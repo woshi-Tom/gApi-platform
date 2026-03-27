@@ -1,0 +1,419 @@
+package handler
+
+import (
+	"encoding/json"
+	"strconv"
+	"time"
+
+	"gapi-platform/internal/config"
+	"gapi-platform/internal/model"
+	"gapi-platform/internal/pkg/response"
+	"gapi-platform/internal/repository"
+	"gapi-platform/internal/service"
+	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
+)
+
+// AdminHandler handles admin endpoints
+type AdminHandler struct {
+	authService  *service.AuthService
+	userRepo     *repository.UserRepository
+	channelSvc   *service.ChannelService
+	orderRepo    *repository.OrderRepository
+	auditRepo    *repository.AuditRepository
+	loginLogRepo *repository.LoginLogRepository
+	adminUsers   []config.AdminAccount
+}
+
+// NewAdminHandler creates a new admin handler
+func NewAdminHandler(
+	authService *service.AuthService,
+	userRepo *repository.UserRepository,
+	channelSvc *service.ChannelService,
+	orderRepo *repository.OrderRepository,
+	auditRepo *repository.AuditRepository,
+	loginLogRepo *repository.LoginLogRepository,
+	adminUsers []config.AdminAccount,
+) *AdminHandler {
+	return &AdminHandler{
+		authService:  authService,
+		userRepo:     userRepo,
+		channelSvc:   channelSvc,
+		orderRepo:    orderRepo,
+		auditRepo:    auditRepo,
+		loginLogRepo: loginLogRepo,
+		adminUsers:   adminUsers,
+	}
+}
+
+// Login handles admin login
+func (h *AdminHandler) Login(c *gin.Context) {
+	var req struct {
+		Username string `json:"username" binding:"required"`
+		Password string `json:"password" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, "INVALID_PARAMETER", err.Error())
+		return
+	}
+
+	for _, admin := range h.adminUsers {
+		if admin.Username == req.Username && admin.Password == req.Password {
+			token, _, err := h.authService.GenerateAdminToken(admin.Username, admin.Role)
+			if err != nil {
+				response.InternalError(c, "failed to generate token")
+				return
+			}
+			response.Success(c, map[string]interface{}{
+				"token":    token,
+				"username": admin.Username,
+				"role":     admin.Role,
+			})
+			return
+		}
+	}
+
+	response.Fail(c, "INVALID_CREDENTIALS", "用户名或密码错误")
+}
+
+// ListUsers returns all users
+func (h *AdminHandler) ListUsers(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	level := c.Query("level")
+	status := c.Query("status")
+	keyword := c.Query("keyword")
+
+	users, total, err := h.userRepo.List(page, pageSize, level, status, keyword)
+	if err != nil {
+		response.InternalError(c, "failed to list users")
+		return
+	}
+
+	// Mask sensitive data
+	for i := range users {
+		users[i].PasswordHash = ""
+		users[i].VerifyToken = ""
+	}
+
+	response.Paginated(c, users, page, pageSize, total)
+}
+
+// UpdateUser updates a user
+func (h *AdminHandler) UpdateUser(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		response.Fail(c, "INVALID_PARAMETER", "invalid user id")
+		return
+	}
+
+	user, err := h.userRepo.GetByID(uint(id))
+	if err != nil {
+		response.NotFound(c, "user not found")
+		return
+	}
+
+	var req struct {
+		Status         string `json:"status"`
+		Level          string `json:"level"`
+		QuotaAdjust    int64  `json:"quota_adjust"`
+		VIPQuotaAdjust int64  `json:"vip_quota_adjust"`
+		VIPExpiredAt   string `json:"vip_expired_at"`
+		DisabledReason string `json:"disabled_reason"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, "INVALID_PARAMETER", err.Error())
+		return
+	}
+
+	if req.Status != "" {
+		user.Status = req.Status
+	}
+	if req.Level != "" {
+		user.Level = req.Level
+	}
+	if req.QuotaAdjust != 0 {
+		user.RemainQuota += req.QuotaAdjust
+		if user.RemainQuota < 0 {
+			user.RemainQuota = 0
+		}
+	}
+	if req.VIPQuotaAdjust != 0 {
+		user.VIPQuota += req.VIPQuotaAdjust
+		if user.VIPQuota < 0 {
+			user.VIPQuota = 0
+		}
+	}
+	if req.VIPExpiredAt != "" {
+		t, err := time.Parse(time.RFC3339, req.VIPExpiredAt)
+		if err == nil {
+			user.VIPExpiredAt = &t
+		}
+	}
+	if req.DisabledReason != "" {
+		user.DisabledReason = req.DisabledReason
+	}
+
+	if err := h.userRepo.Update(user); err != nil {
+		response.InternalError(c, "failed to update user")
+		return
+	}
+
+	response.SuccessWithMessage(c, nil, "user updated")
+}
+
+// ListChannels returns all channels
+func (h *AdminHandler) ListChannels(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	channelType := c.Query("type")
+	status := c.Query("status")
+	group := c.Query("group")
+	keyword := c.Query("keyword")
+
+	channels, total, err := h.channelSvc.List(page, pageSize, channelType, status, group, keyword)
+	if err != nil {
+		response.InternalError(c, "failed to list channels")
+		return
+	}
+
+	response.Paginated(c, channels, page, pageSize, total)
+}
+
+// CreateChannel creates a new channel
+func (h *AdminHandler) CreateChannel(c *gin.Context) {
+	var req struct {
+		Name     string   `json:"name" binding:"required"`
+		Type     string   `json:"type" binding:"required"`
+		BaseURL  string   `json:"base_url" binding:"required"`
+		APIKey   string   `json:"api_key" binding:"required"`
+		Models   []string `json:"models"`
+		Weight   int      `json:"weight"`
+		Priority int      `json:"priority"`
+		Group    string   `json:"group_name"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, "INVALID_PARAMETER", err.Error())
+		return
+	}
+
+	channel := &model.Channel{
+		Name:            req.Name,
+		Type:            req.Type,
+		BaseURL:         req.BaseURL,
+		APIKeyEncrypted: req.APIKey,
+		Weight:          req.Weight,
+		Priority:        req.Priority,
+		GroupName:       req.Group,
+		Status:          1,
+		IsHealthy:       true,
+	}
+
+	if len(req.Models) > 0 {
+		b, _ := json.Marshal(req.Models)
+		channel.Models = string(b)
+	}
+
+	if err := h.channelSvc.Create(channel); err != nil {
+		response.Fail(c, "CHANNEL_CREATE_FAILED", err.Error())
+		return
+	}
+
+	response.Created(c, channel)
+}
+
+// UpdateChannel updates a channel
+func (h *AdminHandler) UpdateChannel(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		response.Fail(c, "INVALID_PARAMETER", "invalid channel id")
+		return
+	}
+
+	channel, err := h.channelSvc.GetByID(uint(id))
+	if err != nil {
+		response.NotFound(c, "channel not found")
+		return
+	}
+
+	var req struct {
+		Name     string `json:"name"`
+		BaseURL  string `json:"base_url"`
+		Status   int    `json:"status"`
+		Priority int    `json:"priority"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, "INVALID_PARAMETER", err.Error())
+		return
+	}
+
+	if req.Name != "" {
+		channel.Name = req.Name
+	}
+	if req.BaseURL != "" {
+		channel.BaseURL = req.BaseURL
+	}
+	channel.Status = req.Status
+	channel.Priority = req.Priority
+
+	if err := h.channelSvc.Update(channel); err != nil {
+		response.InternalError(c, "failed to update channel")
+		return
+	}
+
+	response.SuccessWithMessage(c, channel, "channel updated")
+}
+
+// TestChannel tests a channel
+func (h *AdminHandler) TestChannel(c *gin.Context) {
+	// Delegate to channel handler
+	(&ChannelHandler{channelService: h.channelSvc}).Test(c)
+}
+
+// ListOrders returns all orders
+func (h *AdminHandler) ListOrders(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	orderType := c.Query("type")
+	status := c.Query("status")
+
+	orders, total, err := h.orderRepo.List(page, pageSize, 0, orderType, status, "", "")
+	if err != nil {
+		response.InternalError(c, "failed to list orders")
+		return
+	}
+
+	response.Paginated(c, orders, page, pageSize, total)
+}
+
+// GetAuditLogs returns audit logs
+func (h *AdminHandler) GetAuditLogs(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	actionGroup := c.Query("action_group")
+	action := c.Query("action")
+	resourceType := c.Query("resource_type")
+	startTime := c.Query("start_time")
+	endTime := c.Query("end_time")
+
+	var success *bool
+	if s := c.Query("success"); s != "" {
+		b := s == "true"
+		success = &b
+	}
+
+	logs, total, err := h.auditRepo.List(page, pageSize, 0, actionGroup, action, resourceType, startTime, endTime, success)
+	if err != nil {
+		response.InternalError(c, "failed to list audit logs")
+		return
+	}
+
+	response.Paginated(c, logs, page, pageSize, total)
+}
+
+// GetLoginLogs returns login logs
+func (h *AdminHandler) GetLoginLogs(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	username := c.Query("username")
+	ip := c.Query("ip")
+	status := c.Query("status") // success or failed
+	startTime := c.Query("start_time")
+	endTime := c.Query("end_time")
+
+	var success *bool
+	if status != "" {
+		b := status == "success"
+		success = &b
+	}
+
+	logs, total, err := h.loginLogRepo.List(page, pageSize, username, ip, success, startTime, endTime)
+	if err != nil {
+		response.InternalError(c, "failed to list login logs")
+		return
+	}
+
+	response.Paginated(c, logs, page, pageSize, total)
+}
+
+func (h *AdminHandler) GetDashboardStats(c *gin.Context) {
+	db := h.userRepo.GetDB()
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+	var stats model.DashboardStats
+
+	db.Model(&model.User{}).Count((*int64)(&stats.TotalUsers))
+
+	db.Model(&model.User{}).Where("last_login_at >= ?", today).Count((*int64)(&stats.ActiveUsersToday))
+
+	db.Model(&model.User{}).Where("level IN ?", []string{"vip", "enterprise"}).Count((*int64)(&stats.VIPUsersCount))
+
+	db.Model(&model.Channel{}).Count((*int64)(&stats.TotalChannels))
+
+	db.Model(&model.Channel{}).Where("is_healthy = ?", true).Count((*int64)(&stats.HealthyChannels))
+
+	db.Model(&model.Order{}).Where("created_at >= ?", today).Count((*int64)(&stats.TotalOrdersToday))
+
+	db.Model(&model.Order{}).Where("status = ? AND created_at >= ?", "paid", today).
+		Select("COALESCE(SUM(pay_amount), 0)").Scan(&stats.TotalRevenueToday)
+
+	db.Model(&model.UsageLog{}).Where("created_at >= ?", today).
+		Select("COALESCE(SUM(total_tokens), 0)").Scan(&stats.TotalQuotaUsedToday)
+
+	response.Success(c, stats)
+}
+
+// ChangePassword handles admin password change
+func (h *AdminHandler) ChangePassword(c *gin.Context) {
+	var req struct {
+		OldPassword string `json:"old_password" binding:"required"`
+		NewPassword string `json:"new_password" binding:"required,min=8"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, "INVALID_PARAMETER", err.Error())
+		return
+	}
+
+	adminID, exists := c.Get("admin_id")
+	if !exists {
+		response.Unauthorized(c, "unauthorized")
+		return
+	}
+
+	var admin model.AdminUser
+	if err := h.userRepo.GetDB().First(&admin, adminID).Error; err != nil {
+		response.NotFound(c, "admin user not found")
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(admin.PasswordHash), []byte(req.OldPassword)); err != nil {
+		response.Fail(c, "INVALID_PASSWORD", "old password is incorrect")
+		return
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		response.InternalError(c, "failed to hash password")
+		return
+	}
+
+	admin.PasswordHash = string(hashedPassword)
+	admin.PasswordChangedAt = time.Now()
+	admin.FailedLoginAttempts = 0
+	admin.LockedUntil = nil
+
+	if err := h.userRepo.GetDB().Save(&admin).Error; err != nil {
+		response.InternalError(c, "failed to update password")
+		return
+	}
+
+	response.SuccessWithMessage(c, nil, "password changed successfully")
+}

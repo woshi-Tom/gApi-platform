@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build outputs
+dist/
+dist-admin/
+*.exe
+gapi-server
+
+# Logs
+*.log
+logs/
+server.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Backend
+backend/tmp/
+
+# Database (don't commit sensitive data)
+*.sql.bak
+
+# Docker
+docker-compose.override.yml
+
+# Test coverage
+coverage/
+*.cover
+
+# Misc
+*.bak
+*.orig
