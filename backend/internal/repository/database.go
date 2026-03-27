@@ -85,6 +85,7 @@ func (d *Database) AutoMigrate() error {
 		&model.AuditLog{},
 		&model.LoginLog{},
 		&model.UsageLog{},
+		&model.APIAccessLog{},
 		&model.SystemConfig{},
 		&model.SignupConfig{},
 	)
