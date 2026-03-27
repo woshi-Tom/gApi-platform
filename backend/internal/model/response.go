@@ -174,6 +174,8 @@ type Product struct {
 	BonusQuota    int64     `json:"bonus_quota"`
 	VIPDays       int       `json:"vip_days"`
 	VIPQuota      int64     `json:"vip_quota"`
+	RPMLimit      int       `json:"rpm_limit"`
+	TPMLimit      int       `json:"tpm_limit"`
 	SortOrder     int       `json:"sort_order"`
 	IsRecommended bool      `json:"is_recommended"`
 	IsHot         bool      `json:"is_hot"`
@@ -217,7 +219,7 @@ type DateCount struct {
 // ChatCompletionsRequest represents OpenAI chat completions request
 type ChatCompletionsRequest struct {
 	Model       string                   `json:"model" binding:"required"`
-	Messages    []map[string]string     `json:"messages" binding:"required"`
+	Messages    []map[string]string      `json:"messages" binding:"required"`
 	Temperature float64                  `json:"temperature"`
 	MaxTokens   int                      `json:"max_tokens"`
 	TopP        float64                  `json:"top_p"`

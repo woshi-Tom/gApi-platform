@@ -17,7 +17,7 @@
           <el-card shadow="hover" class="pc" :class="{rec:p.is_recommended}"><template #header><div style="display:flex;justify-content:space-between"><span>{{ p.name }}</span><el-tag v-if="p.is_recommended" type="warning" size="small">推荐</el-tag></div></template>
             <div class="price">¥{{ p.price }}<span v-if="p.original_price" class="org">¥{{ p.original_price }}</span></div>
             <div class="info">有效期：{{ p.vip_days || p.duration_days || 30 }} 天</div>
-            <div class="info">配额：{{ (p.vip_quota || p.quota || 0)?.toLocaleString() }} Token</div>
+            <div class="info">配额：{{ ((p.vip_quota ?? p.quota) || 0).toLocaleString() }} Token</div>
             <el-button type="warning" style="width:100%;margin-top:16px" @click="buy(p,'vip')">开通VIP</el-button>
           </el-card>
         </el-col></el-row>
