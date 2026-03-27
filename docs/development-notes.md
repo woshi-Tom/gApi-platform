@@ -600,6 +600,25 @@ PENDING → (payment success) → PAID → (admin process) → COMPLETED
   - 备份脚本 scripts/backup.sh
   - 详细部署指南 docs/deployment.md
 
+### 12.8 Bug Fixes & Improvements (2026-03-28)
+- [x] 管理后台商品管理：显示所有状态商品（包括下架）
+  - 后端添加 ListAll 方法返回所有商品
+  - 前端移除前端过滤逻辑
+- [x] 充值套餐添加 RPM/TPM 限制字段
+  - RechargePackage 模型添加 rpm_limit、tpm_limit 字段
+  - 前端表单和列表添加对应字段
+- [x] 操作日志表格布局优化
+  - 统一列宽和样式
+  - 修复边框不一致问题
+- [x] 用户右上角显示名修复
+  - 持久化用户信息到 localStorage
+  - 页面刷新后正确显示用户名
+- [x] API 密钥创建限制
+  - 普通用户：最多 1 个密钥
+  - VIP 用户：根据套餐并发限制（默认5个）
+  - 企业用户：最多 10 个
+  - 超限时显示友好错误提示
+
 ### 12.6 Known Issues (Resolved)
 - [x] 管理后台布局重复 - 已修复
 - [x] 局域网访问 502 - 已修复
