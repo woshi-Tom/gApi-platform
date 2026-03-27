@@ -131,7 +131,7 @@ curl http://localhost:8080/api/v1/chat/completions \
       <template #header>
         <div class="card-header">
           <span>最近活动</span>
-          <el-button text size="small" @click="$router.push('/orders')">
+          <el-button text size="small" @click="$router.push('/logs')">
             查看全部 <el-icon><ArrowRight /></el-icon>
           </el-button>
         </div>

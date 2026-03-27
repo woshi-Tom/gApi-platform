@@ -393,3 +393,47 @@ func (r *RechargePackageRepository) Update(pkg *model.RechargePackage) error {
 func (r *RechargePackageRepository) Delete(id uint) error {
 	return r.db.Model(&model.RechargePackage{}).Where("id = ?", id).Update("status", "deleted").Error
 }
+
+// APIAccessLogRepository handles API access log database operations
+type APIAccessLogRepository struct {
+	db *gorm.DB
+}
+
+func NewAPIAccessLogRepository(db *gorm.DB) *APIAccessLogRepository {
+	return &APIAccessLogRepository{db: db}
+}
+
+func (r *APIAccessLogRepository) Create(log *model.APIAccessLog) error {
+	return r.db.Create(log).Error
+}
+
+func (r *APIAccessLogRepository) ListByUser(userID uint, page, pageSize int) ([]model.APIAccessLog, int64, error) {
+	var logs []model.APIAccessLog
+	var total int64
+
+	query := r.db.Model(&model.APIAccessLog{}).Where("user_id = ?", userID)
+	query.Count(&total)
+	err := query.Offset((page - 1) * pageSize).Limit(pageSize).Order("created_at DESC").Find(&logs).Error
+	return logs, total, err
+}
+
+func (r *APIAccessLogRepository) List(page, pageSize int, userID *uint, startTime, endTime string) ([]model.APIAccessLog, int64, error) {
+	var logs []model.APIAccessLog
+	var total int64
+
+	query := r.db.Model(&model.APIAccessLog{})
+
+	if userID != nil {
+		query = query.Where("user_id = ?", *userID)
+	}
+	if startTime != "" {
+		query = query.Where("created_at >= ?", startTime)
+	}
+	if endTime != "" {
+		query = query.Where("created_at <= ?", endTime)
+	}
+
+	query.Count(&total)
+	err := query.Offset((page - 1) * pageSize).Limit(pageSize).Order("created_at DESC").Find(&logs).Error
+	return logs, total, err
+}

@@ -24,6 +24,7 @@ func SetupUserRoutes(
 	vipRepo := repository.NewVIPPackageRepository(db.GetDB())
 	rechargeRepo := repository.NewRechargePackageRepository(db.GetDB())
 	loginLogRepo := repository.NewLoginLogRepository(db.GetDB())
+	apiAccessLogRepo := repository.NewAPIAccessLogRepository(db.GetDB())
 
 	authService := service.NewAuthService(userRepo, tokenRepo, &cfg.JWT)
 	userService := service.NewUserService(userRepo)
@@ -40,6 +41,7 @@ func SetupUserRoutes(
 	apiHandler := handler.NewAPIHandler(tokenService, channelService, userRepo)
 	emailHandler := handler.NewEmailVerificationHandler(emailVerificationService)
 	captchaHandler := handler.NewCaptchaHandler(captchaService)
+	apiAccessLogHandler := handler.NewAPIAccessLogHandler(apiAccessLogRepo)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
@@ -103,6 +105,12 @@ func SetupUserRoutes(
 			orders.GET("/:id", orderHandler.GetByID)
 		}
 
+		apiLogs := v1.Group("/logs")
+		apiLogs.Use(middleware.JWTAuth(authService))
+		{
+			apiLogs.GET("", apiAccessLogHandler.List)
+		}
+
 		payment := v1.Group("/payment")
 		payment.Use(middleware.JWTAuth(authService))
 		{
@@ -113,9 +121,9 @@ func SetupUserRoutes(
 		v1.POST("/payment/callback/alipay", paymentHandler.AlipayCallback)
 		v1.POST("/payment/callback/wechat", paymentHandler.WechatCallback)
 
-		v1.POST("/chat/completions", middleware.TokenAuth(tokenService), apiHandler.ChatCompletions)
-		v1.GET("/models", middleware.TokenAuth(tokenService), apiHandler.ListModels)
-		v1.POST("/embeddings", middleware.TokenAuth(tokenService), apiHandler.Embeddings)
+		v1.POST("/chat/completions", middleware.TokenAuth(tokenService), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.ChatCompletions)
+		v1.GET("/models", middleware.TokenAuth(tokenService), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.ListModels)
+		v1.POST("/embeddings", middleware.TokenAuth(tokenService), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.Embeddings)
 
 		internal := v1.Group("/internal")
 		{

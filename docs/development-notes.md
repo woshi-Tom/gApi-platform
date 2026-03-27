@@ -577,11 +577,16 @@ PENDING → (payment success) → PAID → (admin process) → COMPLETED
 
 ### 12.5 Remaining Tasks
 - [ ] 支付集成 (支付宝/微信)
-- [ ] VIP 过期处理
+- [ ] VIP 过期处理 (后台定时任务)
 - [ ] 用户请求日志 (API 调用记录)
-- [ ] 前端消费者页面完善
-- [ ] 商品管理前端完善 (添加/编辑/启用/禁用按钮)
+- [ ] 用户活动日志页面
 - [ ] 部署文档
+
+### 12.6 Recently Fixed (2026-03-28)
+- [x] 商品管理 RPM/TPM 限制显示 bug
+- [x] 用户 API 密钥复制显示不完整
+- [x] 用户 VIP 配额显示为 0
+- [x] 用户控制台"最近活动"跳转错误
 
 ### 12.6 Known Issues (Resolved)
 - [x] 管理后台布局重复 - 已修复

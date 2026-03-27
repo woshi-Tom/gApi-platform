@@ -114,6 +114,40 @@ func (UsageLog) TableName() string {
 	return "usage_logs"
 }
 
+// APIAccessLog represents user API access logs (for user dashboard)
+type APIAccessLog struct {
+	ID       uint `json:"id" gorm:"primaryKey"`
+	UserID   uint `json:"user_id" gorm:"not null;index"`
+	TenantID uint `json:"tenant_id" gorm:"index"`
+
+	// Request info
+	Endpoint string `json:"endpoint" gorm:"size:100;not null"` // /api/v1/chat/completions
+	Method   string `json:"method" gorm:"size:10;not null"`    // POST
+	Model    string `json:"model" gorm:"size:50"`              // gpt-3.5-turbo
+	TokenID  *uint  `json:"token_id" gorm:"index"`
+
+	// Usage
+	PromptTokens     int `json:"prompt_tokens" gorm:"default:0"`
+	CompletionTokens int `json:"completion_tokens" gorm:"default:0"`
+	TotalTokens      int `json:"total_tokens" gorm:"default:0"`
+
+	// Response
+	StatusCode   int    `json:"status_code" gorm:"default:0"`
+	ResponseTime int    `json:"response_time" gorm:"default:0"` // milliseconds
+	ErrorMessage string `json:"error_message" gorm:"type:text"`
+
+	// Request metadata
+	RequestIP string `json:"request_ip" gorm:"size:50"`
+	UserAgent string `json:"user_agent" gorm:"size:200"`
+
+	// Timestamp
+	CreatedAt time.Time `json:"created_at" gorm:"index"`
+}
+
+func (APIAccessLog) TableName() string {
+	return "api_access_logs"
+}
+
 // SystemConfig represents system configuration
 type SystemConfig struct {
 	ID          uint   `json:"id" gorm:"primaryKey"`
