@@ -46,13 +46,13 @@
         </el-table-column>
         <el-table-column label="RPM限制" width="90">
           <template #default="{ row }">
-            <span v-if="row.product_type==='vip'">{{ row.rpm_limit || '-' }}</span>
+            <span v-if="row.product_type==='vip'">{{ row.rpm_limit > 0 ? row.rpm_limit : '-' }}</span>
             <span v-else>-</span>
           </template>
         </el-table-column>
         <el-table-column label="TPM限制" width="90">
           <template #default="{ row }">
-            <span v-if="row.product_type==='vip'">{{ row.tpm_limit ? (row.tpm_limit / 1000) + 'k' : '-' }}</span>
+            <span v-if="row.product_type==='vip'">{{ row.tpm_limit > 0 ? (row.tpm_limit / 1000) + 'k' : '-' }}</span>
             <span v-else>-</span>
           </template>
         </el-table-column>
