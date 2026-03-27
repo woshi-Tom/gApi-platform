@@ -29,13 +29,6 @@ func (h *TokenHandler) List(c *gin.Context) {
 		return
 	}
 
-	// Mask token keys for security
-	for i := range tokens {
-		if len(tokens[i].TokenKey) > 10 {
-			tokens[i].TokenKey = tokens[i].TokenKey[:10] + "***"
-		}
-	}
-
 	response.Success(c, tokens)
 }
 

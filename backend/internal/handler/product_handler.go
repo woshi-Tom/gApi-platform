@@ -39,6 +39,8 @@ func (h *ProductHandler) List(c *gin.Context) {
 					OriginalPrice: nil,
 					VIPQuota:      pkg.Quota,
 					VIPDays:       pkg.DurationDays,
+					RPMLimit:      pkg.RPMLimit,
+					TPMLimit:      pkg.TPMLimit,
 					SortOrder:     pkg.SortOrder,
 					IsRecommended: pkg.IsRecommended,
 					IsHot:         pkg.IsPopular,
