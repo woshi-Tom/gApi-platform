@@ -33,7 +33,7 @@ type Token struct {
 	// Usage limits
 	MaxUsagePerDay *int64     `json:"max_usage_per_day"`
 	ExpiresAt      *time.Time `json:"expires_at"`
-	UnlimitedQuota bool      `json:"unlimited_quota" gorm:"default:false"`
+	UnlimitedQuota bool       `json:"unlimited_quota" gorm:"default:false"`
 
 	// Status
 	Status    string `json:"status" gorm:"size:20;default:'active'"` // active|disabled|expired
@@ -130,8 +130,7 @@ type VIPPackage struct {
 	TPMLimit        int   `json:"tpm_limit" gorm:"default:100000"`
 	ConcurrentLimit int   `json:"concurrent_limit" gorm:"default:10"`
 
-	// Features
-	Features string `json:"features" gorm:"type:jsonb"` // JSON object
+	Features string `json:"features" gorm:"type:text"`
 
 	// Display
 	SortOrder     int  `json:"sort_order" gorm:"default:0"`
