@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"gapi-platform/internal/config"
 	"gapi-platform/internal/mq"
 	"gapi-platform/internal/repository"
 	"gapi-platform/internal/router"
+	"gapi-platform/internal/worker"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 )
@@ -72,6 +74,10 @@ func main() {
 			}
 		}
 	}
+
+	vipWorker := worker.NewVIPExpiryWorker(db.GetDB(), 1*time.Minute)
+	go vipWorker.Start()
+	defer vipWorker.Stop()
 
 	r := gin.Default()
 
