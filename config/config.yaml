@@ -1,0 +1,43 @@
+server:
+  port: "8080"
+  admin_port: "9000"
+  admin_bind: "0.0.0.0"
+  mode: debug
+  timeout: 60
+  frontend: "http://localhost:5173"
+  admin_secret: "gapi-admin-secret-key-2026"
+
+database:
+  host: localhost
+  port: 5432
+  user: gapi
+  password: gapi123
+  database: gapi
+  max_open: 100
+  max_idle: 10
+
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  db: 0
+
+rabbitmq:
+  host: localhost
+  port: 5672
+  user: gapi
+  password: gapi123
+
+jwt:
+  secret: "gapi-jwt-secret-key-must-be-at-least-32-characters-long"
+  expire_hour: 24
+
+log:
+  level: info
+  path: "./logs"
+  format: console
+
+admin_users:
+  - username: admin
+    password: admin123
+    role: super_admin
