@@ -577,7 +577,6 @@ PENDING → (payment success) → PAID → (admin process) → COMPLETED
 
 ### 12.5 Remaining Tasks
 - [ ] 支付集成 (支付宝/微信)
-- [ ] 部署文档
 
 ### 12.6 Recently Fixed (2026-03-28)
 - [x] 商品管理 RPM/TPM 限制显示 bug
@@ -593,6 +592,13 @@ PENDING → (payment success) → PAID → (admin process) → COMPLETED
 - [x] VIP 过期处理后台任务
   - 每分钟检查过期 VIP 用户
   - 自动降级为 free 等级
+- [x] 部署文档
+  - docker-compose.prod.yml 生产环境配置
+  - nginx 配置 (反向代理 + SSL)
+  - Dockerfile (后端、前端、管理后台)
+  - 环境变量模板 .env.example
+  - 备份脚本 scripts/backup.sh
+  - 详细部署指南 docs/deployment.md
 
 ### 12.6 Known Issues (Resolved)
 - [x] 管理后台布局重复 - 已修复
