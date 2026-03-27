@@ -577,9 +577,6 @@ PENDING → (payment success) → PAID → (admin process) → COMPLETED
 
 ### 12.5 Remaining Tasks
 - [ ] 支付集成 (支付宝/微信)
-- [ ] VIP 过期处理 (后台定时任务)
-- [ ] 用户请求日志 (API 调用记录)
-- [ ] 用户活动日志页面
 - [ ] 部署文档
 
 ### 12.6 Recently Fixed (2026-03-28)
@@ -587,6 +584,15 @@ PENDING → (payment success) → PAID → (admin process) → COMPLETED
 - [x] 用户 API 密钥复制显示不完整
 - [x] 用户 VIP 配额显示为 0
 - [x] 用户控制台"最近活动"跳转错误
+
+### 12.7 Recently Added (2026-03-28)
+- [x] 用户 API 调用日志功能
+  - 后端中间件记录 API 调用
+  - 前端 /logs 页面查看 API 调用记录
+  - Dashboard "查看全部" 链接到日志页面
+- [x] VIP 过期处理后台任务
+  - 每分钟检查过期 VIP 用户
+  - 自动降级为 free 等级
 
 ### 12.6 Known Issues (Resolved)
 - [x] 管理后台布局重复 - 已修复
