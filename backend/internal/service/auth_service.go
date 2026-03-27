@@ -9,6 +9,7 @@ import (
 	"gapi-platform/internal/repository"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 // AuthService handles authentication
@@ -227,4 +228,8 @@ func (s *UserService) GetQuota(userID uint) (*model.QuotaInfo, error) {
 		IsVIP:        isVIP,
 		Level:        user.Level,
 	}, nil
+}
+
+func (s *UserService) GetDB() *gorm.DB {
+	return s.userRepo.GetDB()
 }

@@ -12,16 +12,16 @@ import (
 
 // UserHandler handles user-related endpoints
 type UserHandler struct {
-	authService *service.AuthService
-	userService *service.UserService
+	authService  *service.AuthService
+	userService  *service.UserService
 	loginLogRepo *repository.LoginLogRepository
 }
 
 // NewUserHandler creates a new user handler
 func NewUserHandler(authService *service.AuthService, userService *service.UserService, loginLogRepo *repository.LoginLogRepository) *UserHandler {
 	return &UserHandler{
-		authService: authService,
-		userService: userService,
+		authService:  authService,
+		userService:  userService,
 		loginLogRepo: loginLogRepo,
 	}
 }
@@ -64,13 +64,13 @@ func (h *UserHandler) Login(c *gin.Context) {
 	if err != nil {
 		if h.loginLogRepo != nil {
 			h.loginLogRepo.Create(&model.LoginLog{
-				Username:  req.Email,
-				LoginType: "user",
-				IP:        c.ClientIP(),
-				UserAgent: c.Request.UserAgent(),
-				Success:   false,
+				Username:   req.Email,
+				LoginType:  "user",
+				IP:         c.ClientIP(),
+				UserAgent:  c.Request.UserAgent(),
+				Success:    false,
 				FailReason: err.Error(),
-				CreatedAt: time.Now(),
+				CreatedAt:  time.Now(),
 			})
 		}
 		response.Fail(c, "LOGIN_FAILED", err.Error())
@@ -202,5 +202,61 @@ func (h *UserHandler) GetVIPStatus(c *gin.Context) {
 	response.Success(c, status)
 }
 
-// Ensure model import is used
+// GetUsageStats returns user's usage statistics for dashboard charts
+func (h *UserHandler) GetUsageStats(c *gin.Context) {
+	userID := c.MustGet("user_id").(uint)
+	db := h.userService.GetDB()
+
+	type DailyUsage struct {
+		Date          string `json:"date"`
+		TotalCalls    int64  `json:"total_calls"`
+		TotalTokens   int64  `json:"total_tokens"`
+		AvgResponseMs int64  `json:"avg_response_ms"`
+	}
+
+	var usageStats []DailyUsage
+	now := time.Now()
+
+	for i := 6; i >= 0; i-- {
+		date := now.AddDate(0, 0, -i)
+		dayStart := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+		dayEnd := dayStart.Add(24 * time.Hour)
+
+		var calls, tokens, avgMs int64
+		db.Model(&model.APIAccessLog{}).
+			Where("user_id = ? AND created_at >= ? AND created_at < ?", userID, dayStart, dayEnd).
+			Count(&calls)
+
+		db.Model(&model.APIAccessLog{}).
+			Where("user_id = ? AND created_at >= ? AND created_at < ?", userID, dayStart, dayEnd).
+			Select("COALESCE(SUM(total_tokens), 0)").Scan(&tokens)
+
+		db.Model(&model.APIAccessLog{}).
+			Where("user_id = ? AND created_at >= ? AND created_at < ?", userID, dayStart, dayEnd).
+			Select("COALESCE(AVG(response_time), 0)").Scan(&avgMs)
+
+		usageStats = append(usageStats, DailyUsage{
+			Date:          dayStart.Format("01-02"),
+			TotalCalls:    calls,
+			TotalTokens:   tokens,
+			AvgResponseMs: avgMs,
+		})
+	}
+
+	var totalTokensAll, totalCallsAll int64
+	db.Model(&model.APIAccessLog{}).
+		Where("user_id = ?", userID).
+		Select("COALESCE(SUM(total_tokens), 0)").Scan(&totalTokensAll)
+
+	db.Model(&model.APIAccessLog{}).
+		Where("user_id = ?", userID).
+		Count(&totalCallsAll)
+
+	response.Success(c, gin.H{
+		"daily_usage":      usageStats,
+		"total_tokens_all": totalTokensAll,
+		"total_calls_all":  totalCallsAll,
+	})
+}
+
 var _ = model.User{}

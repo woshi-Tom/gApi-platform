@@ -82,6 +82,7 @@ func SetupUserRoutes(
 			userAuth.POST("/change-password", userHandler.ChangePassword)
 			userAuth.GET("/quota", userHandler.GetQuota)
 			userAuth.GET("/vip/status", userHandler.GetVIPStatus)
+			userAuth.GET("/stats/usage", userHandler.GetUsageStats)
 		}
 
 		tokens := v1.Group("/tokens")
@@ -158,11 +159,12 @@ func SetupAdminRoutes(
 	loginLogRepo := repository.NewLoginLogRepository(db.GetDB())
 	vipRepo := repository.NewVIPPackageRepository(db.GetDB())
 	rechargeRepo := repository.NewRechargePackageRepository(db.GetDB())
+	apiAccessLogRepo := repository.NewAPIAccessLogRepository(db.GetDB())
 
 	authService := service.NewAuthService(userRepo, tokenRepo, &cfg.JWT)
 	channelService := service.NewChannelService(channelRepo)
 
-	adminHandler := handler.NewAdminHandler(authService, userRepo, channelService, orderRepo, auditRepo, loginLogRepo, cfg.AdminUsers)
+	adminHandler := handler.NewAdminHandler(authService, userRepo, channelService, orderRepo, auditRepo, loginLogRepo, apiAccessLogRepo, cfg.AdminUsers)
 	productHandler := handler.NewProductHandler(vipRepo, rechargeRepo)
 
 	r.Use(corsMiddleware(cfg.Server.Frontend))
@@ -195,6 +197,7 @@ func SetupAdminRoutes(
 			adminAuth.POST("/products/:id/disable", productHandler.Disable)
 
 			adminAuth.GET("/stats/overview", adminHandler.GetDashboardStats)
+			adminAuth.GET("/stats/trends", adminHandler.GetStatsTrends)
 
 			adminAuth.POST("/change-password", adminHandler.ChangePassword)
 		}

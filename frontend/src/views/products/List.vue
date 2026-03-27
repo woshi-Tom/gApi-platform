@@ -6,8 +6,12 @@
         <el-row :gutter="20"><el-col :span="8" v-for="p in rc" :key="p.id">
           <el-card shadow="hover" class="pc"><template #header><div style="display:flex;justify-content:space-between"><span>{{ p.name }}</span><el-tag v-if="p.is_popular" type="danger" size="small">热销</el-tag></div></template>
             <div class="price">¥{{ p.price }}<span v-if="p.original_price" class="org">¥{{ p.original_price }}</span></div>
-            <div class="info">配额：{{ p.quota?.toLocaleString() }} Token</div>
-            <div class="info" v-if="p.bonus_quota">赠送：{{ p.bonus_quota?.toLocaleString() }} Token</div>
+            <div class="info">配额：{{ (p.quota ?? 0).toLocaleString() }} Token</div>
+            <div class="info" v-if="p.bonus_quota">赠送：{{ (p.bonus_quota ?? 0).toLocaleString() }} Token</div>
+            <div class="info-limit">
+              <span class="limit-item">RPM: {{ (p.rpm_limit ?? 0) > 0 ? p.rpm_limit : '0' }}</span>
+              <span class="limit-item">TPM: {{ (p.tpm_limit ?? 0) > 0 ? (p.tpm_limit/1000)+'k' : '0' }}</span>
+            </div>
             <el-button type="primary" style="width:100%;margin-top:16px" @click="buy(p,'recharge')">立即购买</el-button>
           </el-card>
         </el-col></el-row>
@@ -18,6 +22,10 @@
             <div class="price">¥{{ p.price }}<span v-if="p.original_price" class="org">¥{{ p.original_price }}</span></div>
             <div class="info">有效期：{{ p.vip_days || p.duration_days || 30 }} 天</div>
             <div class="info">配额：{{ ((p.vip_quota ?? p.quota) || 0).toLocaleString() }} Token</div>
+            <div class="info-limit">
+              <span class="limit-item">RPM: {{ (p.rpm_limit ?? 0) > 0 ? p.rpm_limit : '0' }}</span>
+              <span class="limit-item">TPM: {{ (p.tpm_limit ?? 0) > 0 ? (p.tpm_limit/1000)+'k' : '0' }}</span>
+            </div>
             <el-button type="warning" style="width:100%;margin-top:16px" @click="buy(p,'vip')">开通VIP</el-button>
           </el-card>
         </el-col></el-row>
@@ -41,5 +49,17 @@ onMounted(load)
 <style scoped>
 .pc { text-align:center;margin-bottom:20px }.pc.rec { border:2px solid #e6a23c }
 .price { font-size:28px;font-weight:bold;color:#f56c6c;margin:16px 0 }.org { font-size:14px;color:#999;text-decoration:line-through;margin-left:8px }
-.info { color:#606266;margin:8px 0 }
+.info { color:#606266;margin:6px 0;font-size:14px }
+.info-limit { 
+  display:flex; 
+  justify-content:center; 
+  gap:16px; 
+  margin-top:8px; 
+  padding:8px; 
+  background:#f5f7fa; 
+  border-radius:4px;
+  font-size:13px;
+  color:#606266;
+}
+.limit-item { font-weight:500 }
 </style>

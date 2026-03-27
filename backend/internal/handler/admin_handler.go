@@ -16,13 +16,14 @@ import (
 
 // AdminHandler handles admin endpoints
 type AdminHandler struct {
-	authService  *service.AuthService
-	userRepo     *repository.UserRepository
-	channelSvc   *service.ChannelService
-	orderRepo    *repository.OrderRepository
-	auditRepo    *repository.AuditRepository
-	loginLogRepo *repository.LoginLogRepository
-	adminUsers   []config.AdminAccount
+	authService      *service.AuthService
+	userRepo         *repository.UserRepository
+	channelSvc       *service.ChannelService
+	orderRepo        *repository.OrderRepository
+	auditRepo        *repository.AuditRepository
+	loginLogRepo     *repository.LoginLogRepository
+	apiAccessLogRepo *repository.APIAccessLogRepository
+	adminUsers       []config.AdminAccount
 }
 
 // NewAdminHandler creates a new admin handler
@@ -33,16 +34,18 @@ func NewAdminHandler(
 	orderRepo *repository.OrderRepository,
 	auditRepo *repository.AuditRepository,
 	loginLogRepo *repository.LoginLogRepository,
+	apiAccessLogRepo *repository.APIAccessLogRepository,
 	adminUsers []config.AdminAccount,
 ) *AdminHandler {
 	return &AdminHandler{
-		authService:  authService,
-		userRepo:     userRepo,
-		channelSvc:   channelSvc,
-		orderRepo:    orderRepo,
-		auditRepo:    auditRepo,
-		loginLogRepo: loginLogRepo,
-		adminUsers:   adminUsers,
+		authService:      authService,
+		userRepo:         userRepo,
+		channelSvc:       channelSvc,
+		orderRepo:        orderRepo,
+		auditRepo:        auditRepo,
+		loginLogRepo:     loginLogRepo,
+		apiAccessLogRepo: apiAccessLogRepo,
+		adminUsers:       adminUsers,
 	}
 }
 
@@ -416,4 +419,73 @@ func (h *AdminHandler) ChangePassword(c *gin.Context) {
 	}
 
 	response.SuccessWithMessage(c, nil, "password changed successfully")
+}
+
+// GetStatsTrends returns API request trends for charts
+func (h *AdminHandler) GetStatsTrends(c *gin.Context) {
+	db := h.userRepo.GetDB()
+
+	// Get last 7 days data
+	type DailyStat struct {
+		Date         string `json:"date"`
+		TotalCalls   int64  `json:"total_calls"`
+		SuccessCalls int64  `json:"success_calls"`
+		FailedCalls  int64  `json:"failed_calls"`
+		TotalTokens  int64  `json:"total_tokens"`
+	}
+
+	var stats []DailyStat
+	now := time.Now()
+
+	for i := 6; i >= 0; i-- {
+		date := now.AddDate(0, 0, -i)
+		dayStart := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, date.Location())
+		dayEnd := dayStart.Add(24 * time.Hour)
+
+		var totalCalls, successCalls, failedCalls, totalTokens int64
+
+		db.Model(&model.APIAccessLog{}).
+			Where("created_at >= ? AND created_at < ?", dayStart, dayEnd).
+			Count(&totalCalls)
+
+		db.Model(&model.APIAccessLog{}).
+			Where("created_at >= ? AND created_at < ? AND status_code < 400", dayStart, dayEnd).
+			Count(&successCalls)
+
+		db.Model(&model.APIAccessLog{}).
+			Where("created_at >= ? AND created_at < ? AND status_code >= 400", dayStart, dayEnd).
+			Count(&failedCalls)
+
+		db.Model(&model.APIAccessLog{}).
+			Where("created_at >= ? AND created_at < ?", dayStart, dayEnd).
+			Select("COALESCE(SUM(total_tokens), 0)").Scan(&totalTokens)
+
+		stats = append(stats, DailyStat{
+			Date:         dayStart.Format("01-02"),
+			TotalCalls:   totalCalls,
+			SuccessCalls: successCalls,
+			FailedCalls:  failedCalls,
+			TotalTokens:  totalTokens,
+		})
+	}
+
+	// Get today's success/failure breakdown
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	tomorrow := today.Add(24 * time.Hour)
+
+	var successCount, failedCount int64
+	db.Model(&model.APIAccessLog{}).
+		Where("created_at >= ? AND created_at < ? AND status_code < 400", today, tomorrow).
+		Count(&successCount)
+	db.Model(&model.APIAccessLog{}).
+		Where("created_at >= ? AND created_at < ? AND status_code >= 400", today, tomorrow).
+		Count(&failedCount)
+
+	response.Success(c, gin.H{
+		"daily_trends": stats,
+		"today_breakdown": gin.H{
+			"success": successCount,
+			"failed":  failedCount,
+		},
+	})
 }
