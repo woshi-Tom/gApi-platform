@@ -230,15 +230,44 @@ async function handleSave() {
 
   saving.value = true
   try {
-    if (isEdit.value) {
-      ElMessage.info('编辑功能待实现')
+    if (form.product_type === 'vip') {
+      var payload = {
+        product_type: 'vip',
+        name: form.name,
+        description: form.description,
+        price: form.price,
+        vip_days: form.vip_days,
+        quota: form.quota,
+        rpm_limit: form.rpm_limit,
+        tpm_limit: form.tpm_limit,
+        concurrent_limit: form.concurrent_limit,
+        sort_order: form.sort_order,
+        status: form.status
+      }
     } else {
-      ElMessage.info('添加功能待实现')
+      var payload = {
+        product_type: 'recharge',
+        name: form.name,
+        description: form.description,
+        price: form.price,
+        quota: form.quota,
+        bonus_quota: form.bonus_quota,
+        sort_order: form.sort_order,
+        status: form.status
+      }
+    }
+
+    if (isEdit.value) {
+      await adminAPI.put(`/products/${form.id}?type=${form.product_type}`, payload)
+      ElMessage.success('编辑成功')
+    } else {
+      await adminAPI.post('/products', payload)
+      ElMessage.success('添加成功')
     }
     dialogVisible.value = false
     load()
   } catch (e) {
-    ElMessage.error('保存失败')
+    ElMessage.error(e.response?.data?.error?.message || '保存失败')
   } finally {
     saving.value = false
   }
