@@ -570,13 +570,17 @@ PENDING → (payment success) → PAID → (admin process) → COMPLETED
 - `GET /api/v1/admin/channels` - 渠道列表
 - `GET /api/v1/admin/orders` - 订单列表
 - `GET /api/v1/admin/products` - 商品列表
+- `POST /api/v1/admin/products` - 创建商品
+- `PUT /api/v1/admin/products/:id` - 更新商品
+- `POST /api/v1/admin/products/:id/enable` - 启用商品
+- `POST /api/v1/admin/products/:id/disable` - 禁用商品
 
 ### 12.5 Remaining Tasks
 - [ ] 支付集成 (支付宝/微信)
 - [ ] VIP 过期处理
 - [ ] 用户请求日志 (API 调用记录)
 - [ ] 前端消费者页面完善
-- [ ] 商品添加/编辑 API
+- [ ] 商品管理前端完善 (添加/编辑/启用/禁用按钮)
 - [ ] 部署文档
 
 ### 12.6 Known Issues (Resolved)

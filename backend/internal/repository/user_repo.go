@@ -346,6 +346,18 @@ func (r *VIPPackageRepository) GetByID(id uint) (*model.VIPPackage, error) {
 	return &pkg, err
 }
 
+func (r *VIPPackageRepository) Create(pkg *model.VIPPackage) error {
+	return r.db.Create(pkg).Error
+}
+
+func (r *VIPPackageRepository) Update(pkg *model.VIPPackage) error {
+	return r.db.Save(pkg).Error
+}
+
+func (r *VIPPackageRepository) Delete(id uint) error {
+	return r.db.Model(&model.VIPPackage{}).Where("id = ?", id).Update("status", "deleted").Error
+}
+
 // RechargePackageRepository handles recharge package database operations
 type RechargePackageRepository struct {
 	db *gorm.DB
@@ -368,4 +380,16 @@ func (r *RechargePackageRepository) GetByID(id uint) (*model.RechargePackage, er
 	var pkg model.RechargePackage
 	err := r.db.First(&pkg, id).Error
 	return &pkg, err
+}
+
+func (r *RechargePackageRepository) Create(pkg *model.RechargePackage) error {
+	return r.db.Create(pkg).Error
+}
+
+func (r *RechargePackageRepository) Update(pkg *model.RechargePackage) error {
+	return r.db.Save(pkg).Error
+}
+
+func (r *RechargePackageRepository) Delete(id uint) error {
+	return r.db.Model(&model.RechargePackage{}).Where("id = ?", id).Update("status", "deleted").Error
 }

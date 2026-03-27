@@ -180,6 +180,8 @@ func SetupAdminRoutes(
 			adminAuth.GET("/test", func(c *gin.Context) { c.String(200, "test") })
 
 			adminAuth.GET("/products", productHandler.List)
+			adminAuth.POST("/products", productHandler.Create)
+			adminAuth.PUT("/products/:id", productHandler.Update)
 			adminAuth.POST("/products/:id/enable", productHandler.Enable)
 			adminAuth.POST("/products/:id/disable", productHandler.Disable)
 
