@@ -46,12 +46,12 @@
         </el-table-column>
         <el-table-column label="RPM限制" width="90">
           <template #default="{ row }">
-            {{ row.rpm_limit > 0 ? row.rpm_limit : '-' }}
+            {{ (row.rpm_limit ?? 0) > 0 ? row.rpm_limit : '0' }}
           </template>
         </el-table-column>
         <el-table-column label="TPM限制" width="90">
           <template #default="{ row }">
-            {{ row.tpm_limit > 0 ? (row.tpm_limit / 1000) + 'k' : '-' }}
+            {{ (row.tpm_limit ?? 0) > 0 ? (row.tpm_limit / 1000) + 'k' : '0' }}
           </template>
         </el-table-column>
         <el-table-column label="状态" width="80">
@@ -213,8 +213,8 @@ function handleEdit(row) {
     vip_days: row.vip_days || 30,
     quota: row.quota || 0,
     bonus_quota: row.bonus_quota || 0,
-    rpm_limit: row.rpm_limit || 2000,
-    tpm_limit: row.tpm_limit || 100000,
+    rpm_limit: row.rpm_limit ?? 0,
+    tpm_limit: row.tpm_limit ?? 0,
     concurrent_limit: row.concurrent_limit || 10,
     sort_order: row.sort_order || 0,
     status: row.status
@@ -256,6 +256,8 @@ async function handleSave() {
         price: form.price,
         quota: form.quota,
         bonus_quota: form.bonus_quota,
+        rpm_limit: form.rpm_limit,
+        tpm_limit: form.tpm_limit,
         sort_order: form.sort_order,
         status: form.status
       }

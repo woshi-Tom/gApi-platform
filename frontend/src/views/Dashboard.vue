@@ -18,7 +18,7 @@
         </div>
         <div class="stat-info">
           <div class="stat-label">今日用量</div>
-          <div class="stat-value">{{ formatQuota(quota?.used_quota_today) }}</div>
+          <div class="stat-value">{{ formatQuota(usageStats?.used_today) }}</div>
         </div>
       </el-card>
       
@@ -39,6 +39,27 @@
         <div class="stat-info">
           <div class="stat-label">API密钥</div>
           <div class="stat-value">{{ tokenCount }} 个</div>
+        </div>
+      </el-card>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="charts-grid">
+      <el-card shadow="hover" class="chart-card">
+        <template #header>
+          <span>Token消耗趋势 (近7天)</span>
+        </template>
+        <div class="chart-container">
+          <v-chart :option="tokenChartOption" autoresize />
+        </div>
+      </el-card>
+      
+      <el-card shadow="hover" class="chart-card">
+        <template #header>
+          <span>API调用统计 (近7天)</span>
+        </template>
+        <div class="chart-container">
+          <v-chart :option="callsChartOption" autoresize />
         </div>
       </el-card>
     </div>
@@ -109,8 +130,8 @@ curl http://localhost:8080/api/v1/chat/completions \
         </div>
         
         <div class="quota-item">
-          <span class="item-label">本月用量</span>
-          <span class="item-value">{{ formatQuota(quota?.used_quota_month) }}</span>
+          <span class="item-label">累计Token</span>
+          <span class="item-value">{{ formatQuota(usageStats?.total_tokens) }}</span>
         </div>
         
         <el-divider style="margin: 12px 0" />
@@ -162,13 +183,20 @@ curl http://localhost:8080/api/v1/chat/completions \
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { LineChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent } from 'echarts/components'
+import VChart from 'vue-echarts'
 import { 
   Coin, TrendCharts, Star, Key, CopyDocument, 
   ShoppingCart, ArrowRight 
 } from '@element-plus/icons-vue'
 import request from '@/api/request'
+
+use([CanvasRenderer, LineChart, GridComponent, TooltipComponent])
 
 interface Quota {
   remain_quota: number
@@ -179,8 +207,24 @@ interface Quota {
   level: string
 }
 
+interface DailyUsage {
+  date: string
+  total_calls: number
+  total_tokens: number
+  avg_response_ms: number
+}
+
+interface UsageStats {
+  daily_usage: DailyUsage[]
+  total_tokens_all: number
+  total_calls_all: number
+  used_today: number
+}
+
 const quota = ref<Quota | null>(null)
 const tokenCount = ref(0)
+const usageStats = ref<UsageStats | null>(null)
+const dailyUsage = ref<DailyUsage[]>([])
 
 const supportedModels = [
   'GPT-3.5-Turbo', 'GPT-4', 'GPT-4-Turbo', 
@@ -215,6 +259,88 @@ function formatTime(date: Date): string {
   return `${days}天前`
 }
 
+const tokenChartOption = computed(() => ({
+  tooltip: {
+    trigger: 'axis',
+    axisPointer: { type: 'cross' },
+    formatter: (params: any[]) => {
+      const p = params[0]
+      const val = p.value >= 1000 ? (p.value / 1000).toFixed(2) + 'k' : p.value.toLocaleString()
+      return `${p.axisValue}<br/>${p.marker} Token消耗: ${val} k`
+    }
+  },
+  grid: {
+    left: '3%',
+    right: '4%',
+    bottom: '10%',
+    top: '10%',
+    containLabel: true
+  },
+  xAxis: {
+    type: 'category',
+    data: dailyUsage.value.map(d => d.date),
+    boundaryGap: false
+  },
+  yAxis: {
+    type: 'value',
+    name: 'Token(k)',
+    axisLabel: {
+      formatter: (v: number) => v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v
+    }
+  },
+  series: [{
+    name: 'Token消耗',
+    type: 'line',
+    data: dailyUsage.value.map(d => d.total_tokens),
+    smooth: true,
+    itemStyle: { color: '#409eff' },
+    areaStyle: { color: 'rgba(64, 158, 255, 0.1)' },
+    lineStyle: { width: 3 },
+    symbol: 'circle',
+    symbolSize: 8
+  }]
+}))
+
+const callsChartOption = computed(() => ({
+  tooltip: {
+    trigger: 'axis',
+    axisPointer: { type: 'cross' },
+    formatter: (params: any[]) => {
+      const p = params[0]
+      return `${p.axisValue}<br/>${p.marker} API调用: ${p.value.toLocaleString()} 次`
+    }
+  },
+  grid: {
+    left: '12%',
+    right: '4%',
+    bottom: '12%',
+    top: '15%',
+    containLabel: true
+  },
+  xAxis: {
+    type: 'category',
+    data: dailyUsage.value.map(d => d.date),
+    boundaryGap: false
+  },
+  yAxis: {
+    type: 'value',
+    name: '调用次数',
+    nameTextStyle: {
+      padding: [0, 0, 0, -20]
+    },
+    axisLabel: {
+      formatter: (v: number) => v >= 1000 ? (v / 1000).toFixed(0) + 'k' : String(v)
+    }
+  },
+  series: [{
+    name: 'API调用',
+    type: 'bar',
+    data: dailyUsage.value.map(d => d.total_calls),
+    itemStyle: { color: '#67c23a', borderRadius: [4, 4, 0, 0] },
+    barMaxWidth: 40
+  }]
+}))
+
 async function copyCode() {
   const code = `curl http://localhost:8080/api/v1/chat/completions \\
   -H "Authorization: Bearer sk-ap-your-key" \\
@@ -222,8 +348,20 @@ async function copyCode() {
   -d '{"model":"gpt-3.5-turbo","messages":[{"role":"user","content":"Hello"}]}'`
   
   try {
-    await navigator.clipboard.writeText(code)
-    ElMessage.success('已复制到剪贴板')
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(code)
+      ElMessage.success('已复制到剪贴板')
+    } else {
+      const textarea = document.createElement('textarea')
+      textarea.value = code
+      textarea.style.position = 'fixed'
+      textarea.style.opacity = '0'
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+      ElMessage.success('已复制到剪贴板')
+    }
   } catch {
     ElMessage.error('复制失败，请手动复制')
   }
@@ -231,14 +369,19 @@ async function copyCode() {
 
 onMounted(async () => {
   try {
-    const [quotaRes, tokensRes] = await Promise.all([
+    const [quotaRes, tokensRes, usageRes] = await Promise.all([
       request.get('/user/quota'),
-      request.get('/tokens')
+      request.get('/tokens'),
+      request.get('/user/stats/usage')
     ])
     quota.value = quotaRes.data.data
     tokenCount.value = tokensRes.data.data?.length || 0
     
-    // Mock recent activity - in real app, fetch from API
+    if (usageRes.data.data) {
+      usageStats.value = usageRes.data.data
+      dailyUsage.value = usageRes.data.data.daily_usage || []
+    }
+    
     recentActivity.value = [
       {
         id: 1,
@@ -256,7 +399,7 @@ onMounted(async () => {
       }
     ]
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.error?.message || '加载失败')
+    console.error('Failed to load data:', e)
   }
 })
 </script>
@@ -268,7 +411,6 @@ onMounted(async () => {
   gap: 20px;
 }
 
-/* Stats Grid */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -313,14 +455,30 @@ onMounted(async () => {
   color: var(--el-text-color-primary);
 }
 
-/* Main Grid */
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.chart-card {
+  border-radius: 10px;
+}
+
+.chart-card :deep(.el-card__header) {
+  font-weight: 500;
+}
+
+.chart-container {
+  height: 260px;
+}
+
 .main-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 16px;
 }
 
-/* Quick Start Card */
 .card-header {
   display: flex;
   justify-content: space-between;
@@ -391,7 +549,6 @@ onMounted(async () => {
   border-radius: 4px;
 }
 
-/* Quota Card */
 .quota-card :deep(.el-card__header) {
   font-weight: 500;
 }
@@ -423,7 +580,6 @@ onMounted(async () => {
   gap: 8px;
 }
 
-/* Activity Card */
 .activity-card {
   margin-bottom: 20px;
 }
@@ -495,13 +651,16 @@ onMounted(async () => {
   padding: 40px 0;
 }
 
-/* Responsive */
 @media (max-width: 1200px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
   
   .main-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .charts-grid {
     grid-template-columns: 1fr;
   }
 }

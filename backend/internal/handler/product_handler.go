@@ -64,6 +64,8 @@ func (h *ProductHandler) List(c *gin.Context) {
 					OriginalPrice: nil,
 					Quota:         pkg.Quota,
 					BonusQuota:    pkg.BonusQuota,
+					RPMLimit:      pkg.RPMLimit,
+					TPMLimit:      pkg.TPMLimit,
 					SortOrder:     pkg.SortOrder,
 					IsRecommended: pkg.IsRecommended,
 					IsHot:         pkg.IsPopular,
@@ -120,6 +122,8 @@ func (h *ProductHandler) ListAll(c *gin.Context) {
 					OriginalPrice: nil,
 					Quota:         pkg.Quota,
 					BonusQuota:    pkg.BonusQuota,
+					RPMLimit:      pkg.RPMLimit,
+					TPMLimit:      pkg.TPMLimit,
 					SortOrder:     pkg.SortOrder,
 					IsRecommended: pkg.IsRecommended,
 					IsHot:         pkg.IsPopular,
@@ -345,6 +349,8 @@ func (h *ProductHandler) Create(c *gin.Context) {
 			OriginalPrice: req.OriginalPrice,
 			Quota:         req.Quota,
 			BonusQuota:    req.BonusQuota,
+			RPMLimit:      req.RPMLimit,
+			TPMLimit:      req.TPMLimit,
 			SortOrder:     req.SortOrder,
 			IsRecommended: req.IsRecommended,
 			IsPopular:     req.IsPopular,
@@ -457,6 +463,12 @@ func (h *ProductHandler) Update(c *gin.Context) {
 		}
 		if req.BonusQuota != nil {
 			pkg.BonusQuota = *req.BonusQuota
+		}
+		if req.RPMLimit != nil {
+			pkg.RPMLimit = *req.RPMLimit
+		}
+		if req.TPMLimit != nil {
+			pkg.TPMLimit = *req.TPMLimit
 		}
 		if req.SortOrder != nil {
 			pkg.SortOrder = *req.SortOrder

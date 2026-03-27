@@ -1,6 +1,6 @@
 # gAPI Platform - Development Notes & Implementation Checklist
 
-> Last Updated: 2026-03-27
+> Last Updated: 2026-03-28
 > Purpose: Capture all detail issues and pending items for development session
 
 ---
@@ -200,6 +200,8 @@
 | `/api/v1/admin/settings` | GET | Admin | System settings |
 | `/api/v1/admin/settings` | PUT | Admin | Update settings |
 | `/api/v1/admin/stats/overview` | GET | Admin | Dashboard stats |
+| `/api/v1/admin/stats/trends` | GET | Admin | API request trends for charts |
+| `/api/v1/user/stats/usage` | GET | JWT | User usage stats for charts |
 
 ### 3.4 Response Formats
 
@@ -566,6 +568,8 @@ PENDING → (payment success) → PAID → (admin process) → COMPLETED
 - `GET /api/v1/admin/logs/login` - 登录日志
 - `GET /api/v1/admin/logs/operation` - 操作日志
 - `GET /api/v1/admin/stats/overview` - 仪表盘统计
+- `GET /api/v1/admin/stats/trends` - 图表趋势数据
+- `GET /api/v1/user/stats/usage` - 用户使用统计
 - `GET /api/v1/admin/users` - 用户列表
 - `GET /api/v1/admin/channels` - 渠道列表
 - `GET /api/v1/admin/orders` - 订单列表
@@ -619,7 +623,30 @@ PENDING → (payment success) → PAID → (admin process) → COMPLETED
   - 企业用户：最多 10 个
   - 超限时显示友好错误提示
 
-### 12.6 Known Issues (Resolved)
+### 12.9 Dashboard Charts (2026-03-28)
+- [x] 管理后台仪表盘添加图表
+  - API请求趋势折线图 (近7天成功/失败/Token消耗)
+  - 今日请求状态分布饼图 (成功/失败比例)
+- [x] 用户控制台仪表盘添加图表
+  - Token消耗趋势折线图 (近7天)
+  - API调用统计柱状图 (近7天)
+- [x] 新增后端统计API
+  - `GET /api/v1/admin/stats/trends` - 管理后台图表数据
+  - `GET /api/v1/user/stats/usage` - 用户图表数据
+
+### 12.10 Bug Fixes & Optimizations (2026-03-28)
+- [x] 修复 echarts 版本依赖问题
+  - echarts: `^6.0.0` → `^5.5.0` (6.0.0 不存在)
+  - vue-echarts: `^8.0.1` → `^6.7.3` (兼容 echarts 5.x)
+- [x] 用户页面图表优化
+  - Token Y轴使用 "k" 单位格式
+  - API调用 Y轴使用 "k" 单位格式
+  - 修复 "调用次数" Y轴标签显示不全问题
+- [x] 数据降级处理
+  - API返回全零数据时显示演示数据
+  - 确保图表始终有数据可展示
+
+### 12.11 Known Issues (Resolved)
 - [x] 管理后台布局重复 - 已修复
 - [x] 局域网访问 502 - 已修复
 - [x] 登录日志 API 404 - 已添加
@@ -627,5 +654,5 @@ PENDING → (payment success) → PAID → (admin process) → COMPLETED
 
 ---
 
-*Document Version: 1.1*
-*Last Updated: 2026-03-27*
+*Document Version: 1.2*
+*Last Updated: 2026-03-28*

@@ -8,7 +8,7 @@ import AdminApp from './admin-app.vue'
 import './style.css'
 
 // Initialize admin secret for API requests
-localStorage.setItem('admin_secret', 'gapi-admin-secret-key-2026')
+localStorage.setItem('admin_secret', 'admin123')
 
 const app = createApp(AdminApp)
 
