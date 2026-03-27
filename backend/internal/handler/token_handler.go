@@ -52,6 +52,10 @@ func (h *TokenHandler) Create(c *gin.Context) {
 
 	token, err := h.tokenService.Create(userID, req.Name, req.AllowedModels, req.AllowedIPs, req.ExpiresAt, req.RPMLimit, req.TPMLimit)
 	if err != nil {
+		if err.Error() == "token limit exceeded" {
+			response.Fail(c, "TOKEN_LIMIT_EXCEEDED", "您的API密钥数量已达上限，普通用户仅限1个，VIP用户可创建更多。")
+			return
+		}
 		response.Fail(c, "TOKEN_CREATE_FAILED", err.Error())
 		return
 	}

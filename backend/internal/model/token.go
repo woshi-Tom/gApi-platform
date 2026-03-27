@@ -164,6 +164,10 @@ type RechargePackage struct {
 	Quota      int64 `json:"quota" gorm:"not null"`        // tokens
 	BonusQuota int64 `json:"bonus_quota" gorm:"default:0"` // bonus tokens
 
+	// Rate limits
+	RPMLimit int `json:"rpm_limit" gorm:"default:60"`   // requests per minute
+	TPMLimit int `json:"tpm_limit" gorm:"default:6000"` // tokens per minute
+
 	// Display
 	SortOrder     int  `json:"sort_order" gorm:"default:0"`
 	IsRecommended bool `json:"is_recommended" gorm:"default:false"`

@@ -77,6 +77,62 @@ func (h *ProductHandler) List(c *gin.Context) {
 	response.Success(c, products)
 }
 
+func (h *ProductHandler) ListAll(c *gin.Context) {
+	productType := c.Query("type")
+
+	var products []model.Product
+
+	if productType == "" || productType == "vip" {
+		vipPackages, err := h.vipRepo.ListAll()
+		if err == nil {
+			for _, pkg := range vipPackages {
+				products = append(products, model.Product{
+					ID:            pkg.ID,
+					Name:          pkg.Name,
+					Description:   pkg.Description,
+					ProductType:   "vip",
+					Price:         pkg.Price,
+					OriginalPrice: nil,
+					VIPQuota:      pkg.Quota,
+					VIPDays:       pkg.DurationDays,
+					RPMLimit:      pkg.RPMLimit,
+					TPMLimit:      pkg.TPMLimit,
+					SortOrder:     pkg.SortOrder,
+					IsRecommended: pkg.IsRecommended,
+					IsHot:         pkg.IsPopular,
+					Status:        pkg.Status,
+					CreatedAt:     pkg.CreatedAt,
+				})
+			}
+		}
+	}
+
+	if productType == "" || productType == "recharge" {
+		rechargePackages, err := h.rechargeRepo.ListAll()
+		if err == nil {
+			for _, pkg := range rechargePackages {
+				products = append(products, model.Product{
+					ID:            pkg.ID,
+					Name:          pkg.Name,
+					Description:   pkg.Description,
+					ProductType:   "recharge",
+					Price:         pkg.Price,
+					OriginalPrice: nil,
+					Quota:         pkg.Quota,
+					BonusQuota:    pkg.BonusQuota,
+					SortOrder:     pkg.SortOrder,
+					IsRecommended: pkg.IsRecommended,
+					IsHot:         pkg.IsPopular,
+					Status:        pkg.Status,
+					CreatedAt:     pkg.CreatedAt,
+				})
+			}
+		}
+	}
+
+	response.Success(c, products)
+}
+
 func (h *ProductHandler) GetByID(c *gin.Context) {
 	idStr := c.Param("id")
 	productType := c.Query("type")

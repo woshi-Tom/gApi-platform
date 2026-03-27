@@ -4,15 +4,26 @@ import request from '@/api/request'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('token') || '')
-  const user = ref<any>(null)
+  const userData = ref(localStorage.getItem('user') || null)
+  const user = computed(() => {
+    if (userData.value) {
+      try {
+        return JSON.parse(userData.value)
+      } catch {
+        return null
+      }
+    }
+    return null
+  })
 
   const isLoggedIn = computed(() => !!token.value)
 
   async function login(email: string, password: string) {
     const { data } = await request.post('/user/login', { email, password })
     token.value = data.data.token
-    user.value = data.data.user
+    userData.value = JSON.stringify(data.data.user)
     localStorage.setItem('token', token.value)
+    localStorage.setItem('user', userData.value)
     return data
   }
 
@@ -23,14 +34,19 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function fetchProfile() {
     if (!token.value) return
-    const { data } = await request.get('/user/profile')
-    user.value = data.data
+    try {
+      const { data } = await request.get('/user/profile')
+      userData.value = JSON.stringify(data.data)
+      localStorage.setItem('user', userData.value)
+    } catch {
+    }
   }
 
   function logout() {
     token.value = ''
-    user.value = null
+    userData.value = null
     localStorage.removeItem('token')
+    localStorage.removeItem('user')
   }
 
   return { token, user, isLoggedIn, login, register, fetchProfile, logout }

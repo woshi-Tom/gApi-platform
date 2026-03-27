@@ -4,15 +4,20 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"gapi-platform/internal/model"
 	"gapi-platform/internal/repository"
 )
 
+var ErrTokenLimitExceeded = errors.New("token limit exceeded")
+
 // TokenService handles token operations
 type TokenService struct {
-	tokenRepo *repository.TokenRepository
+	tokenRepo      *repository.TokenRepository
+	userRepo       *repository.UserRepository
+	vipPackageRepo *repository.VIPPackageRepository
 }
 
 // NewTokenService creates a new token service
@@ -20,8 +25,19 @@ func NewTokenService(tokenRepo *repository.TokenRepository) *TokenService {
 	return &TokenService{tokenRepo: tokenRepo}
 }
 
+// SetUserRepo sets the user repository for token limit checking
+func (s *TokenService) SetUserRepo(userRepo *repository.UserRepository, vipPackageRepo *repository.VIPPackageRepository) {
+	s.userRepo = userRepo
+	s.vipPackageRepo = vipPackageRepo
+}
+
 // Create creates a new API token
 func (s *TokenService) Create(userID uint, name string, allowedModels, allowedIPs []string, expiresAt *time.Time, rpmLimit, tpmLimit *int) (*model.TokenResponse, error) {
+	// Check token limit based on user tier
+	if err := s.checkTokenLimit(userID); err != nil {
+		return nil, err
+	}
+
 	// Generate token key
 	keyBytes := make([]byte, 32)
 	rand.Read(keyBytes)
@@ -122,4 +138,47 @@ func joinStrings(slice []string, sep string) string {
 		result += sep + slice[i]
 	}
 	return result
+}
+
+func (s *TokenService) checkTokenLimit(userID uint) error {
+	if s.userRepo == nil || s.vipPackageRepo == nil {
+		return nil
+	}
+
+	user, err := s.userRepo.GetByID(userID)
+	if err != nil {
+		return nil
+	}
+
+	tokenCount, err := s.tokenRepo.CountByUser(userID)
+	if err != nil {
+		return err
+	}
+
+	var maxTokens int
+	switch user.Level {
+	case "vip":
+		if user.VIPPackageID > 0 {
+			pkg, err := s.vipPackageRepo.GetByID(user.VIPPackageID)
+			if err == nil && pkg != nil {
+				maxTokens = pkg.ConcurrentLimit
+				if maxTokens == 0 {
+					maxTokens = 5
+				}
+			} else {
+				maxTokens = 5
+			}
+		} else {
+			maxTokens = 5
+		}
+	case "enterprise":
+		maxTokens = 10
+	default:
+		maxTokens = 1
+	}
+
+	if int(tokenCount) >= maxTokens {
+		return ErrTokenLimitExceeded
+	}
+	return nil
 }

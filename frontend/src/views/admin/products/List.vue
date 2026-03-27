@@ -46,14 +46,12 @@
         </el-table-column>
         <el-table-column label="RPM限制" width="90">
           <template #default="{ row }">
-            <span v-if="row.product_type==='vip'">{{ row.rpm_limit > 0 ? row.rpm_limit : '-' }}</span>
-            <span v-else>-</span>
+            {{ row.rpm_limit > 0 ? row.rpm_limit : '-' }}
           </template>
         </el-table-column>
         <el-table-column label="TPM限制" width="90">
           <template #default="{ row }">
-            <span v-if="row.product_type==='vip'">{{ row.tpm_limit > 0 ? (row.tpm_limit / 1000) + 'k' : '-' }}</span>
-            <span v-else>-</span>
+            {{ row.tpm_limit > 0 ? (row.tpm_limit / 1000) + 'k' : '-' }}
           </template>
         </el-table-column>
         <el-table-column label="状态" width="80">
@@ -120,6 +118,12 @@
           </el-form-item>
           <el-form-item label="赠送配额">
             <el-input-number v-model="form.bonus_quota" :min="0" style="width:200px" />
+          </el-form-item>
+          <el-form-item label="RPM限制">
+            <el-input-number v-model="form.rpm_limit" :min="0" style="width:200px" />
+          </el-form-item>
+          <el-form-item label="TPM限制">
+            <el-input-number v-model="form.tpm_limit" :min="0" style="width:200px" />
           </el-form-item>
         </template>
         <el-form-item label="排序">

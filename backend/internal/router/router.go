@@ -29,6 +29,7 @@ func SetupUserRoutes(
 	authService := service.NewAuthService(userRepo, tokenRepo, &cfg.JWT)
 	userService := service.NewUserService(userRepo)
 	tokenService := service.NewTokenService(tokenRepo)
+	tokenService.SetUserRepo(userRepo, vipRepo)
 	channelService := service.NewChannelService(channelRepo)
 	emailVerificationService := service.NewEmailVerificationService(db.GetDB(), redisClient)
 	captchaService := service.NewSliderCaptchaService(redisClient.Client)
@@ -187,7 +188,7 @@ func SetupAdminRoutes(
 			adminAuth.GET("/logs/login", adminHandler.GetLoginLogs)
 			adminAuth.GET("/test", func(c *gin.Context) { c.String(200, "test") })
 
-			adminAuth.GET("/products", productHandler.List)
+			adminAuth.GET("/products", productHandler.ListAll)
 			adminAuth.POST("/products", productHandler.Create)
 			adminAuth.PUT("/products/:id", productHandler.Update)
 			adminAuth.POST("/products/:id/enable", productHandler.Enable)

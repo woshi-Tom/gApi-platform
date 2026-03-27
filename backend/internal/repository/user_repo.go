@@ -163,6 +163,13 @@ func (r *TokenRepository) ListByUser(userID uint) ([]model.Token, error) {
 	return tokens, err
 }
 
+// CountByUser counts tokens for a user
+func (r *TokenRepository) CountByUser(userID uint) (int64, error) {
+	var count int64
+	err := r.db.Model(&model.Token{}).Where("user_id = ?", userID).Count(&count).Error
+	return count, err
+}
+
 // UpdateQuota updates token quota
 func (r *TokenRepository) UpdateQuota(tokenID uint, amount int64) error {
 	return r.db.Model(&model.Token{}).Where("id = ?", tokenID).
@@ -339,6 +346,13 @@ func (r *VIPPackageRepository) List() ([]model.VIPPackage, error) {
 	return packages, err
 }
 
+// ListAll lists all VIP packages regardless of status (for admin)
+func (r *VIPPackageRepository) ListAll() ([]model.VIPPackage, error) {
+	var packages []model.VIPPackage
+	err := r.db.Where("status != 'deleted'").Order("sort_order ASC, price ASC").Find(&packages).Error
+	return packages, err
+}
+
 // GetByID gets a VIP package by ID
 func (r *VIPPackageRepository) GetByID(id uint) (*model.VIPPackage, error) {
 	var pkg model.VIPPackage
@@ -372,6 +386,13 @@ func NewRechargePackageRepository(db *gorm.DB) *RechargePackageRepository {
 func (r *RechargePackageRepository) List() ([]model.RechargePackage, error) {
 	var packages []model.RechargePackage
 	err := r.db.Where("status = 'active' AND is_visible = true").Order("sort_order ASC, price ASC").Find(&packages).Error
+	return packages, err
+}
+
+// ListAll lists all recharge packages regardless of status (for admin)
+func (r *RechargePackageRepository) ListAll() ([]model.RechargePackage, error) {
+	var packages []model.RechargePackage
+	err := r.db.Where("status != 'deleted'").Order("sort_order ASC, price ASC").Find(&packages).Error
 	return packages, err
 }
 

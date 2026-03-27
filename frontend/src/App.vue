@@ -68,7 +68,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
 import {
@@ -92,6 +92,12 @@ function handleCommand(command: string) {
     router.push('/profile')
   }
 }
+
+onMounted(async () => {
+  if (authStore.isLoggedIn && !authStore.user) {
+    await authStore.fetchProfile()
+  }
+})
 </script>
 
 <style>
