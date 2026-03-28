@@ -1,0 +1,32 @@
+[Unit]
+Description=gAPI Platform Backend API Server
+Documentation=https://github.com/your-org/gapi-platform
+After=network.target postgresql.service redis.service
+Wants=postgresql.service redis.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/gapi-platform/backend
+ExecStart=/root/gapi-platform/backend/gapi-server -config /root/gapi-platform/backend/config/config.yaml
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Environment
+Environment=GO_ENV=production
+Environment=GIN_MODE=release
+
+# Security
+NoNewPrivileges=false
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/root/gapi-platform/backend/logs
+
+# Limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target

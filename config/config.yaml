@@ -6,6 +6,7 @@ server:
   timeout: 60
   frontend: "http://localhost:5173"
   admin_secret: "gapi-admin-secret-key-2026"
+  jwt_secret: "gapi-jwt-secret-key-must-be-at-least-32-characters-long"
 
 database:
   host: localhost

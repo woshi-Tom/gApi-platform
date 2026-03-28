@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   User, Avatar, Setting, ArrowDown, Back, Clock, Connection,
-  Document, DataAnalysis, Lock, Goods
+  Document, DataAnalysis, Lock, Goods, Monitor
 } from '@element-plus/icons-vue'
 
 const route = useRoute()

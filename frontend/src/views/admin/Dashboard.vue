@@ -105,16 +105,23 @@
             <span>API请求趋势 (近7天)</span>
           </template>
           <div class="chart-container">
-            <v-chart :option="lineChartOption" :autoresize="true" style="width: 100%; height: 280px" />
+            <v-chart :option="lineChartOption" :autoresize="true" style="width: 100%; height: 320px" />
           </div>
         </el-card>
         
         <el-card shadow="hover" class="chart-card">
           <template #header>
-            <span>今日请求状态分布</span>
+            <span>用户使用排行 (Top 10)</span>
           </template>
           <div class="chart-container">
-            <v-chart :option="pieChartOption" :autoresize="true" style="width: 100%; height: 280px" />
+            <div class="rank-tabs">
+              <el-radio-group v-model="rankType" size="small" @change="fetchUserRanking">
+                <el-radio-button value="requests">请求量</el-radio-button>
+                <el-radio-button value="tokens">Token消耗</el-radio-button>
+                <el-radio-button value="failed_rate">失败率</el-radio-button>
+              </el-radio-group>
+            </div>
+            <v-chart :option="userRankChartOption" :autoresize="true" style="width: 100%; height: 320px" />
           </div>
         </el-card>
       </div>
@@ -150,7 +157,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { LineChart, PieChart } from 'echarts/charts'
+import { LineChart, PieChart, BarChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
 import VChart from 'vue-echarts'
 import request from '@/api/request'
@@ -159,7 +166,7 @@ import {
   Document, Money, TrendCharts, Clock, Setting
 } from '@element-plus/icons-vue'
 
-use([CanvasRenderer, LineChart, PieChart, GridComponent, TooltipComponent, LegendComponent])
+use([CanvasRenderer, LineChart, PieChart, BarChart, GridComponent, TooltipComponent, LegendComponent])
 
 interface Stats {
   total_users: number
@@ -184,12 +191,73 @@ const stats = ref<Partial<Stats>>({})
 const trendData = ref<TrendData[]>([])
 const todayBreakdown = ref({ success: 0, failed: 0 })
 
+const rankType = ref('requests')
+const userRankingData = ref<any[]>([])
+
 function formatQuota(n: number | undefined): string {
   if (!n) return '0'
   if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M'
   if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K'
   return n.toLocaleString()
 }
+
+function formatNumber(n: number): string {
+  if (!n) return '0'
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M'
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K'
+  return n.toLocaleString()
+}
+
+async function fetchUserRanking() {
+  try {
+    const res = await request.get('/admin/stats/user-ranking', {
+      params: { type: rankType.value, limit: 10, time_range: 'week' }
+    })
+    if (res.data?.success) {
+      userRankingData.value = res.data.data || []
+    }
+  } catch (e) {
+    console.error('Failed to fetch user ranking:', e)
+  }
+}
+
+const userRankChartOption = computed(() => {
+  const data = userRankingData.value.slice(0, 10)
+  const labels = data.map(d => d.username || `User ${d.user_id}`)
+  const values = data.map(d => {
+    if (rankType.value === 'requests') return d.requests
+    if (rankType.value === 'tokens') return d.tokens
+    return d.failure_rate
+  })
+
+  return {
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: 60, right: 20, bottom: 5, top: 15, containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: labels,
+      axisLabel: { rotate: 30, interval: 0 }
+    },
+    yAxis: {
+      type: 'value',
+      name: rankType.value === 'failed_rate' ? '失败率(%)' : '数量',
+      min: 0,
+      splitNumber: 5,
+      axisLabel: {
+        formatter: (v: number) => rankType.value === 'failed_rate' ? `${v}%` : formatNumber(v)
+      }
+    },
+    series: [{
+      type: 'bar',
+      data: values,
+      itemStyle: {
+        color: rankType.value === 'failed_rate' ? '#f56c6c' : '#409eff',
+        borderRadius: [4, 4, 0, 0]
+      },
+      barMaxWidth: 30
+    }]
+  }
+})
 
 const lineChartOption = computed(() => {
   const dates = trendData.value.map(d => d.date)
@@ -202,10 +270,10 @@ const lineChartOption = computed(() => {
       axisPointer: { type: 'cross' }
     },
     grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '10%',
-      top: '10%',
+      left: 50,
+      right: 20,
+      bottom: 5,
+      top: 30,
       containLabel: true
     },
     xAxis: {
@@ -215,7 +283,15 @@ const lineChartOption = computed(() => {
     },
     yAxis: {
       type: 'value',
-      name: '数量'
+      name: '数量',
+      nameLocation: 'middle',
+      nameGap: 35,
+      nameTextStyle: {
+        align: 'center',
+        verticalAlign: 'bottom'
+      },
+      min: 0,
+      splitNumber: 5
     },
     series: [{
       name: '成功请求',
@@ -260,8 +336,8 @@ const pieChartOption = computed(() => ({
         }
       },
       data: [
-        { value: todayBreakdown.value.success, name: '成功', itemStyle: { color: '#67c23a' } },
-        { value: todayBreakdown.value.failed, name: '失败', itemStyle: { color: '#f56c6c' } }
+        { value: todayBreakdown.value.success || 0, name: '成功', itemStyle: { color: '#67c23a' } },
+        { value: todayBreakdown.value.failed || 0, name: '失败', itemStyle: { color: '#f56c6c' } }
       ]
     }
   ]
@@ -291,6 +367,7 @@ onMounted(async () => {
       ]
       todayBreakdown.value = { success: 510, failed: 10 }
     }
+    fetchUserRanking()
   } catch (e) {
     console.error('Failed to load stats:', e)
   }
@@ -394,8 +471,8 @@ onMounted(async () => {
 
 .charts-grid {
   display: grid;
-  grid-template-columns: 1.5fr 1fr;
-  gap: 16px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
 }
 
 .chart-card {
@@ -407,7 +484,15 @@ onMounted(async () => {
 }
 
 .chart-container {
-  height: 280px;
+  height: 320px;
+}
+
+.rank-tabs {
+  margin-bottom: 8px;
+}
+
+.rank-tabs :deep(.el-radio-group) {
+  display: flex;
 }
 
 .actions-card :deep(.el-card__header) {
@@ -421,7 +506,7 @@ onMounted(async () => {
 }
 
 .actions-grid .el-button {
-  min-width: 120px;
+  min-width: 100px;
 }
 
 @media (max-width: 1200px) {

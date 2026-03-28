@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"sort"
 	"strconv"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"gapi-platform/internal/service"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 // AdminHandler handles admin endpoints
@@ -487,5 +489,360 @@ func (h *AdminHandler) GetStatsTrends(c *gin.Context) {
 			"success": successCount,
 			"failed":  failedCount,
 		},
+	})
+}
+
+func (h *AdminHandler) getDB() *gorm.DB {
+	return h.apiAccessLogRepo.GetDB()
+}
+
+func (h *AdminHandler) getStartTime(timeRange string) time.Time {
+	now := time.Now()
+	switch timeRange {
+	case "today":
+		return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	case "week":
+		return now.AddDate(0, 0, -7)
+	case "month":
+		return now.AddDate(0, 0, -30)
+	default:
+		return now.AddDate(0, 0, -7)
+	}
+}
+
+func (h *AdminHandler) StatsUserOverview(c *gin.Context) {
+	timeRange := c.DefaultQuery("time_range", "week")
+	startTime := h.getStartTime(timeRange)
+	db := h.getDB()
+
+	var result struct {
+		TotalRequests int64
+		TotalTokens   int64
+		TotalFailed   int64
+		FailureRate   float64
+		AbnormalUsers int64
+		ActiveUsers   int64
+	}
+
+	db.Table("api_access_logs").Where("created_at >= ?", startTime).Count(&result.TotalRequests)
+	db.Table("api_access_logs").Where("created_at >= ?", startTime).Select("COALESCE(SUM(total_tokens), 0)").Scan(&result.TotalTokens)
+	db.Table("api_access_logs").Where("created_at >= ? AND status_code NOT IN (200, 201)", startTime).Count(&result.TotalFailed)
+
+	if result.TotalRequests > 0 {
+		result.FailureRate = float64(result.TotalFailed) / float64(result.TotalRequests) * 100
+	}
+
+	db.Table("api_access_logs").Where("created_at >= ?", startTime).Distinct("user_id").Count(&result.ActiveUsers)
+
+	var userStats []struct {
+		UserID uint
+		Total  int64
+		Failed int64
+	}
+	db.Table("api_access_logs").
+		Select("user_id, COUNT(*) as total, SUM(CASE WHEN status_code NOT IN (200, 201) THEN 1 ELSE 0 END) as failed").
+		Where("created_at >= ?", startTime).
+		Group("user_id").
+		Scan(&userStats)
+
+	for _, u := range userStats {
+		if u.Total > 0 && float64(u.Failed)/float64(u.Total) > 0.3 {
+			result.AbnormalUsers++
+		}
+	}
+
+	response.Success(c, result)
+}
+
+func (h *AdminHandler) StatsUserRanking(c *gin.Context) {
+	metric := c.DefaultQuery("type", "requests")
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+	timeRange := c.DefaultQuery("time_range", "week")
+	startTime := h.getStartTime(timeRange)
+	db := h.getDB()
+
+	var results []map[string]interface{}
+	query := `
+		SELECT 
+			u.id as user_id,
+			u.username,
+			u.email,
+			u.level,
+			COALESCE(stats.requests, 0) as requests,
+			COALESCE(stats.tokens, 0) as tokens,
+			COALESCE(stats.failed, 0) as failed,
+			CASE WHEN stats.requests > 0 THEN (stats.failed::float / stats.requests * 100) ELSE 0 END as failure_rate
+		FROM users u
+		LEFT JOIN (
+			SELECT 
+				user_id,
+				COUNT(*) as requests,
+				COALESCE(SUM(total_tokens), 0) as tokens,
+				SUM(CASE WHEN status_code NOT IN (200, 201) THEN 1 ELSE 0 END) as failed
+			FROM api_access_logs
+			WHERE created_at >= ?
+			GROUP BY user_id
+		) stats ON u.id = stats.user_id
+		WHERE stats.requests > 0 OR stats.requests IS NULL
+	`
+	db.Raw(query, startTime).Scan(&results)
+
+	getFloat64 := func(val interface{}) float64 {
+		switch v := val.(type) {
+		case float64:
+			return v
+		case float32:
+			return float64(v)
+		case int:
+			return float64(v)
+		case int64:
+			return float64(v)
+		case int32:
+			return float64(v)
+		case uint:
+			return float64(v)
+		case uint64:
+			return float64(v)
+		default:
+			return 0
+		}
+	}
+
+	sort.Slice(results, func(i, j int) bool {
+		var valI, valJ float64
+		switch metric {
+		case "tokens":
+			valI = getFloat64(results[i]["tokens"])
+			valJ = getFloat64(results[j]["tokens"])
+		case "failed_rate":
+			valI = getFloat64(results[i]["failure_rate"])
+			valJ = getFloat64(results[j]["failure_rate"])
+		default:
+			valI = getFloat64(results[i]["requests"])
+			valJ = getFloat64(results[j]["requests"])
+		}
+		return valI > valJ
+	})
+
+	if limit > 0 && len(results) > limit {
+		results = results[:limit]
+	}
+
+	response.Success(c, results)
+}
+
+func (h *AdminHandler) StatsUserList(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	sortBy := c.DefaultQuery("sort_by", "failure_rate")
+	order := c.DefaultQuery("order", "desc")
+	timeRange := c.DefaultQuery("time_range", "week")
+	level := c.DefaultQuery("level", "all")
+	status := c.DefaultQuery("status", "all")
+	startTime := h.getStartTime(timeRange)
+	db := h.getDB()
+
+	baseQuery := `
+		SELECT 
+			u.id as user_id,
+			u.username,
+			u.email,
+			u.level,
+			u.status,
+			COALESCE(stats.requests, 0) as requests,
+			COALESCE(stats.tokens, 0) as tokens,
+			COALESCE(stats.failed, 0) as failed,
+			CASE WHEN stats.requests > 0 THEN (stats.failed::float / stats.requests * 100) ELSE 0 END as failure_rate
+		FROM users u
+		LEFT JOIN (
+			SELECT 
+				user_id,
+				COUNT(*) as requests,
+				COALESCE(SUM(total_tokens), 0) as tokens,
+				SUM(CASE WHEN status_code NOT IN (200, 201) THEN 1 ELSE 0 END) as failed
+			FROM api_access_logs
+			WHERE created_at >= ?
+			GROUP BY user_id
+		) stats ON u.id = stats.user_id
+		WHERE 1=1
+	`
+
+	args := []interface{}{startTime}
+	if level != "all" {
+		baseQuery += " AND u.level = ?"
+		args = append(args, level)
+	}
+	if status == "normal" {
+		baseQuery += " AND (stats.requests IS NULL OR stats.failed::float / NULLIF(stats.requests, 0) <= 0.3)"
+	} else if status == "abnormal" {
+		baseQuery += " AND stats.requests > 0 AND stats.failed::float / stats.requests > 0.3"
+	}
+
+	var total int64
+	countQuery := "SELECT COUNT(*) FROM (" + baseQuery + ") as t"
+	db.Raw(countQuery, args...).Scan(&total)
+
+	if order == "asc" {
+		baseQuery += " ORDER BY " + sortBy + " ASC"
+	} else {
+		baseQuery += " ORDER BY " + sortBy + " DESC"
+	}
+	baseQuery += " LIMIT ? OFFSET ?"
+	args = append(args, pageSize, (page-1)*pageSize)
+
+	var results []map[string]interface{}
+	db.Raw(baseQuery, args...).Scan(&results)
+
+	response.Success(c, gin.H{
+		"data":       results,
+		"pagination": gin.H{"total": total, "page": page, "page_size": pageSize},
+	})
+}
+
+func (h *AdminHandler) StatsAbnormalUsers(c *gin.Context) {
+	threshold := 30.0
+	if t, err := strconv.ParseFloat(c.DefaultQuery("threshold", "30"), 64); err == nil {
+		threshold = t
+	}
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	timeRange := c.DefaultQuery("time_range", "week")
+	startTime := h.getStartTime(timeRange)
+	db := h.getDB()
+
+	var results []map[string]interface{}
+	query := `
+		SELECT 
+			u.id as user_id,
+			u.username,
+			u.email,
+			u.level,
+			stats.requests,
+			stats.failed,
+			(stats.failed::float / stats.requests * 100) as failure_rate
+		FROM users u
+		INNER JOIN (
+			SELECT 
+				user_id,
+				COUNT(*) as requests,
+				SUM(CASE WHEN status_code NOT IN (200, 201) THEN 1 ELSE 0 END) as failed
+			FROM api_access_logs
+			WHERE created_at >= ?
+			GROUP BY user_id
+			HAVING SUM(CASE WHEN status_code NOT IN (200, 201) THEN 1 ELSE 0 END)::float / COUNT(*) > ?
+		) stats ON u.id = stats.user_id
+		ORDER BY failure_rate DESC
+	`
+
+	args := []interface{}{startTime, threshold / 100}
+	if limit > 0 {
+		query += " LIMIT ?"
+		args = append(args, limit)
+	}
+
+	db.Raw(query, args...).Scan(&results)
+	response.Success(c, results)
+}
+
+func (h *AdminHandler) StatsUserDetail(c *gin.Context) {
+	userID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		response.Fail(c, "INVALID_PARAMETER", "invalid user id")
+		return
+	}
+	timeRange := c.DefaultQuery("time_range", "week")
+	startTime := h.getStartTime(timeRange)
+	db := h.getDB()
+
+	var user struct {
+		ID       uint
+		Username string
+		Email    string
+		Level    string
+		Status   string
+	}
+	db.Table("users").Where("id = ?", userID).Scan(&user)
+
+	var stats struct {
+		Requests    int64
+		Tokens      int64
+		Failed      int64
+		AvgResponse float64
+	}
+	statsQuery := `
+		SELECT 
+			COUNT(*) as requests,
+			COALESCE(SUM(total_tokens), 0) as tokens,
+			SUM(CASE WHEN status_code NOT IN (200, 201) THEN 1 ELSE 0 END) as failed,
+			COALESCE(AVG(response_time), 0) as avg_response
+		FROM api_access_logs
+		WHERE user_id = ? AND created_at >= ?
+	`
+	db.Raw(statsQuery, userID, startTime).Scan(&stats)
+
+	failureRate := float64(0)
+	if stats.Requests > 0 {
+		failureRate = float64(stats.Failed) / float64(stats.Requests) * 100
+	}
+
+	var dailyTrends []map[string]interface{}
+	dailyQuery := `
+		SELECT 
+			DATE(created_at) as date,
+			COUNT(*) as requests,
+			COALESCE(SUM(total_tokens), 0) as tokens,
+			SUM(CASE WHEN status_code NOT IN (200, 201) THEN 1 ELSE 0 END) as failed
+		FROM api_access_logs
+		WHERE user_id = ? AND created_at >= NOW() - INTERVAL '30 days'
+		GROUP BY DATE(created_at)
+		ORDER BY date
+	`
+	db.Raw(dailyQuery, userID).Scan(&dailyTrends)
+
+	var modelDist []map[string]interface{}
+	modelQuery := `
+		SELECT 
+			COALESCE(model, 'unknown') as model,
+			COUNT(*) as requests,
+			COALESCE(SUM(total_tokens), 0) as tokens
+		FROM api_access_logs
+		WHERE user_id = ? AND created_at >= ?
+		GROUP BY model
+		ORDER BY tokens DESC
+	`
+	db.Raw(modelQuery, userID, startTime).Scan(&modelDist)
+
+	var resultDist []map[string]interface{}
+	resultQuery := `
+		SELECT 
+			CASE 
+				WHEN status_code IN (200, 201) THEN 'success'
+				WHEN status_code = 0 THEN 'timeout'
+				ELSE 'failed'
+			END as status,
+			COUNT(*) as count
+		FROM api_access_logs
+		WHERE user_id = ? AND created_at >= ?
+		GROUP BY status
+	`
+	db.Raw(resultQuery, userID, startTime).Scan(&resultDist)
+
+	response.Success(c, gin.H{
+		"user": gin.H{
+			"id":       user.ID,
+			"username": user.Username,
+			"email":    user.Email,
+			"level":    user.Level,
+			"status":   user.Status,
+		},
+		"stats": gin.H{
+			"requests":     stats.Requests,
+			"tokens":       stats.Tokens,
+			"failed":       stats.Failed,
+			"failure_rate": failureRate,
+			"avg_response": stats.AvgResponse,
+		},
+		"daily_trends":        dailyTrends,
+		"model_distribution":  modelDist,
+		"result_distribution": resultDist,
 	})
 }

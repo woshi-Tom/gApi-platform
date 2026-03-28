@@ -75,7 +75,7 @@ export const adminUserApi = {
 
 export const adminAuthApi = {
   login: (username: string, password: string) => {
-    localStorage.setItem('admin_secret', 'admin123')
+    localStorage.setItem('admin_secret', 'gapi-admin-secret-key-2026')
     return adminAPI.post('/login', { username, password })
   },
   changePassword: (oldPassword: string, newPassword: string) =>
