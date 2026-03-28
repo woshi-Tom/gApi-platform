@@ -652,7 +652,100 @@ PENDING → (payment success) → PAID → (admin process) → COMPLETED
 - [x] 登录日志 API 404 - 已添加
 - [x] 数据库 jsonb 类型错误 - 已修复为 text
 
+### 12.12 ECharts Y轴渲染问题修复 (2026-03-29)
+
+#### 问题描述
+- 用户仪表盘图表Y轴刻度不显示
+- Y轴标签被遮挡
+- X轴与卡片底部间距过大
+
+#### 根本原因
+1. ECharts柱状图默认`boundaryGap: true`，与折线图配置冲突
+2. Y轴max值未设置，数据为0时无法计算刻度
+3. Grid百分比配置在某些情况下空间不足
+
+#### 解决方案
+1. **动态计算Y轴max值**
+   ```typescript
+   const maxValue = Math.max(...data, 30)
+   max: Math.ceil(maxValue / 5) * 5 + 5
+   ```
+
+2. **固定像素值替代百分比**
+   ```typescript
+   grid: {
+     left: 50,
+     right: 20,
+     bottom: 25,
+     top: 30,
+     containLabel: true
+   }
+   ```
+
+3. **Y轴名称位置调整**
+   ```typescript
+   yAxis: {
+     name: '调用次数',
+     nameLocation: 'middle',
+     nameGap: 30,
+     nameTextStyle: {
+       align: 'center',
+       verticalAlign: 'bottom'
+     }
+   }
+   ```
+
+4. **数据回退机制**
+   ```typescript
+   if (!hasData) {
+     dailyUsage.value = [...demoData]
+   }
+   ```
+
+#### 相关文件
+- `frontend/src/views/Dashboard.vue` - 用户端图表配置
+- `frontend/src/views/admin/Dashboard.vue` - 管理端图表配置
+- `docs/echarts-yaxis-issue.md` - 详细问题记录
+
+### 12.13 Nginx IPv6 部署配置 (2026-03-29)
+
+#### 部署架构
+```
+Client (IPv4/IPv6) → Nginx Reverse Proxy → Backend Services
+```
+
+#### 端口配置
+| 端口 | 服务 | 说明 |
+|------|------|------|
+| 5173 | 用户端前端 | HTTP |
+| 5174 | 管理后台前端 | HTTP |
+| 8080 | 后端API | Go/Gin |
+
+#### 部署文件
+- `deploy/nginx/gapi-platform.conf` - Nginx配置
+- `deploy/nginx/deploy-nginx.sh` - 部署脚本
+- `deploy/nginx/README.md` - 部署文档
+
+#### 使用方法
+```bash
+cd deploy/nginx
+chmod +x deploy-nginx.sh
+sudo ./deploy-nginx.sh --install
+```
+
+### 12.14 E2E 测试配置 (2026-03-29)
+
+#### 测试文件
+- `frontend/tests/e2e/user-dashboard.spec.ts` - 用户仪表盘测试
+- `frontend/tests/e2e/admin-dashboard.spec.ts` - 管理后台测试
+
+#### 运行测试
+```bash
+cd frontend
+npx playwright test
+```
+
 ---
 
-*Document Version: 1.2*
-*Last Updated: 2026-03-28*
+*Document Version: 1.3*
+*Last Updated: 2026-03-29*
