@@ -11,15 +11,15 @@ import (
 
 // Config holds all configuration
 type Config struct {
-	Server     ServerConfig     `yaml:"server" json:"server"`
-	Database   DatabaseConfig   `yaml:"database" json:"database"`
-	Redis      RedisConfig      `yaml:"redis" json:"redis"`
-	RabbitMQ   RabbitMQConfig  `yaml:"rabbitmq" json:"rabbitmq"`
-	JWT        JWTConfig       `yaml:"jwt" json:"jwt"`
-	Payment    PaymentConfig   `yaml:"payment" json:"payment"`
-	SMTP       SMTPConfig      `yaml:"smtp" json:"smtp"`
-	Log        LogConfig       `yaml:"log" json:"log"`
-	AdminUsers []AdminAccount  `yaml:"admin_users" json:"admin_users"`
+	Server     ServerConfig   `yaml:"server" json:"server"`
+	Database   DatabaseConfig `yaml:"database" json:"database"`
+	Redis      RedisConfig    `yaml:"redis" json:"redis"`
+	RabbitMQ   RabbitMQConfig `yaml:"rabbitmq" json:"rabbitmq"`
+	JWT        JWTConfig      `yaml:"jwt" json:"jwt"`
+	Payment    PaymentConfig  `yaml:"payment" json:"payment"`
+	SMTP       SMTPConfig     `yaml:"smtp" json:"smtp"`
+	Log        LogConfig      `yaml:"log" json:"log"`
+	AdminUsers []AdminAccount `yaml:"admin_users" json:"admin_users"`
 }
 
 // AdminAccount represents an admin user account
@@ -30,13 +30,14 @@ type AdminAccount struct {
 }
 
 type ServerConfig struct {
-	Port        string `yaml:"port" json:"port"`
-	AdminPort   string `yaml:"admin_port" json:"admin_port"`
-	AdminBind   string `yaml:"admin_bind" json:"admin_bind"`
-	Mode        string `yaml:"mode" json:"mode"`
-	Timeout     int    `yaml:"timeout" json:"timeout"`
-	Frontend    string `yaml:"frontend" json:"frontend"`
-	AdminSecret string `yaml:"admin_secret" json:"admin_secret"`
+	Port          string `yaml:"port" json:"port"`
+	AdminPort     string `yaml:"admin_port" json:"admin_port"`
+	AdminBind     string `yaml:"admin_bind" json:"admin_bind"`
+	Mode          string `yaml:"mode" json:"mode"`
+	Timeout       int    `yaml:"timeout" json:"timeout"`
+	Frontend      string `yaml:"frontend" json:"frontend"`
+	AdminFrontend string `yaml:"admin_frontend" json:"admin_frontend"`
+	AdminSecret   string `yaml:"admin_secret" json:"admin_secret"`
 }
 
 type DatabaseConfig struct {
