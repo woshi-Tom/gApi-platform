@@ -12,8 +12,12 @@ import (
 	"gapi-platform/internal/repository"
 	"gapi-platform/internal/router"
 	"gapi-platform/internal/worker"
+
+	_ "gapi-platform/docs"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func main() {
@@ -83,6 +87,8 @@ func main() {
 
 	router.SetupUserRoutes(r, cfg, db, redisClient)
 	router.SetupAdminRoutes(r, cfg, db, redisClient)
+
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	addr := fmt.Sprintf(":%s", cfg.Server.Port)
 	logger.Info().Msgf("Starting unified API server on %s", addr)
