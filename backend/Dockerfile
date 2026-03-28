@@ -4,6 +4,10 @@ WORKDIR /app
 
 RUN apk add --no-cache git
 
+# Use Chinese Go module mirror for faster downloads in China
+ENV GOPROXY=https://goproxy.cn,direct
+ENV GOSUMDB=off
+
 COPY go.mod go.sum* ./
 RUN go mod download
 
@@ -30,4 +34,4 @@ ENV TZ=Asia/Shanghai
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 
-ENTRYPOINT ["./gapi-server"]
+ENTRYPOINT ["./gapi-server", "-config", "/app/config/config.yaml"]
