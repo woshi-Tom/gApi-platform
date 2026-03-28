@@ -37,6 +37,7 @@ services:
       - gapi-network
 
   backend:
+    image: gapi-backend:test
     build:
       context: ../backend
       dockerfile: Dockerfile
@@ -72,6 +73,7 @@ services:
       - gapi-network
 
   frontend:
+    image: gapi-frontend:test
     build:
       context: ../frontend
       dockerfile: Dockerfile
@@ -87,6 +89,7 @@ services:
       - gapi-network
 
   admin:
+    image: gapi-admin:test
     build:
       context: ../frontend
       dockerfile: Dockerfile.admin
