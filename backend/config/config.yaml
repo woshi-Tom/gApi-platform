@@ -4,6 +4,7 @@ server:
   admin_bind: "0.0.0.0"
   mode: "debug"
   frontend: "http://localhost:5173"
+  admin_frontend: "http://localhost:5174"
   admin_secret: "gapi-admin-secret-key-2026"
 
 admin_users:

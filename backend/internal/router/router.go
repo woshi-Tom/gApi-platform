@@ -48,7 +48,7 @@ func SetupUserRoutes(
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
-	r.Use(corsMiddleware(cfg.Server.Frontend))
+	r.Use(corsMiddleware([]string{cfg.Server.Frontend, cfg.Server.AdminFrontend}))
 
 	// 审计日志中间件
 	r.Use(middleware.AuditLog(auditRepo))
@@ -167,7 +167,7 @@ func SetupAdminRoutes(
 	adminHandler := handler.NewAdminHandler(authService, userRepo, channelService, orderRepo, auditRepo, loginLogRepo, apiAccessLogRepo, cfg.AdminUsers)
 	productHandler := handler.NewProductHandler(vipRepo, rechargeRepo)
 
-	r.Use(corsMiddleware(cfg.Server.Frontend))
+	r.Use(corsMiddleware([]string{cfg.Server.Frontend, cfg.Server.AdminFrontend}))
 
 	v1 := r.Group("/api/v1/admin")
 	{
@@ -210,8 +210,22 @@ func SetupAdminRoutes(
 	}
 }
 
-func corsMiddleware(allowedOrigin string) gin.HandlerFunc {
+func corsMiddleware(allowedOrigins []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		origin := c.Request.Header.Get("Origin")
+
+		allowedOrigin := ""
+		for _, o := range allowedOrigins {
+			if o != "" && (o == origin || o == "*") {
+				allowedOrigin = o
+				break
+			}
+		}
+
+		if allowedOrigin == "" && len(allowedOrigins) > 0 && allowedOrigins[0] != "" {
+			allowedOrigin = allowedOrigins[0]
+		}
+
 		if allowedOrigin == "" {
 			allowedOrigin = "*"
 		}
