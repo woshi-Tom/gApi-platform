@@ -25,11 +25,9 @@ export default defineConfig({
     port: 5173
   },
   build: {
+    outDir: 'dist',
     rollupOptions: {
-      input: {
-        main: resolve(__dirname, 'index.html'),
-        admin: resolve(__dirname, 'admin.html')
-      }
+      input: resolve(__dirname, 'index.html')
     }
   }
 })

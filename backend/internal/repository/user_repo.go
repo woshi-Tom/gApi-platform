@@ -458,3 +458,7 @@ func (r *APIAccessLogRepository) List(page, pageSize int, userID *uint, startTim
 	err := query.Offset((page - 1) * pageSize).Limit(pageSize).Order("created_at DESC").Find(&logs).Error
 	return logs, total, err
 }
+
+func (r *APIAccessLogRepository) GetDB() *gorm.DB {
+	return r.db
+}

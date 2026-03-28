@@ -199,6 +199,12 @@ func SetupAdminRoutes(
 			adminAuth.GET("/stats/overview", adminHandler.GetDashboardStats)
 			adminAuth.GET("/stats/trends", adminHandler.GetStatsTrends)
 
+			adminAuth.GET("/stats/user-overview", adminHandler.StatsUserOverview)
+			adminAuth.GET("/stats/user-ranking", adminHandler.StatsUserRanking)
+			adminAuth.GET("/stats/user-list", adminHandler.StatsUserList)
+			adminAuth.GET("/stats/abnormal-users", adminHandler.StatsAbnormalUsers)
+			adminAuth.GET("/stats/user/:id/detail", adminHandler.StatsUserDetail)
+
 			adminAuth.POST("/change-password", adminHandler.ChangePassword)
 		}
 	}

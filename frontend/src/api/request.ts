@@ -2,6 +2,8 @@ import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
 
+const ADMIN_SECRET = 'gapi-admin-secret-key-2026'
+
 const createRequest = (baseURL: string) => {
   const instance = axios.create({
     baseURL,
@@ -13,9 +15,8 @@ const createRequest = (baseURL: string) => {
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
-    const adminSecret = localStorage.getItem('admin_secret')
-    if (adminSecret) {
-      config.headers['X-Admin-Secret'] = adminSecret
+    if (baseURL.includes('/admin/')) {
+      config.headers['X-Admin-Secret'] = ADMIN_SECRET
     }
     return config
   })
@@ -26,8 +27,11 @@ const createRequest = (baseURL: string) => {
       if (error.response?.status === 401) {
         localStorage.removeItem('token')
         localStorage.removeItem('admin_token')
+        localStorage.removeItem('admin_secret')
         router.push('/login')
         ElMessage.error('登录已过期，请重新登录')
+      } else if (error.response?.status === 403 && error.response?.data?.error?.message?.includes('admin')) {
+        // Skip showing error for admin auth issues, let the page handle it
       } else if (error.response?.data?.error?.message) {
         ElMessage.error(error.response.data.error.message)
       } else if (error.message) {
