@@ -19,7 +19,15 @@ func NewTokenHandler(tokenService *service.TokenService) *TokenHandler {
 	return &TokenHandler{tokenService: tokenService}
 }
 
-// List returns the user's tokens
+// List godoc
+// @Summary List API tokens
+// @Description Get all API tokens for current user
+// @Tags tokens
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /api/v1/tokens [get]
 func (h *TokenHandler) List(c *gin.Context) {
 	userID := c.MustGet("user_id").(uint)
 
@@ -32,7 +40,16 @@ func (h *TokenHandler) List(c *gin.Context) {
 	response.Success(c, tokens)
 }
 
-// Create creates a new API token
+// Create godoc
+// @Summary Create API token
+// @Description Create a new API token for current user
+// @Tags tokens
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 201 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /api/v1/tokens [post]
 func (h *TokenHandler) Create(c *gin.Context) {
 	userID := c.MustGet("user_id").(uint)
 
@@ -63,7 +80,17 @@ func (h *TokenHandler) Create(c *gin.Context) {
 	response.Created(c, token)
 }
 
-// Delete deletes a token
+// Delete godoc
+// @Summary Delete API token
+// @Description Delete an API token
+// @Tags tokens
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Token ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 404 {object} map[string]interface{}
+// @Router /api/v1/tokens/{id} [delete]
 func (h *TokenHandler) Delete(c *gin.Context) {
 	userID := c.MustGet("user_id").(uint)
 	tokenIDStr := c.Param("id")

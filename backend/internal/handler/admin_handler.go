@@ -51,7 +51,15 @@ func NewAdminHandler(
 	}
 }
 
-// Login handles admin login
+// Login godoc
+// @Summary Admin login
+// @Description Authenticate admin user
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /api/v1/admin/login [post]
 func (h *AdminHandler) Login(c *gin.Context) {
 	var req struct {
 		Username string `json:"username" binding:"required"`
@@ -82,7 +90,18 @@ func (h *AdminHandler) Login(c *gin.Context) {
 	response.Fail(c, "INVALID_CREDENTIALS", "用户名或密码错误")
 }
 
-// ListUsers returns all users
+// ListUsers godoc
+// @Summary List users
+// @Description Get all users with pagination
+// @Tags admin
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number"
+// @Param page_size query int false "Page size"
+// @Param keyword query string false "Search keyword"
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /api/v1/admin/users [get]
 func (h *AdminHandler) ListUsers(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
@@ -347,6 +366,15 @@ func (h *AdminHandler) GetLoginLogs(c *gin.Context) {
 	response.Paginated(c, logs, page, pageSize, total)
 }
 
+// GetDashboardStats godoc
+// @Summary Get dashboard stats
+// @Description Get overview statistics for admin dashboard
+// @Tags admin
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /api/v1/admin/stats/overview [get]
 func (h *AdminHandler) GetDashboardStats(c *gin.Context) {
 	db := h.userRepo.GetDB()
 	now := time.Now()
@@ -423,7 +451,15 @@ func (h *AdminHandler) ChangePassword(c *gin.Context) {
 	response.SuccessWithMessage(c, nil, "password changed successfully")
 }
 
-// GetStatsTrends returns API request trends for charts
+// GetStatsTrends godoc
+// @Summary Get stats trends
+// @Description Get API request trends for the last 7 days
+// @Tags admin
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /api/v1/admin/stats/trends [get]
 func (h *AdminHandler) GetStatsTrends(c *gin.Context) {
 	db := h.userRepo.GetDB()
 

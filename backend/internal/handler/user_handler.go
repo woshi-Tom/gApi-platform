@@ -26,7 +26,15 @@ func NewUserHandler(authService *service.AuthService, userService *service.UserS
 	}
 }
 
-// Register handles user registration
+// Register godoc
+// @Summary Register a new user
+// @Description Create a new user account
+// @Tags user
+// @Accept json
+// @Produce json
+// @Success 201 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Router /api/v1/user/register [post]
 func (h *UserHandler) Register(c *gin.Context) {
 	var req struct {
 		Username string `json:"username" binding:"required,min=3,max=50"`
@@ -48,7 +56,15 @@ func (h *UserHandler) Register(c *gin.Context) {
 	response.Created(c, result)
 }
 
-// Login handles user login
+// Login godoc
+// @Summary User login
+// @Description Authenticate user and return JWT token
+// @Tags user
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /api/v1/user/login [post]
 func (h *UserHandler) Login(c *gin.Context) {
 	var req struct {
 		Email    string `json:"email" binding:"required,email"`
@@ -94,7 +110,15 @@ func (h *UserHandler) Login(c *gin.Context) {
 	response.Success(c, result)
 }
 
-// GetProfile returns the current user's profile
+// GetProfile godoc
+// @Summary Get user profile
+// @Description Get current user's profile
+// @Tags user
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /api/v1/user/profile [get]
 func (h *UserHandler) GetProfile(c *gin.Context) {
 	userID := c.MustGet("user_id").(uint)
 
@@ -111,7 +135,16 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 	response.Success(c, user)
 }
 
-// UpdateProfile updates the current user's profile
+// UpdateProfile godoc
+// @Summary Update user profile
+// @Description Update current user's profile
+// @Tags user
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /api/v1/user/profile [put]
 func (h *UserHandler) UpdateProfile(c *gin.Context) {
 	userID := c.MustGet("user_id").(uint)
 
@@ -146,7 +179,16 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 	response.SuccessWithMessage(c, nil, "profile updated")
 }
 
-// ChangePassword changes the user's password
+// ChangePassword godoc
+// @Summary Change user password
+// @Description Change the current user's password
+// @Tags user
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /api/v1/user/change-password [post]
 func (h *UserHandler) ChangePassword(c *gin.Context) {
 	userID := c.MustGet("user_id").(uint)
 
@@ -169,7 +211,15 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 	response.SuccessWithMessage(c, nil, "password changed successfully")
 }
 
-// GetQuota returns the user's quota information
+// GetQuota godoc
+// @Summary Get user quota
+// @Description Get current user's quota information
+// @Tags user
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /api/v1/user/quota [get]
 func (h *UserHandler) GetQuota(c *gin.Context) {
 	userID := c.MustGet("user_id").(uint)
 
@@ -182,7 +232,15 @@ func (h *UserHandler) GetQuota(c *gin.Context) {
 	response.Success(c, quota)
 }
 
-// GetVIPStatus returns the user's VIP status
+// GetVIPStatus godoc
+// @Summary Get VIP status
+// @Description Get current user's VIP membership status
+// @Tags user
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /api/v1/user/vip/status [get]
 func (h *UserHandler) GetVIPStatus(c *gin.Context) {
 	userID := c.MustGet("user_id").(uint)
 
@@ -202,7 +260,15 @@ func (h *UserHandler) GetVIPStatus(c *gin.Context) {
 	response.Success(c, status)
 }
 
-// GetUsageStats returns user's usage statistics for dashboard charts
+// GetUsageStats godoc
+// @Summary Get usage statistics
+// @Description Get user's API usage statistics for dashboard charts (last 7 days)
+// @Tags user
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /api/v1/user/stats/usage [get]
 func (h *UserHandler) GetUsageStats(c *gin.Context) {
 	userID := c.MustGet("user_id").(uint)
 	db := h.userService.GetDB()
