@@ -123,3 +123,64 @@ docker-compose down -v --rmi all
 # 完全清理
 docker system prune -a
 ```
+
+---
+
+## E2E 测试
+
+### 使用测试脚本
+
+```bash
+cd deploy/docker
+
+# 启动环境并运行测试
+./run-tests.sh all
+
+# 或分步执行
+./run-tests.sh up          # 启动测试环境
+./run-tests.sh seed         # 填充测试数据
+./run-tests.sh test        # 运行测试
+./run-tests.sh down         # 停止环境
+```
+
+### 本地运行测试
+
+确保服务已启动，然后：
+
+```bash
+cd frontend
+
+# 设置环境变量
+export PLAYWRIGHT_BASE_URL=http://localhost:5173
+export API_BASE_URL=http://localhost:8080
+
+# 运行测试
+npx playwright test
+```
+
+### Docker Compose 测试环境
+
+独立的测试环境 (端口不冲突):
+
+```bash
+cd deploy/docker
+
+# 启动测试环境 (使用不同的端口)
+docker-compose -f docker-compose.test.yml up -d
+
+# 运行测试
+docker exec gapi-playwright-test npx playwright test
+
+# 查看测试报告
+docker exec gapi-playwright-test cat playwright-report/index.html
+```
+
+### 测试端口
+
+| 服务 | 开发环境 | 测试环境 |
+|------|---------|---------|
+| Frontend | 5173 | 5173 |
+| Admin | 5174 | 5174 |
+| API | 8080 | 8081 |
+| PostgreSQL | 5432 | 5433 |
+| Redis | 6379 | 6380 |
