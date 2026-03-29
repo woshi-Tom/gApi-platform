@@ -8,6 +8,7 @@ import (
 
 	"gapi-platform/internal/config"
 	"gapi-platform/internal/model"
+	"gapi-platform/internal/pkg/crypto"
 	"gapi-platform/internal/pkg/response"
 	"gapi-platform/internal/repository"
 	"gapi-platform/internal/service"
@@ -225,11 +226,12 @@ func (h *AdminHandler) CreateChannel(c *gin.Context) {
 		return
 	}
 
+	encryptedKey, _ := crypto.Encrypt(req.APIKey)
 	channel := &model.Channel{
 		Name:            req.Name,
 		Type:            req.Type,
 		BaseURL:         req.BaseURL,
-		APIKeyEncrypted: req.APIKey,
+		APIKeyEncrypted: encryptedKey,
 		Weight:          req.Weight,
 		Priority:        req.Priority,
 		GroupName:       req.Group,
