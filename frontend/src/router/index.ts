@@ -6,6 +6,8 @@ const router = createRouter({
   routes: [
     { path: '/login', name: 'Login', component: () => import('@/views/Login.vue'), meta: { title: '登录' } },
     { path: '/register', name: 'Register', component: () => import('@/views/Register.vue'), meta: { title: '注册' } },
+    { path: '/forgot-password', name: 'ForgotPassword', component: () => import('@/views/ForgotPassword.vue'), meta: { title: '忘记密码' } },
+    { path: '/reset-password', name: 'ResetPassword', component: () => import('@/views/ResetPassword.vue'), meta: { title: '重置密码' } },
     { path: '/', name: 'Dashboard', component: () => import('@/views/Dashboard.vue'), meta: { requiresAuth: true, title: '控制台' } },
     { path: '/tokens', name: 'Tokens', component: () => import('@/views/tokens/List.vue'), meta: { requiresAuth: true, title: 'API 密钥' } },
     { path: '/products', name: 'Products', component: () => import('@/views/products/List.vue'), meta: { requiresAuth: true, title: '商品列表' } },
