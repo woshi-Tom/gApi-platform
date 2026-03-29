@@ -27,6 +27,8 @@
       </el-form>
       <div class="login-footer">
         还没有账号？<router-link to="/register">立即注册</router-link>
+        <span class="separator">|</span>
+        <router-link to="/forgot-password">忘记密码</router-link>
       </div>
     </el-card>
     
@@ -159,5 +161,10 @@ async function handleLogin() {
 
 .login-footer a:hover {
   text-decoration: underline;
+}
+
+.login-footer .separator {
+  margin: 0 12px;
+  color: #dcdfe6;
 }
 </style>
