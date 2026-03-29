@@ -4,6 +4,7 @@ import (
 	"gapi-platform/internal/config"
 	"gapi-platform/internal/handler"
 	"gapi-platform/internal/middleware"
+	"gapi-platform/internal/mq"
 	"gapi-platform/internal/repository"
 	"gapi-platform/internal/service"
 	"github.com/gin-gonic/gin"
@@ -44,6 +45,13 @@ func SetupUserRoutes(
 	captchaHandler := handler.NewCaptchaHandler(captchaService)
 	apiAccessLogHandler := handler.NewAPIAccessLogHandler(apiAccessLogRepo)
 
+	// Init handler for setup wizard
+	var mqClient *mq.Client
+	if mq.DefaultClient != nil {
+		mqClient = mq.DefaultClient()
+	}
+	initHandler := handler.NewInitHandler(db.GetDB(), redisClient, mqClient, cfg.AdminUsers)
+
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
@@ -59,6 +67,16 @@ func SetupUserRoutes(
 		{
 			user.POST("/register", userHandler.Register)
 			user.POST("/login", userHandler.Login)
+		}
+
+		init := v1.Group("/init")
+		{
+			init.GET("/status", initHandler.GetStatus)
+			init.POST("/test-db", initHandler.TestDatabase)
+			init.POST("/test-db-with-config", initHandler.TestDatabaseWithConfig)
+			init.POST("/init-db", initHandler.InitializeDatabase)
+			init.POST("/test-redis", initHandler.TestRedis)
+			init.POST("/create-admin", initHandler.CreateAdmin)
 		}
 
 		email := v1.Group("/email")

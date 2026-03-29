@@ -19,7 +19,12 @@ type Config struct {
 	Payment    PaymentConfig  `yaml:"payment" json:"payment"`
 	SMTP       SMTPConfig     `yaml:"smtp" json:"smtp"`
 	Log        LogConfig      `yaml:"log" json:"log"`
+	Security   SecurityConfig `yaml:"security" json:"security"`
 	AdminUsers []AdminAccount `yaml:"admin_users" json:"admin_users"`
+}
+
+type SecurityConfig struct {
+	EncryptKey string `yaml:"encrypt_key" json:"encrypt_key"`
 }
 
 // AdminAccount represents an admin user account
@@ -236,6 +241,11 @@ func (c *Config) loadFromEnv() {
 		c.JWT.Secret = v
 	}
 
+	// Security
+	if v := os.Getenv("GAPI_ENCRYPT_KEY"); v != "" {
+		c.Security.EncryptKey = v
+	}
+
 	// Log
 	if v := os.Getenv("GAPI_LOG_PATH"); v != "" {
 		c.Log.Path = v
@@ -272,6 +282,9 @@ func (c *Config) setDefaults() {
 	}
 	if c.Log.Level == "" {
 		c.Log.Level = "info"
+	}
+	if c.Security.EncryptKey == "" {
+		c.Security.EncryptKey = "gapi-platform-default-encrypt-key-32ch"
 	}
 	if c.Log.Format == "" {
 		c.Log.Format = "console"

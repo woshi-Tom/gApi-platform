@@ -9,6 +9,7 @@ import (
 
 	"gapi-platform/internal/config"
 	"gapi-platform/internal/mq"
+	"gapi-platform/internal/pkg/crypto"
 	"gapi-platform/internal/repository"
 	"gapi-platform/internal/router"
 	"gapi-platform/internal/worker"
@@ -36,6 +37,11 @@ func main() {
 	if cfg.Server.Mode == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
+
+	if err := crypto.Init(cfg.Security.EncryptKey); err != nil {
+		log.Fatalf("Failed to initialize crypto: %v", err)
+	}
+	logger.Info().Msg("Crypto initialized")
 
 	db, err := repository.NewDatabase(&cfg.Database)
 	if err != nil {
