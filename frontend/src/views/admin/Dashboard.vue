@@ -218,40 +218,46 @@ async function fetchUserRanking() {
     }
   } catch (e) {
     console.error('Failed to fetch user ranking:', e)
+    userRankingData.value = []
   }
 }
 
 const userRankChartOption = computed(() => {
   const data = userRankingData.value.slice(0, 10)
-  const labels = data.map(d => d.username || `User ${d.user_id}`)
-  const values = data.map(d => {
-    if (rankType.value === 'requests') return d.requests
-    if (rankType.value === 'tokens') return d.tokens
-    return d.failure_rate
-  })
+  const labels = data.length > 0 ? data.map(d => d.username || `User ${d.user_id}`) : ['暂无数据']
+  const values = data.length > 0 
+    ? data.map(d => {
+        if (rankType.value === 'requests') return d.requests
+        if (rankType.value === 'tokens') return d.tokens
+        return d.failure_rate
+      })
+    : [0]
+
+  const isFailedRate = rankType.value === 'failed_rate'
 
   return {
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    grid: { left: 60, right: 20, bottom: 5, top: 15, containLabel: true },
+    grid: { left: 60, right: 20, bottom: 50, top: 15, containLabel: true },
     xAxis: {
       type: 'category',
       data: labels,
-      axisLabel: { rotate: 30, interval: 0 }
+      axisLabel: { rotate: 30, interval: 0, fontSize: 11 }
     },
     yAxis: {
       type: 'value',
-      name: rankType.value === 'failed_rate' ? '失败率(%)' : '数量',
+      name: isFailedRate ? '失败率(%)' : '数量',
       min: 0,
+      max: isFailedRate ? 100 : undefined,
       splitNumber: 5,
       axisLabel: {
-        formatter: (v: number) => rankType.value === 'failed_rate' ? `${v}%` : formatNumber(v)
+        formatter: (v: number) => isFailedRate ? `${v}%` : formatNumber(v)
       }
     },
     series: [{
       type: 'bar',
       data: values,
       itemStyle: {
-        color: rankType.value === 'failed_rate' ? '#f56c6c' : '#409eff',
+        color: isFailedRate ? '#f56c6c' : '#409eff',
         borderRadius: [4, 4, 0, 0]
       },
       barMaxWidth: 30
