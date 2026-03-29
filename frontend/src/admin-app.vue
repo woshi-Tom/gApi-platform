@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onBeforeMount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
@@ -12,7 +12,11 @@ const router = useRouter()
 
 const adminUsername = ref('管理员')
 const menuActive = computed(() => route.path)
-const isLoginPage = computed(() => route.path === '/login')
+
+const isNoLayoutPage = computed(() => {
+  const path = route.path
+  return path === '/login' || path === '/init'
+})
 
 function handleCommand(command: string) {
   if (command === 'logout') {
@@ -29,7 +33,7 @@ function handleLogout() {
   router.push('/login')
 }
 
-onMounted(() => {
+onBeforeMount(() => {
   const admin = localStorage.getItem('admin_user')
   if (admin) {
     try {
@@ -42,7 +46,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <router-view v-if="isLoginPage" />
+  <router-view v-if="isNoLayoutPage" />
   <el-container v-else class="app-container admin-layout">
     <el-aside width="220px" class="sidebar admin-sidebar">
       <div class="logo admin-logo">
