@@ -88,6 +88,8 @@ func (d *Database) AutoMigrate() error {
 		&model.APIAccessLog{},
 		&model.SystemConfig{},
 		&model.SignupConfig{},
+		&model.EmailVerification{},
+		&model.PasswordReset{},
 	)
 }
 
