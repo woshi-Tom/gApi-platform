@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import axios from 'axios'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -15,10 +16,51 @@ const router = createRouter({
   ]
 })
 
-router.beforeEach((to, _from, next) => {
+const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
+
+function getAdminUrl() {
+  const currentHost = window.location.host
+  const [hostname, port] = currentHost.split(':')
+  return `http://${hostname}:5174`
+}
+
+async function checkInitialization() {
+  try {
+    const response = await axios.get(`${apiBase}/v1/init/status`)
+    return response.data?.data?.needs_init === false || response.data?.needs_init === false
+  } catch {
+    return true
+  }
+}
+
+let initChecked = false
+
+router.beforeEach(async (to, _from, next) => {
   const token = localStorage.getItem('token')
-  if (to.meta.requiresAuth && !token) next('/login')
-  else next()
+  const path = to.path
+  
+  if (path === '/login' || path === '/register') {
+    if (!initChecked) {
+      const initialized = await checkInitialization()
+      initChecked = true
+      if (!initialized) {
+        window.location.href = `${getAdminUrl()}/#/init`
+        return
+      }
+    }
+    if (token && path === '/login') {
+      next('/')
+    } else {
+      next()
+    }
+    return
+  }
+  
+  if (to.meta.requiresAuth && !token) {
+    next('/login')
+  } else {
+    next()
+  }
 })
 
 export default router

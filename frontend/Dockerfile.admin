@@ -16,6 +16,10 @@ FROM nginx:alpine
 
 COPY --from=builder /app/dist-admin /usr/share/nginx/html
 
+# Use admin.html as the main index for admin panel
+RUN mv /usr/share/nginx/html/admin.html /usr/share/nginx/html/index.html && \
+    sed -i 's/admin.html/index.html/g' /usr/share/nginx/html/index.html
+
 RUN echo 'server { \
     listen 80; \
     server_name _; \
