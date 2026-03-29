@@ -1,10 +1,13 @@
 -- gAPI Platform Data Seeding Script
 -- Run: docker exec gapi-postgres psql -U gapi -d gapi -f /seed.sql
--- 
--- Note: Admin credentials are in config.yaml, not database.
--- Default: admin / admin123
 
 BEGIN;
+
+-- Create admin user (password: admin123)
+-- Hash generated with bcrypt cost 10
+INSERT INTO admin_users (id, username, email, password_hash, role, status, created_at) VALUES
+(1, 'admin', 'admin@example.com', '$2a$10$N9qo8uLOickgx2ZMRZoMye.Y5RjlVRNQFMpBJ7qP2z6dBZG5vR5S', 'super_admin', 'active', NOW())
+ON CONFLICT (username) DO NOTHING;
 
 -- Create test users
 INSERT INTO users (id, username, email, password_hash, level, remain_quota, status, created_at) VALUES
