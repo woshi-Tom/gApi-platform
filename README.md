@@ -2,13 +2,13 @@
 
 **版本**: 1.0  
 **日期**: 2026-03-23  
-**状态**: 待开发
+**状态**: 开发中
 
 ---
 
 ## 项目概述
 
-全新设计的 gAPI Platform，类似 OneAPI/NewAPI，支持：
+类似 OneAPI/NewAPI 的 API 代理平台，支持：
 - 多租户架构
 - VIP 用户体系 (30天过期)
 - 商品购买 (支付宝/微信支付)
@@ -25,7 +25,21 @@
 | 前端 | Vue 3 + Element Plus + TypeScript |
 | 数据库 | PostgreSQL |
 | 缓存 | Redis |
-| 消息队列 | RabbitMQ (可选) |
+| 消息队列 | RabbitMQ |
+
+---
+
+## 快速启动
+
+```bash
+cd deploy/docker
+docker-compose up -d
+```
+
+访问地址：
+- 用户前端: http://localhost:5173
+- 管理后台: http://localhost:5174
+- API: http://localhost:8080
 
 ---
 
@@ -33,26 +47,20 @@
 
 ```
 gapi-platform/
-├── backend/            # Go 后端
-│   ├── cmd/           # 入口
-│   ├── internal/      # 内部包
-│   ├── config/        # 配置
-│   └── scripts/       # 脚本
-│
-├── frontend/           # Vue 3 前端
-│   ├── src/           # 源码
-│   └── public/        # 静态资源
-│
-├── docs/              # 设计文档
-│   ├── system-design.md
-│   ├── database-design-v2.md
-│   ├── interface-design-south-north.md
-│   ├── project-structure.md
-│   ├── security-deployment.md
-│   └── business-detail.md
-│
-├── config/            # 配置文件
-└── scripts/           # 工具脚本
+├── backend/                    # Go 后端
+│   ├── cmd/                   # 入口
+│   └── internal/              # 内部包
+├── frontend/                   # Vue 3 前端
+│   └── src/                  # 源码
+├── docs/                      # 设计文档
+│   ├── development-notes.md   # ⚠️ 开发前必读
+│   └── *.md                  # 其他设计文档
+└── deploy/
+    ├── docker/                # Docker 部署
+    │   ├── docker-compose.yml      # 开发环境
+    │   ├── docker-compose.prod.yml # 生产环境
+    │   └── docker-compose.test.yml  # 测试环境
+    └── nginx/                # Nginx 配置
 ```
 
 ---
@@ -63,37 +71,41 @@ gapi-platform/
 |---------|---------|------|
 | **北向** | `/api/v1/` | 用户端：注册、充值、调用AI API |
 | **南向** | `/api/v1/internal/` | 内部：渠道管理、健康检查 |
-| **管理后台** | `/api/v1/admin/` | 管理员：商品上下架、用户管理 (内网) |
+| **管理后台** | `/api/v1/admin/` | 管理员：商品上下架、用户管理 |
+| **初始化** | `/api/v1/init/` | 系统初始化向导 |
 
 ---
 
 ## 核心设计文档
 
-1. **system-design.md** - 系统设计概览
-2. **database-design-v2.md** - 数据库完整DDL
-3. **interface-design-south-north.md** - 北向/南向/管理后台接口分离
-4. **business-detail.md** - 业务细节：注册赠送、商品管理
-5. **security-deployment.md** - 安全与部署
-6. **development-notes.md** - 开发实现清单 (含环境变量、接口清单、检查项)
+| 文档 | 说明 |
+|------|------|
+| `development-notes.md` | ⚠️ **开发前必读** - 环境变量、接口清单、检查项 |
+| `system-design.md` | 系统设计概览 |
+| `database-design-v2.md` | 数据库完整DDL |
+| `interface-design-south-north.md` | 北向/南向/管理后台接口 |
+| `business-detail.md` | 业务细节：注册赠送、商品管理 |
+| `security-deployment.md` | 安全与部署 |
+
+---
+
+## 部署
+
+### 开发环境
+```bash
+cd deploy/docker
+cp .env.example .env
+docker-compose up -d
+```
+
+### 生产环境
+```bash
+cd deploy/docker
+docker-compose -f docker-compose.prod.yml up -d
+```
 
 ---
 
 ## 开发前必读
 
-> 新开开发会话前，请先阅读 `docs/development-notes.md`，包含：
-> - 环境变量配置清单
-> - 数据库表创建顺序
-> - API接口完整清单
-> - 敏感数据脱敏规则
-> - 支付回调处理
-> - VIP系统细节
-> - 通道测试类型
-> - 日志统计展示格式
-> - 边缘 case 处理
-> - 前后端实现检查项
-
----
-
-## 开始开发
-
-详见各设计文档
+> 新开开发会话前，请先阅读 `docs/development-notes.md`
