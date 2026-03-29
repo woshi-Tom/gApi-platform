@@ -18,6 +18,7 @@ type Config struct {
 	JWT        JWTConfig      `yaml:"jwt" json:"jwt"`
 	Payment    PaymentConfig  `yaml:"payment" json:"payment"`
 	SMTP       SMTPConfig     `yaml:"smtp" json:"smtp"`
+	Email      EmailConfig    `yaml:"email" json:"email"`
 	Log        LogConfig      `yaml:"log" json:"log"`
 	Security   SecurityConfig `yaml:"security" json:"security"`
 	AdminUsers []AdminAccount `yaml:"admin_users" json:"admin_users"`
@@ -96,13 +97,35 @@ type WechatConfig struct {
 }
 
 type SMTPConfig struct {
+	Enabled  bool   `yaml:"enabled" json:"enabled"`
 	Host     string `yaml:"host" json:"host"`
 	Port     int    `yaml:"port" json:"port"`
 	Username string `yaml:"username" json:"username"`
 	Password string `yaml:"password" json:"password"`
 	From     string `yaml:"from" json:"from"`
 	FromName string `yaml:"from_name" json:"from_name"`
-	TLS      bool   `yaml:"tls" json:"tls"`
+	UseTLS   bool   `yaml:"use_tls" json:"use_tls"`
+}
+
+type EmailConfig struct {
+	SMTP                SMTPConfig          `yaml:"smtp" json:"smtp"`
+	CodeLength          int                 `yaml:"code_length" json:"code_length"`
+	CodeExpiresMinutes  int                 `yaml:"code_expires_minutes" json:"code_expires_minutes"`
+	MaxAttempts         int                 `yaml:"max_attempts" json:"max_attempts"`
+	SendCooldownSeconds int                 `yaml:"send_cooldown_seconds" json:"send_cooldown_seconds"`
+	RateLimit           RateLimitConfig     `yaml:"rate_limit" json:"rate_limit"`
+	PasswordReset       PasswordResetConfig `yaml:"password_reset" json:"password_reset"`
+}
+
+type RateLimitConfig struct {
+	PerEmailPerHour  int `yaml:"per_email_per_hour" json:"per_email_per_hour"`
+	PerIPPerHour     int `yaml:"per_ip_per_hour" json:"per_ip_per_hour"`
+	PerDevicePerHour int `yaml:"per_device_per_hour" json:"per_device_per_hour"`
+}
+
+type PasswordResetConfig struct {
+	TokenLength         int `yaml:"token_length" json:"token_length"`
+	TokenExpiresMinutes int `yaml:"token_expires_minutes" json:"token_expires_minutes"`
 }
 
 type LogConfig struct {
@@ -213,6 +236,9 @@ func (c *Config) loadFromEnv() {
 		c.RabbitMQ.Password = v
 	}
 
+	if v := os.Getenv("GAPI_SMTP_ENABLED"); v != "" {
+		c.SMTP.Enabled = v == "true"
+	}
 	if v := os.Getenv("GAPI_SMTP_HOST"); v != "" {
 		c.SMTP.Host = v
 	}
@@ -233,8 +259,8 @@ func (c *Config) loadFromEnv() {
 	if v := os.Getenv("GAPI_SMTP_FROM_NAME"); v != "" {
 		c.SMTP.FromName = v
 	}
-	if v := os.Getenv("GAPI_SMTP_TLS"); v != "" {
-		c.SMTP.TLS = v == "true"
+	if v := os.Getenv("GAPI_SMTP_USE_TLS"); v != "" {
+		c.SMTP.UseTLS = v == "true"
 	}
 
 	if v := os.Getenv("GAPI_JWT_SECRET"); v != "" {
@@ -288,6 +314,33 @@ func (c *Config) setDefaults() {
 	}
 	if c.Log.Format == "" {
 		c.Log.Format = "console"
+	}
+	if c.Email.CodeLength == 0 {
+		c.Email.CodeLength = 6
+	}
+	if c.Email.CodeExpiresMinutes == 0 {
+		c.Email.CodeExpiresMinutes = 10
+	}
+	if c.Email.MaxAttempts == 0 {
+		c.Email.MaxAttempts = 3
+	}
+	if c.Email.SendCooldownSeconds == 0 {
+		c.Email.SendCooldownSeconds = 60
+	}
+	if c.Email.RateLimit.PerEmailPerHour == 0 {
+		c.Email.RateLimit.PerEmailPerHour = 5
+	}
+	if c.Email.RateLimit.PerIPPerHour == 0 {
+		c.Email.RateLimit.PerIPPerHour = 10
+	}
+	if c.Email.RateLimit.PerDevicePerHour == 0 {
+		c.Email.RateLimit.PerDevicePerHour = 3
+	}
+	if c.Email.PasswordReset.TokenLength == 0 {
+		c.Email.PasswordReset.TokenLength = 32
+	}
+	if c.Email.PasswordReset.TokenExpiresMinutes == 0 {
+		c.Email.PasswordReset.TokenExpiresMinutes = 60
 	}
 }
 
