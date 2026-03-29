@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"gapi-platform/internal/model"
+	"gapi-platform/internal/pkg/crypto"
 	"gapi-platform/internal/pkg/response"
 	"gapi-platform/internal/repository"
 	"gapi-platform/internal/service"
@@ -422,13 +423,10 @@ func (h *ChannelHandler) saveTestHistory(channelID, userID uint, req *model.Chan
 	_ = io.EOF
 }
 
-// Helper functions for encryption (placeholder - should use pkg/crypto)
 func encryptAPIKey(key string) (string, error) {
-	// TODO: Use pkg/crypto.Encrypt
-	return key, nil
+	return crypto.Encrypt(key)
 }
 
 func decryptAPIKey(encrypted string) (string, error) {
-	// TODO: Use pkg/crypto.Decrypt
-	return encrypted, nil
+	return crypto.Decrypt(encrypted)
 }
