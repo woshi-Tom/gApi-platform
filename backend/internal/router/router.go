@@ -32,7 +32,8 @@ func SetupUserRoutes(
 	tokenService := service.NewTokenService(tokenRepo)
 	tokenService.SetUserRepo(userRepo, vipRepo)
 	channelService := service.NewChannelService(channelRepo)
-	emailVerificationService := service.NewEmailVerificationService(db.GetDB(), redisClient)
+	settingsService := service.NewSettingsService(db.GetDB())
+	emailVerificationService := service.NewEmailVerificationService(db.GetDB(), redisClient, &cfg.Email, settingsService)
 	captchaService := service.NewSliderCaptchaService(redisClient.Client)
 
 	userHandler := handler.NewUserHandler(authService, userService, loginLogRepo)
@@ -83,6 +84,13 @@ func SetupUserRoutes(
 		{
 			email.POST("/send-code", emailHandler.SendCode)
 			email.POST("/verify-code", emailHandler.VerifyCode)
+		}
+
+		auth := v1.Group("/auth")
+		{
+			auth.POST("/forgot-password", emailHandler.ForgotPassword)
+			auth.GET("/reset-password", emailHandler.VerifyResetToken)
+			auth.POST("/reset-password", emailHandler.ResetPassword)
 		}
 
 		captcha := v1.Group("/captcha")
@@ -181,9 +189,11 @@ func SetupAdminRoutes(
 
 	authService := service.NewAuthService(userRepo, tokenRepo, &cfg.JWT)
 	channelService := service.NewChannelService(channelRepo)
+	settingsService := service.NewSettingsService(db.GetDB())
 
 	adminHandler := handler.NewAdminHandler(authService, userRepo, channelService, orderRepo, auditRepo, loginLogRepo, apiAccessLogRepo, cfg.AdminUsers)
 	productHandler := handler.NewProductHandler(vipRepo, rechargeRepo)
+	settingsHandler := handler.NewSettingsHandler(settingsService)
 
 	r.Use(corsMiddleware([]string{cfg.Server.Frontend, cfg.Server.AdminFrontend}))
 
@@ -224,6 +234,12 @@ func SetupAdminRoutes(
 			adminAuth.GET("/stats/user/:id/detail", adminHandler.StatsUserDetail)
 
 			adminAuth.POST("/change-password", adminHandler.ChangePassword)
+
+			adminAuth.GET("/settings/email", settingsHandler.GetSMTPConfig)
+			adminAuth.PUT("/settings/email", settingsHandler.UpdateSMTPConfig)
+			adminAuth.POST("/settings/email/test", settingsHandler.TestSMTPConnection)
+			adminAuth.GET("/settings/register", settingsHandler.GetRegisterSettings)
+			adminAuth.PUT("/settings/register", settingsHandler.UpdateRegisterSettings)
 		}
 	}
 }
