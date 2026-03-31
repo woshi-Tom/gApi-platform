@@ -36,14 +36,25 @@
 </template>
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { getProducts } from '@/api/product'
 import request from '@/api/request'
 import { ElMessage } from 'element-plus'
+const router = useRouter()
 const tab = ref('recharge')
 const rc = ref<any[]>([])
 const vp = ref<any[]>([])
 async function load() { const {data}=await getProducts(); const a=data.data||[]; rc.value=a.filter((p:any)=>p.product_type==='recharge'); vp.value=a.filter((p:any)=>p.product_type==='vip') }
-async function buy(p:any,t:string) { try { await request.post('/orders',{package_id:p.id,package_type:t,payment_method:'alipay'}); ElMessage.success('订单已创建') } catch(e:any) { ElMessage.error(e.response?.data?.error?.message||'创建失败') } }
+async function buy(p:any,t:string) {
+  try {
+    const res = await request.post('/orders',{package_id:p.id,package_type:t,payment_method:'alipay'})
+    const data = res.data?.data || res.data
+    ElMessage.success('订单已创建，正在跳转支付页面...')
+    router.push(`/payment?order_no=${data.order_no}`)
+  } catch(e:any) {
+    ElMessage.error(e.response?.data?.error?.message||'创建失败')
+  }
+}
 onMounted(load)
 </script>
 <style scoped>

@@ -114,8 +114,11 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { userOrderApi } from '@/api/order'
 import { ElMessage } from 'element-plus'
+
+const router = useRouter()
 
 interface Order {
   id: number
@@ -201,7 +204,7 @@ function showDetail(order: Order) {
 }
 
 function handlePay(order: Order) {
-  ElMessage.info('支付功能开发中，请稍后...')
+  router.push({ path: '/payment', query: { order_no: order.order_no } })
 }
 
 onMounted(load)

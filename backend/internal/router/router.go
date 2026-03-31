@@ -1,6 +1,8 @@
 package router
 
 import (
+	"fmt"
+
 	"gapi-platform/internal/config"
 	"gapi-platform/internal/handler"
 	"gapi-platform/internal/middleware"
@@ -26,6 +28,9 @@ func SetupUserRoutes(
 	rechargeRepo := repository.NewRechargePackageRepository(db.GetDB())
 	loginLogRepo := repository.NewLoginLogRepository(db.GetDB())
 	apiAccessLogRepo := repository.NewAPIAccessLogRepository(db.GetDB())
+	idempRepo := repository.NewIdempotencyRepository(db.GetDB())
+	paymentLogRepo := repository.NewPaymentLogRepository(db.GetDB())
+	_ = paymentLogRepo
 
 	authService := service.NewAuthService(userRepo, tokenRepo, &cfg.JWT)
 	userService := service.NewUserService(userRepo)
@@ -36,10 +41,19 @@ func SetupUserRoutes(
 	emailVerificationService := service.NewEmailVerificationService(db.GetDB(), redisClient, &cfg.Email, settingsService)
 	captchaService := service.NewSliderCaptchaService(redisClient.Client)
 
+	alipayService := service.NewAlipayService(
+		settingsService,
+		orderRepo,
+		paymentRepo,
+		userRepo,
+		cfg.Server.Mode,
+		fmt.Sprintf("%s/api/v1/payment/callback/alipay", cfg.Server.Frontend),
+	)
+
 	userHandler := handler.NewUserHandler(authService, userService, loginLogRepo)
 	tokenHandler := handler.NewTokenHandler(tokenService)
-	orderHandler := handler.NewOrderHandler(orderRepo, userRepo, paymentRepo)
-	paymentHandler := handler.NewPaymentHandler(cfg, orderRepo, paymentRepo, userRepo)
+	orderHandler := handler.NewOrderHandler(orderRepo, userRepo, paymentRepo, vipRepo, rechargeRepo, idempRepo)
+	paymentHandler := handler.NewPaymentHandler(orderRepo, paymentRepo, userRepo, vipRepo, auditRepo, alipayService)
 	productHandler := handler.NewProductHandler(vipRepo, rechargeRepo)
 	apiHandler := handler.NewAPIHandler(tokenService, channelService, userRepo)
 	emailHandler := handler.NewEmailVerificationHandler(emailVerificationService)
@@ -131,6 +145,7 @@ func SetupUserRoutes(
 			orders.GET("", orderHandler.List)
 			orders.POST("", orderHandler.Create)
 			orders.GET("/:id", orderHandler.GetByID)
+			orders.GET("/no/:order_no", orderHandler.GetByOrderNo)
 		}
 
 		apiLogs := v1.Group("/logs")
@@ -143,11 +158,12 @@ func SetupUserRoutes(
 		payment.Use(middleware.JWTAuth(authService))
 		{
 			payment.POST("/alipay", paymentHandler.CreateAlipay)
-			payment.POST("/wechat", paymentHandler.CreateWechat)
+			payment.GET("/alipay/query/:order_no", paymentHandler.QueryAlipayOrder)
+			payment.POST("/alipay/cancel/:order_no", paymentHandler.CancelAlipayOrder)
+			payment.GET("/config", paymentHandler.GetPaymentConfig)
 		}
 
-		v1.POST("/payment/callback/alipay", paymentHandler.AlipayCallback)
-		v1.POST("/payment/callback/wechat", paymentHandler.WechatCallback)
+		v1.POST("/payment/callback/alipay", paymentHandler.AlipayNotify)
 
 		v1.POST("/chat/completions", middleware.TokenAuth(tokenService), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.ChatCompletions)
 		v1.GET("/models", middleware.TokenAuth(tokenService), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.ListModels)
@@ -181,6 +197,7 @@ func SetupAdminRoutes(
 	tokenRepo := repository.NewTokenRepository(db.GetDB())
 	channelRepo := repository.NewChannelRepository(db.GetDB())
 	orderRepo := repository.NewOrderRepository(db.GetDB())
+	paymentRepo := repository.NewPaymentRepository(db.GetDB())
 	auditRepo := repository.NewAuditRepository(db.GetDB())
 	loginLogRepo := repository.NewLoginLogRepository(db.GetDB())
 	vipRepo := repository.NewVIPPackageRepository(db.GetDB())
@@ -190,10 +207,18 @@ func SetupAdminRoutes(
 	authService := service.NewAuthService(userRepo, tokenRepo, &cfg.JWT)
 	channelService := service.NewChannelService(channelRepo)
 	settingsService := service.NewSettingsService(db.GetDB())
+	alipayService := service.NewAlipayService(
+		settingsService,
+		orderRepo,
+		paymentRepo,
+		userRepo,
+		cfg.Server.Mode,
+		fmt.Sprintf("%s/api/v1/payment/callback/alipay", cfg.Server.Frontend),
+	)
 
 	adminHandler := handler.NewAdminHandler(authService, userRepo, channelService, orderRepo, auditRepo, loginLogRepo, apiAccessLogRepo, cfg.AdminUsers)
 	productHandler := handler.NewProductHandler(vipRepo, rechargeRepo)
-	settingsHandler := handler.NewSettingsHandler(settingsService)
+	settingsHandler := handler.NewSettingsHandler(settingsService, alipayService)
 
 	r.Use(corsMiddleware([]string{cfg.Server.Frontend, cfg.Server.AdminFrontend}))
 
@@ -240,6 +265,8 @@ func SetupAdminRoutes(
 			adminAuth.POST("/settings/email/test", settingsHandler.TestSMTPConnection)
 			adminAuth.GET("/settings/register", settingsHandler.GetRegisterSettings)
 			adminAuth.PUT("/settings/register", settingsHandler.UpdateRegisterSettings)
+			adminAuth.GET("/settings/payment", settingsHandler.GetPaymentConfig)
+			adminAuth.PUT("/settings/payment", settingsHandler.UpdatePaymentConfig)
 		}
 	}
 }
@@ -266,7 +293,7 @@ func corsMiddleware(allowedOrigins []string) gin.HandlerFunc {
 
 		c.Header("Access-Control-Allow-Origin", allowedOrigin)
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, X-Admin-Secret")
+		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, X-Admin-Secret, X-Idempotency-Key")
 		c.Header("Access-Control-Allow-Credentials", "true")
 
 		if c.Request.Method == "OPTIONS" {

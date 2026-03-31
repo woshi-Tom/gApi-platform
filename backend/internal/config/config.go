@@ -84,6 +84,7 @@ type AlipayConfig struct {
 	AppID           string `yaml:"app_id" json:"app_id"`
 	PrivateKey      string `yaml:"private_key" json:"private_key"`
 	AlipayPublicKey string `yaml:"alipay_public_key" json:"alipay_public_key"`
+	EncryptKey      string `yaml:"encrypt_key" json:"encrypt_key"`
 	Sandbox         bool   `yaml:"sandbox" json:"sandbox"`
 	Enabled         bool   `yaml:"enabled" json:"enabled"`
 }
@@ -234,6 +235,26 @@ func (c *Config) loadFromEnv() {
 	}
 	if v := os.Getenv("GAPI_RABBITMQ_PASSWORD"); v != "" {
 		c.RabbitMQ.Password = v
+	}
+
+	// Alipay
+	if v := os.Getenv("GAPI_ALIPAY_ENABLED"); v != "" {
+		c.Payment.Alipay.Enabled = v == "true"
+	}
+	if v := os.Getenv("GAPI_ALIPAY_APP_ID"); v != "" {
+		c.Payment.Alipay.AppID = v
+	}
+	if v := os.Getenv("GAPI_ALIPAY_PRIVATE_KEY"); v != "" {
+		c.Payment.Alipay.PrivateKey = v
+	}
+	if v := os.Getenv("GAPI_ALIPAY_PUBLIC_KEY"); v != "" {
+		c.Payment.Alipay.AlipayPublicKey = v
+	}
+	if v := os.Getenv("GAPI_ALIPAY_ENCRYPT_KEY"); v != "" {
+		c.Payment.Alipay.EncryptKey = v
+	}
+	if v := os.Getenv("GAPI_ALIPAY_SANDBOX"); v != "" {
+		c.Payment.Alipay.Sandbox = v == "true"
 	}
 
 	if v := os.Getenv("GAPI_SMTP_ENABLED"); v != "" {

@@ -57,7 +57,7 @@
           </li>
           <li>
             <el-icon color="#67c23a"><Check /></el-icon>
-            <span>配额 {{ formatQuota(pkg.quota) }} Token</span>
+            <span>配额 {{ formatQuota(pkg.vip_quota) }} Token</span>
           </li>
           <li v-if="pkg.rpm_limit">
             <el-icon color="#67c23a"><Check /></el-icon>
@@ -108,6 +108,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Check, Star, TrendCharts, Headset, Timer } from '@element-plus/icons-vue'
 import { getProducts } from '@/api/product'
@@ -120,6 +121,7 @@ interface VIPPackage {
   price: number
   original_price?: number
   duration_days: number
+  vip_quota: number
   quota: number
   rpm_limit?: number
   tpm_limit?: number
@@ -129,6 +131,7 @@ interface VIPPackage {
 }
 
 const pkgs = ref<VIPPackage[]>([])
+const router = useRouter()
 
 function formatQuota(n: number): string {
   if (!n) return '0'
@@ -148,12 +151,14 @@ async function load() {
 
 async function buy(pkg: VIPPackage) {
   try {
-    await request.post('/orders', {
+    const res = await request.post('/orders', {
       package_id: pkg.id,
       package_type: 'vip',
       payment_method: 'alipay',
     })
-    ElMessage.success('订单已创建，请完成支付')
+    const data = res.data?.data || res.data
+    ElMessage.success('订单已创建，正在跳转支付页面...')
+    router.push(`/payment?order_no=${data.order_no}`)
   } catch (e: any) {
     ElMessage.error(e.response?.data?.error?.message || '创建订单失败')
   }

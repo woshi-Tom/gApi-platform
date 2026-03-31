@@ -4,6 +4,16 @@ import (
 	"time"
 )
 
+// OrderStatus constants
+const (
+	OrderStatusPending   = "pending"
+	OrderStatusPaid      = "paid"
+	OrderStatusCompleted = "completed"
+	OrderStatusCancelled = "cancelled"
+	OrderStatusExpired   = "expired"
+	OrderStatusRefunded  = "refunded"
+)
+
 // Order represents an order
 type Order struct {
 	ID       uint `json:"id" gorm:"primaryKey"`
@@ -24,14 +34,26 @@ type Order struct {
 	PayAmount      float64 `json:"pay_amount" gorm:"type:decimal(10,2);not null"`
 
 	// Status
-	Status       string     `json:"status" gorm:"size:20;default:'pending'"` // pending|paid|cancelled|refunded|expired
+	Status       string     `json:"status" gorm:"size:20;default:'pending'"` // pending|paid|completed|cancelled|refunded|expired
 	PaidAt       *time.Time `json:"paid_at"`
+	CompletedAt  *time.Time `json:"completed_at"`
 	CancelReason string     `json:"cancel_reason" gorm:"size:200"`
 	RefundReason string     `json:"refund_reason" gorm:"type:text"`
 	RefundAmount *float64   `json:"refund_amount" gorm:"type:decimal(10,2)"`
 
-	// Expiry
-	ExpireAt *time.Time `json:"expire_at"`
+	// Expiry - when the order expires if unpaid
+	ExpiresAt *time.Time `json:"expires_at" gorm:"index"` // defaults to 4 hours from creation
+
+	// Alipay
+	AlipayTradeNo string     `json:"alipay_trade_no" gorm:"size:64"`
+	AlipayQRURL   string     `json:"alipay_qr_url" gorm:"type:text"`
+	QRExpireAt    *time.Time `json:"qr_expire_at"`
+
+	// Idempotency
+	IdempotencyKey string `json:"idempotency_key" gorm:"size:64;index"`
+
+	// Optimistic locking
+	Version int `json:"version" gorm:"default:1"`
 
 	// Timestamps
 	CreatedAt time.Time `json:"created_at"`
@@ -45,6 +67,14 @@ func (Order) TableName() string {
 	return "orders"
 }
 
+// PaymentStatus constants
+const (
+	PaymentStatusPending  = "pending"
+	PaymentStatusSuccess  = "success"
+	PaymentStatusFailed   = "failed"
+	PaymentStatusRefunded = "refunded"
+)
+
 // Payment represents a payment record
 type Payment struct {
 	ID       uint `json:"id" gorm:"primaryKey"`
@@ -52,33 +82,30 @@ type Payment struct {
 	UserID   uint `json:"user_id" gorm:"not null;index"`
 	OrderID  uint `json:"order_id" gorm:"not null;index"`
 
-	// Payment info
 	PaymentNo     string `json:"payment_no" gorm:"size:100;not null;uniqueIndex"`
-	PaymentMethod string `json:"payment_method" gorm:"size:20;not null"` // alipay|wechat|bank
+	PaymentMethod string `json:"payment_method" gorm:"size:20;not null"`
 
-	// Amount
 	Amount float64 `json:"amount" gorm:"type:decimal(10,2);not null"`
 
-	// Status
-	Status string     `json:"status" gorm:"size:20;default:'pending'"` // pending|success|failed|refunded
+	Status string     `json:"status" gorm:"size:20;default:'pending'"`
 	PaidAt *time.Time `json:"paid_at"`
 
-	// Channel info
-	ChannelOrderNo string `json:"channel_order_no" gorm:"size:100"` // Alipay/WeChat order number
-	ChannelTradeNo string `json:"channel_trade_no" gorm:"size:100"` // Third-party trade number
-	PaymentURL     string `json:"payment_url" gorm:"type:text"`     // Payment link/qr code
-	QRCode         string `json:"qr_code" gorm:"type:text"`         // QR code base64
+	ChannelOrderNo string `json:"channel_order_no" gorm:"size:100"`
+	ChannelTradeNo string `json:"channel_trade_no" gorm:"size:100"`
+	PaymentURL     string `json:"payment_url" gorm:"type:text"`
+	QRCode         string `json:"qr_code" gorm:"type:text"`
 
-	// Callback info
 	CallbackURL  string     `json:"callback_url" gorm:"size:500"`
 	CallbackBody string     `json:"callback_body" gorm:"type:text"`
 	CallbackAt   *time.Time `json:"callback_at"`
 
-	// Error info
 	ErrorCode    string `json:"error_code" gorm:"size:50"`
 	ErrorMessage string `json:"error_message" gorm:"type:text"`
 
-	// Timestamp
+	IdempotencyKey string     `json:"idempotency_key" gorm:"size:64;index"`
+	RetryCount     int        `json:"retry_count" gorm:"default:0"`
+	LastRetryAt    *time.Time `json:"last_retry_at"`
+
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }

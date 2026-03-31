@@ -35,6 +35,22 @@ export interface RegisterSettings {
   trial_vip_days: number
 }
 
+export interface PaymentConfig {
+  enabled: boolean
+  app_id: string
+  public_key: string
+  sandbox: boolean
+}
+
+export interface UpdatePaymentRequest {
+  enabled: boolean
+  app_id: string
+  private_key: string
+  public_key: string
+  encrypt_key: string
+  sandbox: boolean
+}
+
 export const settingsAPI = {
   getSMTPConfig: () => {
     return adminAPI.get<SMTPConfig>('/settings/email')
@@ -54,5 +70,13 @@ export const settingsAPI = {
 
   updateRegisterSettings: (data: Partial<RegisterSettings>) => {
     return adminAPI.put('/settings/register', data)
+  },
+
+  getPaymentConfig: () => {
+    return adminAPI.get<PaymentConfig>('/settings/payment')
+  },
+
+  updatePaymentConfig: (data: UpdatePaymentRequest) => {
+    return adminAPI.put('/settings/payment', data)
   }
 }

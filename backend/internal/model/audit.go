@@ -203,3 +203,41 @@ type SignupConfig struct {
 func (SignupConfig) TableName() string {
 	return "signup_configs"
 }
+
+// PaymentLog records detailed payment operations for debugging and auditing
+type PaymentLog struct {
+	ID        uint   `json:"id" gorm:"primaryKey"`
+	OrderID   uint   `json:"order_id" gorm:"index"`
+	OrderNo   string `json:"order_no" gorm:"size:50;index"`
+	PaymentID *uint  `json:"payment_id" gorm:"index"`
+	UserID    uint   `json:"user_id" gorm:"index"`
+
+	Action       string `json:"action" gorm:"size:32;not null"` // create|notify|query|cancel|refund|expire
+	Status       string `json:"status" gorm:"size:16"`
+	RequestData  string `json:"request_data" gorm:"type:text"`
+	ResponseData string `json:"response_data" gorm:"type:text"`
+	ErrorMessage string `json:"error_message" gorm:"type:text"`
+	IPAddress    string `json:"ip_address" gorm:"size:50"`
+
+	CreatedAt time.Time `json:"created_at" gorm:"index"`
+}
+
+func (PaymentLog) TableName() string {
+	return "payment_logs"
+}
+
+// IdempotencyKey stores idempotency keys to prevent duplicate operations
+type IdempotencyKey struct {
+	ID        uint      `json:"id" gorm:"primaryKey"`
+	Key       string    `json:"key" gorm:"size:64;uniqueIndex"`
+	UserID    uint      `json:"user_id" gorm:"index"`
+	Action    string    `json:"action" gorm:"size:32"`
+	OrderID   *uint     `json:"order_id" gorm:"index"`
+	OrderNo   string    `json:"order_no" gorm:"size:50"`
+	CreatedAt time.Time `json:"created_at"`
+	ExpiresAt time.Time `json:"expires_at" gorm:"index"`
+}
+
+func (IdempotencyKey) TableName() string {
+	return "idempotency_keys"
+}
