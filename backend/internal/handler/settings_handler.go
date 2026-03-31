@@ -7,11 +7,15 @@ import (
 )
 
 type SettingsHandler struct {
-	settingsSvc *service.SettingsService
+	settingsSvc   *service.SettingsService
+	alipayService *service.AlipayService
 }
 
-func NewSettingsHandler(settingsSvc *service.SettingsService) *SettingsHandler {
-	return &SettingsHandler{settingsSvc: settingsSvc}
+func NewSettingsHandler(settingsSvc *service.SettingsService, alipayService *service.AlipayService) *SettingsHandler {
+	return &SettingsHandler{
+		settingsSvc:   settingsSvc,
+		alipayService: alipayService,
+	}
 }
 
 func (h *SettingsHandler) GetSMTPConfig(c *gin.Context) {
@@ -128,5 +132,51 @@ func (h *SettingsHandler) UpdateRegisterSettings(c *gin.Context) {
 		return
 	}
 
+	response.Success(c, nil)
+}
+
+func (h *SettingsHandler) GetPaymentConfig(c *gin.Context) {
+	cfg, err := h.settingsSvc.GetAlipayConfig()
+	if err != nil {
+		response.InternalError(c, "failed to get payment config: "+err.Error())
+		return
+	}
+
+	response.Success(c, cfg)
+}
+
+func (h *SettingsHandler) UpdatePaymentConfig(c *gin.Context) {
+	var req struct {
+		Enabled    bool   `json:"enabled"`
+		AppID      string `json:"app_id"`
+		PrivateKey string `json:"private_key"`
+		PublicKey  string `json:"public_key"`
+		EncryptKey string `json:"encrypt_key"`
+		Sandbox    bool   `json:"sandbox"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, "INVALID_PARAMETER", err.Error())
+		return
+	}
+
+	cfg := &service.AlipayConfig{
+		Enabled:    req.Enabled,
+		AppID:      req.AppID,
+		PrivateKey: req.PrivateKey,
+		PublicKey:  req.PublicKey,
+		EncryptKey: req.EncryptKey,
+		Sandbox:    req.Sandbox,
+	}
+
+	if err := h.settingsSvc.UpdateAlipayConfig(cfg); err != nil {
+		response.InternalError(c, "failed to update payment config: "+err.Error())
+		return
+	}
+
+	h.settingsSvc.InvalidateCache()
+	if h.alipayService != nil {
+		h.alipayService.ReloadClient()
+	}
 	response.Success(c, nil)
 }

@@ -20,12 +20,12 @@ type User struct {
 
 	// Level & VIP
 	Level        string     `json:"level" gorm:"size:20;default:'free'"` // free|premium|vip|enterprise
-	VIPExpiredAt *time.Time `json:"vip_expired_at"`
-	VIPPackageID uint       `json:"vip_package_id"`
+	VIPExpiredAt *time.Time `json:"vip_expired_at" gorm:"column:v_ip_expired_at"`
+	VIPPackageID uint       `json:"vip_package_id" gorm:"column:v_ip_package_id"`
 
 	// Quota
-	RemainQuota int64 `json:"remain_quota" gorm:"default:0"` // Permanent quota
-	VIPQuota    int64 `json:"vip_quota" gorm:"default:0"`    // VIP quota (30 days)
+	RemainQuota int64 `json:"remain_quota" gorm:"default:0"`                // Permanent quota
+	VIPQuota    int64 `json:"vip_quota" gorm:"column:v_ip_quota;default:0"` // VIP quota (30 days)
 
 	// Status
 	Status         string     `json:"status" gorm:"size:20;default:'active'"` // active|disabled|suspended

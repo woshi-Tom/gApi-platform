@@ -58,9 +58,29 @@ export const adminOrderApi = {
     adminAPI.put(`/orders/${id}/status`, { status }),
 }
 
+// Payment related API wrappers
+export interface AlipayInitResponse {
+  order_no: string
+  qr_code: string
+  qr_expire_at: string
+  package_name?: string
+  amount?: number
+}
+
+export interface AlipayQueryResponse {
+  status: 'pending' | 'paid' | 'cancelled' | 'expired'
+  qr_code?: string
+  qr_expire_at?: string
+  order_no?: string
+  package_name?: string
+  amount?: number
+}
+
 export const paymentApi = {
-  createAlipay: (orderId: number) =>
-    userAPI.post<{ data: { payment_url: string; qr_code: string } }>('/payment/alipay', { order_id: orderId }),
-  createWechat: (orderId: number) =>
-    userAPI.post<{ data: { payment_url: string; qr_code: string } }>('/payment/wechat', { order_id: orderId }),
+  createAlipay: (orderNo: string) =>
+    userAPI.post<{ data: AlipayInitResponse }>('/payment/alipay', { order_no: orderNo }),
+  queryAlipay: (orderNo: string) =>
+    userAPI.get<{ data: AlipayQueryResponse }>(`/payment/alipay/query/${orderNo}`),
+  cancelAlipay: (orderNo: string) =>
+    userAPI.post<{ data: any }>(`/payment/alipay/cancel/${orderNo}`),
 }

@@ -47,7 +47,7 @@ func (w *VIPExpiryWorker) processExpiredVIPs() {
 	now := time.Now()
 
 	var users []model.User
-	err := w.db.Where("level = ? AND vip_expired_at IS NOT NULL AND vip_expired_at < ?", "vip", now).Find(&users).Error
+	err := w.db.Where("level = ? AND v_ip_expired_at IS NOT NULL AND v_ip_expired_at < ?", "vip", now).Find(&users).Error
 	if err != nil {
 		log.Printf("[VIPWorker] Error querying expired VIPs: %v\n", err)
 		return
@@ -59,11 +59,11 @@ func (w *VIPExpiryWorker) processExpiredVIPs() {
 
 	for _, user := range users {
 		result := w.db.Model(&model.User{}).
-			Where("id = ? AND level = 'vip' AND vip_expired_at < ?", user.ID, now).
+			Where("id = ? AND level = 'vip' AND v_ip_expired_at < ?", user.ID, now).
 			Updates(map[string]interface{}{
-				"level":          "free",
-				"vip_expired_at": nil,
-				"vip_package_id": 0,
+				"level":           "free",
+				"v_ip_expired_at": nil,
+				"v_ip_package_id": 0,
 			})
 
 		if result.Error != nil {

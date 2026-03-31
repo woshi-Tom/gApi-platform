@@ -30,6 +30,17 @@ const (
 	ConfigGroupRegister         = "register"
 )
 
+// ConfigKey constants for Alipay settings
+const (
+	ConfigKeyAlipayEnabled    = "alipay_enabled"
+	ConfigKeyAlipayAppID      = "alipay_app_id"
+	ConfigKeyAlipayPrivateKey = "alipay_private_key"
+	ConfigKeyAlipayPublicKey  = "alipay_public_key"
+	ConfigKeyAlipayEncryptKey = "alipay_encrypt_key"
+	ConfigKeyAlipaySandbox    = "alipay_sandbox"
+	ConfigGroupPayment        = "payment"
+)
+
 // SMTPConfig represents SMTP settings
 type SMTPConfig struct {
 	Enabled   bool   `json:"enabled"`
@@ -44,18 +55,18 @@ type SMTPConfig struct {
 
 // SettingsService handles system configuration
 type SettingsService struct {
-	db         *gorm.DB
-	cache      map[string]*SMTPConfig
-	cacheMutex sync.RWMutex
-	cacheTime  time.Time
-	cacheTTL   time.Duration
+	db          *gorm.DB
+	smtpCache   *SMTPConfig
+	alipayCache *AlipayConfig
+	cacheMutex  sync.RWMutex
+	cacheTime   time.Time
+	cacheTTL    time.Duration
 }
 
 // NewSettingsService creates a new settings service
 func NewSettingsService(db *gorm.DB) *SettingsService {
 	return &SettingsService{
 		db:       db,
-		cache:    make(map[string]*SMTPConfig),
 		cacheTTL: 5 * time.Minute,
 	}
 }
@@ -63,8 +74,8 @@ func NewSettingsService(db *gorm.DB) *SettingsService {
 // GetSMTPConfig retrieves SMTP configuration
 func (s *SettingsService) GetSMTPConfig() (*SMTPConfig, error) {
 	s.cacheMutex.RLock()
-	if time.Since(s.cacheTime) < s.cacheTTL && s.cache["smtp"] != nil {
-		cfg := s.cache["smtp"]
+	if time.Since(s.cacheTime) < s.cacheTTL && s.smtpCache != nil {
+		cfg := s.smtpCache
 		s.cacheMutex.RUnlock()
 		return cfg, nil
 	}
@@ -114,7 +125,7 @@ func (s *SettingsService) GetSMTPConfig() (*SMTPConfig, error) {
 	}
 
 	s.cacheMutex.Lock()
-	s.cache["smtp"] = cfg
+	s.smtpCache = cfg
 	s.cacheTime = time.Now()
 	s.cacheMutex.Unlock()
 
@@ -229,7 +240,8 @@ func (s *SettingsService) upsertConfig(tx *gorm.DB, key, value, valueType string
 
 func (s *SettingsService) InvalidateCache() {
 	s.cacheMutex.Lock()
-	s.cache = make(map[string]*SMTPConfig)
+	s.smtpCache = nil
+	s.alipayCache = nil
 	s.cacheTime = time.Time{}
 	s.cacheMutex.Unlock()
 }
@@ -244,14 +256,20 @@ func boolToString(b bool) string {
 
 func getConfigDescription(key string) string {
 	descriptions := map[string]string{
-		ConfigKeySMTPEnabled:   "启用邮箱服务",
-		ConfigKeySMTPHost:      "SMTP 服务器地址",
-		ConfigKeySMTPPort:      "SMTP 端口",
-		ConfigKeySMTPUseTLS:    "使用 TLS 加密",
-		ConfigKeySMTPUsername:  "SMTP 用户名",
-		ConfigKeySMTPPassword:  "SMTP 密码 (加密存储)",
-		ConfigKeySMTPFromName:  "发件人名称",
-		ConfigKeySMTPFromEmail: "发件人邮箱",
+		ConfigKeySMTPEnabled:      "启用邮箱服务",
+		ConfigKeySMTPHost:         "SMTP 服务器地址",
+		ConfigKeySMTPPort:         "SMTP 端口",
+		ConfigKeySMTPUseTLS:       "使用 TLS 加密",
+		ConfigKeySMTPUsername:     "SMTP 用户名",
+		ConfigKeySMTPPassword:     "SMTP 密码 (加密存储)",
+		ConfigKeySMTPFromName:     "发件人名称",
+		ConfigKeySMTPFromEmail:    "发件人邮箱",
+		ConfigKeyAlipayEnabled:    "启用支付宝支付",
+		ConfigKeyAlipayAppID:      "支付宝应用 APP ID",
+		ConfigKeyAlipayPrivateKey: "支付宝应用私钥 (加密存储)",
+		ConfigKeyAlipayPublicKey:  "支付宝公钥",
+		ConfigKeyAlipayEncryptKey: "支付宝加密密钥 (加密存储)",
+		ConfigKeyAlipaySandbox:    "启用沙箱模式",
 	}
 	if desc, ok := descriptions[key]; ok {
 		return desc
@@ -265,6 +283,15 @@ type RegisterSettings struct {
 	EnableCaptcha      bool  `json:"enable_captcha"`
 	NewUserQuota       int   `json:"new_user_quota"`
 	TrialVIPDays       int   `json:"trial_vip_days"`
+}
+
+type AlipayConfig struct {
+	Enabled    bool   `json:"enabled"`
+	AppID      string `json:"app_id"`
+	PrivateKey string `json:"-"`
+	PublicKey  string `json:"public_key"`
+	EncryptKey string `json:"-"`
+	Sandbox    bool   `json:"sandbox"`
 }
 
 func (s *SettingsService) GetRegisterSettings() (*RegisterSettings, error) {
@@ -328,6 +355,140 @@ func (s *SettingsService) IsSMTPEnabled() bool {
 		return false
 	}
 	return cfg.Enabled && cfg.Host != "" && cfg.Username != "" && cfg.Password != ""
+}
+
+func (s *SettingsService) GetAlipayConfig() (*AlipayConfig, error) {
+	s.cacheMutex.RLock()
+	if time.Since(s.cacheTime) < s.cacheTTL && s.alipayCache != nil {
+		cfg := s.alipayCache
+		s.cacheMutex.RUnlock()
+		return cfg, nil
+	}
+	s.cacheMutex.RUnlock()
+
+	cfg := &AlipayConfig{
+		Enabled: false,
+		Sandbox: true,
+	}
+
+	configs, err := s.getConfigsByGroup(ConfigGroupPayment)
+	if err != nil {
+		return cfg, err
+	}
+
+	for _, c := range configs {
+		switch c.ConfigKey {
+		case ConfigKeyAlipayEnabled:
+			cfg.Enabled = c.ConfigValue == "true" || c.ConfigValue == "1"
+		case ConfigKeyAlipayAppID:
+			cfg.AppID = c.ConfigValue
+		case ConfigKeyAlipayPrivateKey:
+			if c.ConfigValue != "" {
+				decrypted, err := crypto.Decrypt(c.ConfigValue)
+				if err == nil {
+					cfg.PrivateKey = decrypted
+				}
+			}
+		case ConfigKeyAlipayPublicKey:
+			cfg.PublicKey = c.ConfigValue
+		case ConfigKeyAlipayEncryptKey:
+			if c.ConfigValue != "" {
+				decrypted, err := crypto.Decrypt(c.ConfigValue)
+				if err == nil {
+					cfg.EncryptKey = decrypted
+				}
+			}
+		case ConfigKeyAlipaySandbox:
+			cfg.Sandbox = c.ConfigValue == "true" || c.ConfigValue == "1"
+		}
+	}
+
+	s.cacheMutex.Lock()
+	s.alipayCache = cfg
+	s.cacheTime = time.Now()
+	s.cacheMutex.Unlock()
+
+	return cfg, nil
+}
+
+func (s *SettingsService) UpdateAlipayConfig(cfg *AlipayConfig) error {
+	updates := map[string]struct {
+		Value       string
+		IsSensitive bool
+	}{
+		ConfigKeyAlipayEnabled:    {Value: boolToString(cfg.Enabled), IsSensitive: false},
+		ConfigKeyAlipayAppID:      {Value: cfg.AppID, IsSensitive: false},
+		ConfigKeyAlipayPrivateKey: {Value: cfg.PrivateKey, IsSensitive: true},
+		ConfigKeyAlipayPublicKey:  {Value: cfg.PublicKey, IsSensitive: false},
+		ConfigKeyAlipayEncryptKey: {Value: cfg.EncryptKey, IsSensitive: true},
+		ConfigKeyAlipaySandbox:    {Value: boolToString(cfg.Sandbox), IsSensitive: false},
+	}
+
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		for key, data := range updates {
+			value := data.Value
+
+			if data.IsSensitive && value != "" {
+				encrypted, err := crypto.Encrypt(value)
+				if err != nil {
+					return fmt.Errorf("failed to encrypt %s: %w", key, err)
+				}
+				value = encrypted
+			}
+
+			if key == ConfigKeyAlipayPrivateKey && value == "" {
+				continue
+			}
+			if key == ConfigKeyAlipayEncryptKey && value == "" {
+				continue
+			}
+
+			if err := s.upsertConfigWithGroup(tx, key, value, "string", data.IsSensitive, ConfigGroupPayment); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err == nil {
+		// Invalidate in-memory Alipay config cache after successful update
+		s.InvalidateCache()
+	}
+	return err
+}
+
+func (s *SettingsService) upsertConfigWithGroup(tx *gorm.DB, key, value, valueType string, isSensitive bool, group string) error {
+	var config model.SystemConfig
+	err := tx.Where("config_key = ?", key).First(&config).Error
+
+	description := getConfigDescription(key)
+
+	if err == gorm.ErrRecordNotFound {
+		config = model.SystemConfig{
+			ConfigKey:   key,
+			ConfigValue: value,
+			ValueType:   valueType,
+			ConfigGroup: group,
+			IsSensitive: isSensitive,
+			Description: description,
+		}
+		return tx.Create(&config).Error
+	} else if err != nil {
+		return err
+	}
+
+	config.ConfigValue = value
+	if isSensitive {
+		config.IsSensitive = true
+	}
+	return tx.Save(&config).Error
+}
+
+func (s *SettingsService) IsAlipayEnabled() bool {
+	cfg, err := s.GetAlipayConfig()
+	if err != nil {
+		return false
+	}
+	return cfg.Enabled && cfg.AppID != "" && cfg.PrivateKey != ""
 }
 
 func boolPtr(b bool) *bool {

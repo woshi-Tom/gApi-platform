@@ -15,6 +15,7 @@ const router = createRouter({
     { path: '/logs', name: 'APILogs', component: () => import('@/views/logs/ApiLogs.vue'), meta: { requiresAuth: true, title: 'API 调用记录' } },
     { path: '/vip', name: 'VIP', component: () => import('@/views/vip/Index.vue'), meta: { requiresAuth: true, title: 'VIP 会员' } },
     { path: '/profile', name: 'Profile', component: () => import('@/views/Profile.vue'), meta: { requiresAuth: true, title: '个人中心' } }
+    ,{ path: '/payment', name: 'Payment', component: () => import('@/views/user/Payment.vue'), meta: { requiresAuth: true, title: '支付宝支付' } }
   ]
 })
 

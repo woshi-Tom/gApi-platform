@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"time"
+
 	"gapi-platform/internal/model"
 	"gorm.io/gorm"
 )
@@ -222,6 +224,23 @@ func (r *OrderRepository) Update(order *model.Order) error {
 	return r.db.Save(order).Error
 }
 
+// Save saves an order (alias for Update)
+func (r *OrderRepository) Save(order *model.Order) error {
+	return r.db.Save(order).Error
+}
+
+// GetByOrderNo gets an order by order number
+func (r *OrderRepository) GetByOrderNo(orderNo string) (*model.Order, error) {
+	var order model.Order
+	err := r.db.Where("order_no = ?", orderNo).First(&order).Error
+	return &order, err
+}
+
+// GetDB returns the database instance
+func (r *OrderRepository) GetDB() *gorm.DB {
+	return r.db
+}
+
 // PaymentRepository handles payment database operations
 type PaymentRepository struct {
 	db *gorm.DB
@@ -247,6 +266,11 @@ func (r *PaymentRepository) GetByID(id uint) (*model.Payment, error) {
 // Update updates a payment
 func (r *PaymentRepository) Update(payment *model.Payment) error {
 	return r.db.Save(payment).Error
+}
+
+// GetDB returns the database instance
+func (r *PaymentRepository) GetDB() *gorm.DB {
+	return r.db
 }
 
 // AuditRepository handles audit log database operations
@@ -460,5 +484,56 @@ func (r *APIAccessLogRepository) List(page, pageSize int, userID *uint, startTim
 }
 
 func (r *APIAccessLogRepository) GetDB() *gorm.DB {
+	return r.db
+}
+
+type IdempotencyRepository struct {
+	db *gorm.DB
+}
+
+func NewIdempotencyRepository(db *gorm.DB) *IdempotencyRepository {
+	return &IdempotencyRepository{db: db}
+}
+
+func (r *IdempotencyRepository) Create(key *model.IdempotencyKey) error {
+	return r.db.Create(key).Error
+}
+
+func (r *IdempotencyRepository) GetByKey(key string) (*model.IdempotencyKey, error) {
+	var result model.IdempotencyKey
+	err := r.db.Where("key = ? AND expires_at > ?", key, time.Now()).First(&result).Error
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+func (r *IdempotencyRepository) DeleteExpired() error {
+	return r.db.Where("expires_at < ?", time.Now()).Delete(&model.IdempotencyKey{}).Error
+}
+
+func (r *IdempotencyRepository) GetDB() *gorm.DB {
+	return r.db
+}
+
+type PaymentLogRepository struct {
+	db *gorm.DB
+}
+
+func NewPaymentLogRepository(db *gorm.DB) *PaymentLogRepository {
+	return &PaymentLogRepository{db: db}
+}
+
+func (r *PaymentLogRepository) Create(log *model.PaymentLog) error {
+	return r.db.Create(log).Error
+}
+
+func (r *PaymentLogRepository) ListByOrderID(orderID uint) ([]model.PaymentLog, error) {
+	var logs []model.PaymentLog
+	err := r.db.Where("order_id = ?", orderID).Order("created_at ASC").Find(&logs).Error
+	return logs, err
+}
+
+func (r *PaymentLogRepository) GetDB() *gorm.DB {
 	return r.db
 }

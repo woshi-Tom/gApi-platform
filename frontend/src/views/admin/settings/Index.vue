@@ -442,11 +442,35 @@ async function saveRateLimit() {
   }
 }
 
+async function loadPaymentConfig() {
+  try {
+    const res = await settingsAPI.getPaymentConfig()
+    if (res.data.data) {
+      const data = res.data.data
+      paymentForm.alipay_enabled = data.enabled
+      paymentForm.alipay_app_id = data.app_id || ''
+      paymentForm.alipay_public_key = data.public_key || ''
+      paymentForm.alipay_sandbox = data.sandbox !== false
+      paymentForm.alipay_private_key = ''
+    }
+  } catch (e) {
+    console.error('Failed to load payment config:', e)
+  }
+}
+
 async function savePayment() {
   saving.value = true
   try {
-    await new Promise(resolve => setTimeout(resolve, 500))
+    await settingsAPI.updatePaymentConfig({
+      enabled: paymentForm.alipay_enabled,
+      app_id: paymentForm.alipay_app_id,
+      private_key: paymentForm.alipay_private_key,
+      public_key: paymentForm.alipay_public_key,
+      encrypt_key: '',
+      sandbox: paymentForm.alipay_sandbox,
+    })
     ElMessage.success('支付设置已保存')
+    paymentForm.alipay_private_key = ''
   } catch (e) {
     ElMessage.error('保存失败')
   } finally {
@@ -469,6 +493,7 @@ async function saveSecurity() {
 onMounted(() => {
   loadEmailConfig()
   loadRegisterSettings()
+  loadPaymentConfig()
 })
 </script>
 
