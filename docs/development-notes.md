@@ -122,6 +122,32 @@
 - **Rollback**: Keep DDL comments with version numbers
 - **Seeding**: Run seed data after schema creation
 
+### 2.4 Database Column Naming Conventions (IMPORTANT)
+
+⚠️ **数据库列名规范 - 必须遵守**
+
+| 字段类型 | 列名格式 | 示例 |
+|---------|---------|------|
+| VIP相关 | `v_ip_xxx` | `v_ip_quota`, `v_ip_expired_at`, `v_ip_package_id` |
+| 普通字段 | `xxx_xxx` | `created_at`, `updated_at`, `remain_quota` |
+
+⚠️ **代码中引用数据库列名时必须使用正确的下划线格式！**
+
+| 错误写法 ❌ | 正确写法 ✅ |
+|-------------|-------------|
+| `Update("vip_quota", value)` | `Update("v_ip_quota", value)` |
+| `Update("vip_expired_at", value)` | `Update("v_ip_expired_at", value)` |
+| `Update("vip_package_id", value)` | `Update("v_ip_package_id", value)` |
+
+### 2.5 Code Review Checklist
+
+提交代码前必须检查：
+
+- [ ] **数据库列名**：所有 SQL/GORM 更新语句中的列名必须与 schema.sql 一致
+- [ ] **VIP字段**：确认使用 `v_ip_xxx` 格式
+- [ ] **支付流程测试**：创建订单 → 完成支付 → 验证订单状态变为 `completed`
+- [ ] **VIP激活验证**：验证用户 level/quota/expired_at 正确更新
+
 ---
 
 ## 3. API Implementation Details

@@ -302,6 +302,52 @@ function initCountdown() {
 }
 ```
 
+### 4.10 Dashboard 日期和活动静态数据 (2026-03-31)
+
+**问题1**: 仪表盘图表使用硬编码的日期数据 ('03-22' 到 '03-28')，实际应该使用API返回的动态日期。
+
+**修复** (Dashboard.vue):
+```javascript
+// 删除硬编码的 fallback 数据
+const hasData = dailyUsage.value.length > 0 && dailyUsage.value.some(d => (d.total_calls || 0) > 0)
+if (!hasData) {
+  dailyUsage.value = [
+    { date: '03-22', total_calls: 10, ... },
+    // ... 删除了这些
+  ]
+}
+```
+
+**问题2**: "最近活动"使用硬编码的演示数据，没有从API获取。
+
+**修复**: 新增 `/user/activities` API 端点:
+```go
+// user_handler.go
+func (h *UserHandler) GetRecentActivities(c *gin.Context) {
+    // 返回最近20条活动记录（订单 + API调用）
+}
+```
+
+**修复** (Dashboard.vue):
+```javascript
+// 从 API 获取真实活动数据
+const activitiesRes = await request.get('/user/activities')
+if (activitiesRes.data.data && activitiesRes.data.data.length > 0) {
+  recentActivity.value = activitiesRes.data.data.map((item: any) => ({
+    id: item.id,
+    type: item.type,
+    title: item.title,
+    description: item.description,
+    time: new Date(item.time)
+  }))
+}
+```
+
+**新增路由** (router.go):
+```go
+userAuth.GET("/activities", userHandler.GetRecentActivities)
+```
+
 ---
 
 ## 5. 部署检查清单
