@@ -4,44 +4,36 @@
 
 管理后台 → 操作日志页面显示 "no data"，即使添加筛选器也无数据。
 
-## 可能原因
+## 根本原因
 
-1. **数据库表不存在** - audit_logs 表未创建
-2. **数据未写入** - 审计中间件未正确记录日志
-3. **查询参数不匹配** - 前端传的参数与后端期望的不一致
+前端响应解析错误：
+- 后端返回: `{ success: true, data: [...array...], pagination: {...} }`
+- 前端期望: `{ success: true, data: { list: [...], pagination: {...} } }`
 
-## 排查步骤
+前端代码尝试访问 `res.data.data.list`，但实际数据在 `res.data.data` 直接返回。
 
-### 1. 检查数据库表是否存在
+## 影响
 
-```sql
--- 连接数据库后执行
-SELECT COUNT(*) FROM audit_logs;
+- 操作日志页面无法显示数据
+- 显示 "no data"
+
+## 修复方案
+
+修改 `frontend/src/views/admin/logs/Index.vue`：
+
+```javascript
+// 修复前
+logs.value = res.data.data?.list || []
+total.value = res.data.data?.pagination?.total || 0
+
+// 修复后
+logs.value = res.data.data || []
+total.value = res.data.pagination?.total || 0
 ```
 
-### 2. 检查审计中间件是否启用
+## 修改文件
 
-审计中间件在 `backend/internal/router/router.go` 中全局启用：
-```go
-r.Use(middleware.AuditLog(auditRepo))
-```
-
-### 3. 检查数据是否写入
-
-审计日志异步写入数据库，查看后端日志是否有错误。
-
-## 临时解决方案
-
-1. 确保数据库已初始化（运行 schema.sql）
-2. 触发一些管理操作（如创建用户、创建渠道）
-3. 刷新操作日志页面查看是否有新数据
-
-## 待确认
-
-如果上述排查后仍无数据，需要：
-1. 检查后端日志
-2. 验证数据库连接
-3. 检查 audit_logs 表结构
+- `frontend/src/views/admin/logs/Index.vue`
 
 ## 发现日期
 
@@ -49,4 +41,4 @@ r.Use(middleware.AuditLog(auditRepo))
 
 ## 状态
 
-🔴 待排查
+✅ 已修复
