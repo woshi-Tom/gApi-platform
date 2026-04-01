@@ -160,7 +160,7 @@ import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart, PieChart, BarChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
 import VChart from 'vue-echarts'
-import request from '@/api/request'
+import { adminAPI } from '@/api/request'
 import {
   User, UserFilled, Star, Connection, CircleCheck,
   Document, Money, TrendCharts, Clock, Setting
@@ -210,7 +210,7 @@ function formatNumber(n: number): string {
 
 async function fetchUserRanking() {
   try {
-    const res = await request.get('/admin/stats/user-ranking', {
+    const res = await adminAPI.get('/stats/user-ranking', {
       params: { type: rankType.value, limit: 10, time_range: 'week' }
     })
     if (res.data?.success) {
@@ -352,8 +352,8 @@ const pieChartOption = computed(() => ({
 onMounted(async () => {
   try {
     const [overviewRes, trendsRes] = await Promise.all([
-      request.get('/admin/stats/overview'),
-      request.get('/admin/stats/trends')
+      adminAPI.get('/stats/overview'),
+      adminAPI.get('/stats/trends')
     ])
     stats.value = overviewRes.data.data || {}
     if (trendsRes.data.data) {
