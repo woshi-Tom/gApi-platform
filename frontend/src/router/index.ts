@@ -13,6 +13,7 @@ const router = createRouter({
     { path: '/products', name: 'Products', component: () => import('@/views/products/List.vue'), meta: { requiresAuth: true, title: '商品列表' } },
     { path: '/orders', name: 'Orders', component: () => import('@/views/orders/List.vue'), meta: { requiresAuth: true, title: '订单记录' } },
     { path: '/logs', name: 'APILogs', component: () => import('@/views/logs/ApiLogs.vue'), meta: { requiresAuth: true, title: 'API 调用记录' } },
+    { path: '/activities', name: 'Activities', component: () => import('@/views/activities/List.vue'), meta: { requiresAuth: true, title: '最近活动' } },
     { path: '/vip', name: 'VIP', component: () => import('@/views/vip/Index.vue'), meta: { requiresAuth: true, title: 'VIP 会员' } },
     { path: '/profile', name: 'Profile', component: () => import('@/views/Profile.vue'), meta: { requiresAuth: true, title: '个人中心' } }
     ,{ path: '/payment', name: 'Payment', component: () => import('@/views/user/Payment.vue'), meta: { requiresAuth: true, title: '支付宝支付' } }
