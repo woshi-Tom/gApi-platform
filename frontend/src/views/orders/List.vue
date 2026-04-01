@@ -129,7 +129,7 @@ interface Order {
   total_amount: number
   discount_amount: number
   pay_amount: number
-  status: 'pending' | 'paid' | 'cancelled' | 'refunded' | 'expired'
+  status: 'pending' | 'paid' | 'completed' | 'cancelled' | 'refunded' | 'expired'
   paid_at?: string
   created_at: string
   expire_at?: string
@@ -158,6 +158,7 @@ function formatDate(dateStr: string): string {
 
 function getStatusType(status: string): string {
   switch (status) {
+    case 'completed':
     case 'paid': return 'success'
     case 'pending': return 'warning'
     case 'cancelled': return 'info'
@@ -169,6 +170,7 @@ function getStatusType(status: string): string {
 
 function getStatusName(status: string): string {
   switch (status) {
+    case 'completed': return '已完成'
     case 'paid': return '已支付'
     case 'pending': return '待支付'
     case 'cancelled': return '已取消'

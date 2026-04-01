@@ -8,7 +8,7 @@
         <el-form-item label="订单状态">
           <el-select v-model="filters.status" clearable placeholder="全部" style="width:120px" @change="load">
             <el-option label="待支付" value="pending" />
-            <el-option label="已支付" value="paid" />
+            <el-option label="已完成" value="completed" />
             <el-option label="已取消" value="cancelled" />
             <el-option label="已退款" value="refunded" />
           </el-select>
@@ -118,10 +118,12 @@ const pagination = reactive({
 
 const statusType = (s: string) => {
   switch (s) {
+    case 'completed': return 'success'
     case 'paid': return 'success'
     case 'pending': return 'warning'
     case 'cancelled': return 'info'
     case 'refunded': return 'danger'
+    case 'expired': return 'warning'
     default: return 'info'
   }
 }
@@ -130,6 +132,7 @@ const statusName = (s: string) => {
   const map: Record<string, string> = {
     pending: '待支付',
     paid: '已支付',
+    completed: '已完成',
     cancelled: '已取消',
     refunded: '已退款',
     expired: '已过期',
