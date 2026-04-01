@@ -315,7 +315,14 @@ func (h *AdminHandler) ListOrders(c *gin.Context) {
 		return
 	}
 
-	response.Paginated(c, orders, page, pageSize, total)
+	response.Success(c, gin.H{
+		"list": orders,
+		"pagination": gin.H{
+			"page":      page,
+			"page_size": pageSize,
+			"total":     total,
+		},
+	})
 }
 
 // GetAuditLogs returns audit logs
@@ -340,7 +347,14 @@ func (h *AdminHandler) GetAuditLogs(c *gin.Context) {
 		return
 	}
 
-	response.Paginated(c, logs, page, pageSize, total)
+	response.Success(c, gin.H{
+		"list": logs,
+		"pagination": gin.H{
+			"page":      page,
+			"page_size": pageSize,
+			"total":     total,
+		},
+	})
 }
 
 // GetLoginLogs returns login logs
@@ -365,7 +379,14 @@ func (h *AdminHandler) GetLoginLogs(c *gin.Context) {
 		return
 	}
 
-	response.Paginated(c, logs, page, pageSize, total)
+	response.Success(c, gin.H{
+		"list": logs,
+		"pagination": gin.H{
+			"page":      page,
+			"page_size": pageSize,
+			"total":     total,
+		},
+	})
 }
 
 // GetDashboardStats godoc
