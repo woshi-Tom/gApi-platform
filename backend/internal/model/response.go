@@ -111,7 +111,8 @@ type TokenResponse struct {
 
 // QuotaInfo represents user quota information
 type QuotaInfo struct {
-	RemainQuota    int64      `json:"remain_quota"`
+	FreeQuota      int64      `json:"free_quota"`
+	FreeExpiredAt  *time.Time `json:"free_expired_at"`
 	VIPQuota       int64      `json:"vip_quota"`
 	VIPExpiredAt   *time.Time `json:"vip_expired_at"`
 	IsVIP          bool       `json:"is_vip"`

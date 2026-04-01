@@ -16,10 +16,10 @@ var (
 )
 
 type BillingService struct {
-	userRepo   *repository.UserRepository
-	tokenRepo  *repository.TokenRepository
-	usageRepo  *repository.UsageLogRepository
-	txRepo     *repository.QuotaTransactionRepository
+	userRepo  *repository.UserRepository
+	tokenRepo *repository.TokenRepository
+	usageRepo *repository.UsageLogRepository
+	txRepo    *repository.QuotaTransactionRepository
 }
 
 func NewBillingService(
@@ -66,21 +66,38 @@ func (s *BillingService) PreConsumeQuota(userID, tokenID uint, modelName string,
 		return err
 	}
 
-	estimatedQuota := s.CalculateQuota(modelName, estimatedTokens, estimatedTokens)
+	estimatedQuota := int64(s.CalculateQuota(modelName, estimatedTokens, estimatedTokens))
 
-	if !token.IsVIPQuota && user.RemainQuota < int64(estimatedQuota) {
-		return ErrQuotaInsufficient
+	totalAvailable := s.GetTotalAvailableQuota(user)
+
+	if totalAvailable >= estimatedQuota {
+		return nil
 	}
 
-	if token.IsVIPQuota && user.VIPQuota < int64(estimatedQuota) {
-		return ErrQuotaInsufficient
+	return ErrQuotaInsufficient
+}
+
+func (s *BillingService) GetTotalAvailableQuota(user *model.User) int64 {
+	var total int64
+
+	if user.FreeQuota > 0 && (user.FreeExpiredAt == nil || user.FreeExpiredAt.After(time.Now())) {
+		total += user.FreeQuota
 	}
 
-	if !token.UnlimitedQuota && token.RemainQuota < int64(estimatedQuota) {
-		return ErrQuotaInsufficient
+	if s.userRepo != nil {
+		rechargeQuota := s.getActiveRechargeQuota(user.ID)
+		total += rechargeQuota
 	}
 
-	return nil
+	if user.VIPQuota > 0 && (user.VIPExpiredAt == nil || user.VIPExpiredAt.After(time.Now())) {
+		total += user.VIPQuota
+	}
+
+	return total
+}
+
+func (s *BillingService) getActiveRechargeQuota(userID uint) int64 {
+	return 0
 }
 
 func (s *BillingService) PostConsumeQuota(userID, tokenID uint, modelName string, promptTokens, completionTokens int) error {
@@ -97,30 +114,54 @@ func (s *BillingService) PostConsumeQuota(userID, tokenID uint, modelName string
 	actualQuota := s.CalculateQuota(modelName, promptTokens, completionTokens)
 	_ = s.CalculateCost(modelName, promptTokens, completionTokens)
 
-	quotaType := "permanent"
-	if user.Level == "vip" || user.Level == "enterprise" {
-		quotaType = "vip"
+	remaining := int64(actualQuota)
+
+	if user.FreeQuota > 0 && (user.FreeExpiredAt == nil || user.FreeExpiredAt.After(time.Now())) {
+		consume := min(remaining, user.FreeQuota)
+		user.FreeQuota -= consume
+		remaining -= consume
+
+		err = s.txRepo.Create(&model.QuotaTransaction{
+			UserID:        userID,
+			TokenID:       &tokenID,
+			Type:          "usage",
+			QuotaType:     "free",
+			ChangeAmount:  -consume,
+			BalanceBefore: user.FreeQuota + consume,
+			BalanceAfter:  user.FreeQuota,
+			Description:   "API usage (free): " + modelName,
+			Model:         modelName,
+		})
+		if err != nil {
+			return err
+		}
 	}
 
-	err = s.txRepo.Create(&model.QuotaTransaction{
-		UserID:        userID,
-		TokenID:       &tokenID,
-		Type:          "usage",
-		QuotaType:     quotaType,
-		ChangeAmount: -int64(actualQuota),
-		BalanceBefore: user.RemainQuota,
-		BalanceAfter:  user.RemainQuota - int64(actualQuota),
-		Description:   "API usage: " + modelName,
-		Model:         modelName,
-	})
-	if err != nil {
-		return err
+	if remaining > 0 {
+		hasRecharge := s.consumeRechargeQuota(userID, tokenID, &remaining, modelName)
+		if hasRecharge && remaining > 0 {
+			user.VIPQuota -= remaining
+			if user.VIPQuota < 0 {
+				user.VIPQuota = 0
+			}
+
+			err = s.txRepo.Create(&model.QuotaTransaction{
+				UserID:        userID,
+				TokenID:       &tokenID,
+				Type:          "usage",
+				QuotaType:     "vip",
+				ChangeAmount:  -remaining,
+				BalanceBefore: user.VIPQuota + remaining,
+				BalanceAfter:  user.VIPQuota,
+				Description:   "API usage (VIP): " + modelName,
+				Model:         modelName,
+			})
+			if err != nil {
+				return err
+			}
+		}
 	}
 
-	user.RemainQuota -= int64(actualQuota)
-	if token.IsVIPQuota {
-		user.VIPQuota -= int64(actualQuota)
-	}
 	token.UsedQuota += int64(actualQuota)
 	if !token.UnlimitedQuota {
 		token.RemainQuota -= int64(actualQuota)
@@ -135,6 +176,10 @@ func (s *BillingService) PostConsumeQuota(userID, tokenID uint, modelName string
 	}
 
 	return nil
+}
+
+func (s *BillingService) consumeRechargeQuota(userID, tokenID uint, remaining *int64, modelName string) bool {
+	return false
 }
 
 func (s *BillingService) CalculateQuota(modelName string, promptTokens, completionTokens int) int {
@@ -166,17 +211,17 @@ func (s *BillingService) CalculateCost(modelName string, promptTokens, completio
 
 func (s *BillingService) GetModelRate(modelName string) float64 {
 	rates := map[string]float64{
-		"gpt-3.5-turbo":      1.0,
-		"gpt-4":               20.0,
-		"gpt-4-turbo":         10.0,
-		"gpt-4-32k":           30.0,
-		"claude-3-opus":       15.0,
-		"claude-3-sonnet":      3.0,
-		"claude-3-haiku":       1.0,
-		"gemini-pro":           1.0,
-		"gemini-1.5-pro":       2.0,
-		"deepseek-chat":        1.0,
-		"deepseek-coder":       1.0,
+		"gpt-3.5-turbo":   1.0,
+		"gpt-4":           20.0,
+		"gpt-4-turbo":     10.0,
+		"gpt-4-32k":       30.0,
+		"claude-3-opus":   15.0,
+		"claude-3-sonnet": 3.0,
+		"claude-3-haiku":  1.0,
+		"gemini-pro":      1.0,
+		"gemini-1.5-pro":  2.0,
+		"deepseek-chat":   1.0,
+		"deepseek-coder":  1.0,
 	}
 
 	for pattern, rate := range rates {
@@ -207,23 +252,30 @@ func (s *BillingService) AddQuota(userID uint, amount int64, quotaType, descript
 		return err
 	}
 
+	var balanceBefore, balanceAfter int64
+
+	switch quotaType {
+	case "free":
+		balanceBefore = user.FreeQuota
+		user.FreeQuota += amount
+		balanceAfter = user.FreeQuota
+	case "vip":
+		balanceBefore = user.VIPQuota
+		user.VIPQuota += amount
+		balanceAfter = user.VIPQuota
+	default:
+		return errors.New("invalid quota type")
+	}
+
 	tx := &model.QuotaTransaction{
 		UserID:        userID,
 		Type:          "recharge",
 		QuotaType:     quotaType,
 		ChangeAmount:  amount,
-		BalanceBefore: user.RemainQuota,
+		BalanceBefore: balanceBefore,
+		BalanceAfter:  balanceAfter,
+		Description:   description,
 	}
-
-	if quotaType == "vip" {
-		user.VIPQuota += amount
-		tx.BalanceAfter = user.VIPQuota
-	} else {
-		user.RemainQuota += amount
-		tx.BalanceAfter = user.RemainQuota
-	}
-
-	tx.Description = description
 
 	if err := s.txRepo.Create(tx); err != nil {
 		return err
@@ -238,27 +290,26 @@ func (s *BillingService) DeductQuota(userID uint, amount int64, reason string) e
 		return err
 	}
 
-	if user.RemainQuota < amount {
+	totalQuota := s.GetTotalAvailableQuota(user)
+	if totalQuota < amount {
 		return ErrQuotaInsufficient
 	}
 
 	tx := &model.QuotaTransaction{
 		UserID:        userID,
 		Type:          "adjust",
-		QuotaType:     "permanent",
+		QuotaType:     "mixed",
 		ChangeAmount:  -amount,
-		BalanceBefore: user.RemainQuota,
-		BalanceAfter:  user.RemainQuota - amount,
+		BalanceBefore: totalQuota,
+		BalanceAfter:  totalQuota - amount,
 		Description:   reason,
 	}
-
-	user.RemainQuota -= amount
 
 	if err := s.txRepo.Create(tx); err != nil {
 		return err
 	}
 
-	return s.userRepo.Update(user)
+	return nil
 }
 
 func (s *BillingService) GetUserQuota(userID uint) (*QuotaInfo, error) {
@@ -267,19 +318,37 @@ func (s *BillingService) GetUserQuota(userID uint) (*QuotaInfo, error) {
 		return nil, err
 	}
 
+	isVIP := s.isVIPUser(user)
+
 	return &QuotaInfo{
-		RemainQuota:    user.RemainQuota,
+		FreeQuota:      user.FreeQuota,
+		FreeExpiredAt:  user.FreeExpiredAt,
 		VIPQuota:       user.VIPQuota,
 		VIPExpiredAt:   user.VIPExpiredAt,
-		IsVIP:          user.Level == "vip" || user.Level == "enterprise",
+		IsVIP:          isVIP,
 		Level:          user.Level,
 		UsedQuotaToday: 0,
 		UsedQuotaMonth: 0,
 	}, nil
 }
 
+func (s *BillingService) isVIPUser(user *model.User) bool {
+	if user == nil {
+		return false
+	}
+	hasLevel := user.Level == "vip_bronze" || user.Level == "vip_silver" || user.Level == "vip_gold"
+	if !hasLevel {
+		return false
+	}
+	if user.VIPExpiredAt == nil {
+		return false
+	}
+	return user.VIPExpiredAt.After(time.Now())
+}
+
 type QuotaInfo struct {
-	RemainQuota    int64
+	FreeQuota      int64
+	FreeExpiredAt  *time.Time
 	VIPQuota       int64
 	VIPExpiredAt   *time.Time
 	IsVIP          bool
@@ -312,12 +381,12 @@ func (s *BillingService) GetUserUsageStats(userID uint, days int) (*repository.U
 }
 
 type TokenQuotaInfo struct {
-	RemainQuota    int64
-	UsedQuota      int64
-	TotalQuota     int64
-	UsagePercent   float64
-	ResetAt        *interface{}
-	IsUnlimited    bool
+	RemainQuota  int64
+	UsedQuota    int64
+	TotalQuota   int64
+	UsagePercent float64
+	ResetAt      *interface{}
+	IsUnlimited  bool
 }
 
 func (s *BillingService) GetTokenQuota(tokenID uint) (*TokenQuotaInfo, error) {
@@ -337,7 +406,7 @@ func (s *BillingService) GetTokenQuota(tokenID uint) (*TokenQuotaInfo, error) {
 		UsedQuota:    token.UsedQuota,
 		TotalQuota:   totalQuota,
 		UsagePercent: usagePercent,
-		ResetAt:     nil,
+		ResetAt:      nil,
 		IsUnlimited:  token.UnlimitedQuota,
 	}, nil
 }

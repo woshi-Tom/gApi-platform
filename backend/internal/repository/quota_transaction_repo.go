@@ -56,5 +56,5 @@ func (r *QuotaTransactionRepository) GetBalance(userID uint) (int64, int64, erro
 	if err != nil {
 		return 0, 0, err
 	}
-	return user.RemainQuota, user.VIPQuota, nil
+	return user.FreeQuota, user.VIPQuota, nil
 }
