@@ -54,24 +54,26 @@
             {{ (row.tpm_limit ?? 0) > 0 ? (row.tpm_limit / 1000) + 'k' : '0' }}
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="80">
+        <el-table-column label="标签" width="120">
           <template #default="{ row }">
-            <el-tag :type="row.status==='active'?'success':'danger'" size="small">
-              {{ row.status==='active'?'上架':'下架' }}
-            </el-tag>
+            <el-tag v-if="row.is_recommended" type="warning" size="small" style="margin-right:4px">推荐</el-tag>
+            <el-tag v-if="row.is_hot" type="danger" size="small">热门</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="sort_order" label="排序" width="60" />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="handleEdit(row)">
               编辑
             </el-button>
-            <el-button v-if="row.status==='active'" type="danger" size="small" @click="handleDisable(row)">
+            <el-button v-if="row.status==='active'" type="warning" size="small" @click="handleDisable(row)">
               下架
             </el-button>
             <el-button v-else type="success" size="small" @click="handleEnable(row)">
               上架
+            </el-button>
+            <el-button type="danger" size="small" @click="handleDelete(row)">
+              删除
             </el-button>
           </template>
         </el-table-column>
@@ -129,6 +131,10 @@
         <el-form-item label="排序">
           <el-input-number v-model="form.sort_order" :min="0" style="width:200px" />
         </el-form-item>
+        <el-form-item label="标签">
+          <el-checkbox v-model="form.is_recommended">推荐</el-checkbox>
+          <el-checkbox v-model="form.is_popular" style="margin-left:20px">热门</el-checkbox>
+        </el-form-item>
         <el-form-item label="状态">
           <el-radio-group v-model="form.status">
             <el-radio label="active">上架</el-radio>
@@ -173,6 +179,8 @@ const defaultForm = () => ({
   tpm_limit: 100000,
   concurrent_limit: 10,
   sort_order: 0,
+  is_recommended: false,
+  is_popular: false,
   status: 'active'
 })
 
@@ -217,6 +225,8 @@ function handleEdit(row) {
     tpm_limit: row.tpm_limit ?? 0,
     concurrent_limit: row.concurrent_limit || 10,
     sort_order: row.sort_order || 0,
+    is_recommended: row.is_recommended || false,
+    is_popular: row.is_hot || false,
     status: row.status
   })
   dialogVisible.value = true
@@ -234,32 +244,33 @@ async function handleSave() {
 
   saving.value = true
   try {
+    const basePayload = {
+      name: form.name,
+      description: form.description,
+      price: form.price,
+      sort_order: form.sort_order,
+      is_recommended: form.is_recommended,
+      is_popular: form.is_popular,
+      status: form.status
+    }
     if (form.product_type === 'vip') {
       var payload = {
+        ...basePayload,
         product_type: 'vip',
-        name: form.name,
-        description: form.description,
-        price: form.price,
         vip_days: form.vip_days,
         quota: form.quota,
         rpm_limit: form.rpm_limit,
         tpm_limit: form.tpm_limit,
-        concurrent_limit: form.concurrent_limit,
-        sort_order: form.sort_order,
-        status: form.status
+        concurrent_limit: form.concurrent_limit
       }
     } else {
       var payload = {
+        ...basePayload,
         product_type: 'recharge',
-        name: form.name,
-        description: form.description,
-        price: form.price,
         quota: form.quota,
         bonus_quota: form.bonus_quota,
         rpm_limit: form.rpm_limit,
-        tpm_limit: form.tpm_limit,
-        sort_order: form.sort_order,
-        status: form.status
+        tpm_limit: form.tpm_limit
       }
     }
 
@@ -303,6 +314,20 @@ async function handleDisable(row) {
   } catch (e) {
     if (e !== 'cancel') {
       ElMessage.error('操作失败')
+    }
+  }
+}
+
+async function handleDelete(row) {
+  try {
+    await ElMessageBox.confirm(`确认删除「${row.name}」? 此操作不可恢复！`, '警告', { type: 'warning' })
+    const type = row.product_type || (row.vip_days ? 'vip' : 'recharge')
+    await adminAPI.delete(`/products/${row.id}?type=${type}`)
+    ElMessage.success('删除成功')
+    load()
+  } catch (e) {
+    if (e !== 'cancel') {
+      ElMessage.error('删除失败')
     }
   }
 }
