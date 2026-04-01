@@ -10,6 +10,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// UserProfile represents user profile response
+type UserProfile struct {
+	ID            uint       `json:"id"`
+	Username      string     `json:"username"`
+	Email         string     `json:"email"`
+	Phone         string     `json:"phone"`
+	Level         string     `json:"level"`
+	IsVIP         bool       `json:"is_vip"`
+	VIPExpiredAt  *time.Time `json:"v_ip_expired_at"`
+	FreeQuota     int64      `json:"free_quota"`
+	VIPQuota      int64      `json:"v_ip_quota"`
+	FreeExpiredAt *time.Time `json:"free_expired_at"`
+	Status        string     `json:"status"`
+	LastLoginAt   *time.Time `json:"last_login_at"`
+	CreatedAt     time.Time  `json:"created_at"`
+}
+
 // UserHandler handles user-related endpoints
 type UserHandler struct {
 	authService  *service.AuthService
@@ -128,11 +145,37 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 		return
 	}
 
-	// Don't return sensitive fields
-	user.PasswordHash = ""
-	user.VerifyToken = ""
+	profile := UserProfile{
+		ID:            user.ID,
+		Username:      user.Username,
+		Email:         user.Email,
+		Phone:         user.Phone,
+		Level:         user.Level,
+		IsVIP:         h.isVIPUser(user),
+		VIPExpiredAt:  user.VIPExpiredAt,
+		FreeQuota:     user.FreeQuota,
+		VIPQuota:      user.VIPQuota,
+		FreeExpiredAt: user.FreeExpiredAt,
+		Status:        user.Status,
+		LastLoginAt:   user.LastLoginAt,
+		CreatedAt:     user.CreatedAt,
+	}
 
-	response.Success(c, user)
+	response.Success(c, profile)
+}
+
+func (h *UserHandler) isVIPUser(user *model.User) bool {
+	if user == nil {
+		return false
+	}
+	hasLevel := user.Level == "vip_bronze" || user.Level == "vip_silver" || user.Level == "vip_gold"
+	if !hasLevel {
+		return false
+	}
+	if user.VIPExpiredAt == nil {
+		return true
+	}
+	return user.VIPExpiredAt.After(time.Now())
 }
 
 // UpdateProfile godoc

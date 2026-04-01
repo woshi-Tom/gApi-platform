@@ -37,17 +37,45 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const { data } = await request.get('/user/profile')
       const user = data.data
-      // Compute is_vip from level field
-      user.is_vip = computeIsVip(user.level)
+      // Compute user status
+      user.is_vip = isVIPUser(user)
+      user.account_status = getAccountStatus(user)
       userData.value = JSON.stringify(user)
       localStorage.setItem('user', userData.value)
     } catch {
     }
   }
 
-  function computeIsVip(level: string | undefined): boolean {
-    if (!level) return false
-    return level !== 'free' && level.startsWith('vip')
+  function isVIPUser(user: any): boolean {
+    if (!user) return false
+    if (user.level && user.level !== 'free' && user.level.startsWith('vip')) {
+      // Check if VIP not expired
+      if (user.v_ip_expired_at) {
+        const expiry = new Date(user.v_ip_expired_at)
+        if (expiry > new Date()) return true
+      }
+      // Has VIP level without expiry = permanent VIP
+      if (!user.v_ip_expired_at) return true
+    }
+    return false
+  }
+
+  function getAccountStatus(user: any): string {
+    if (!user) return 'unknown'
+    // VIP users (bronze/silver/gold with valid expiry or permanent)
+    if (user.level && user.level !== 'free' && user.level.startsWith('vip')) {
+      if (user.v_ip_expired_at) {
+        const expiry = new Date(user.v_ip_expired_at)
+        if (expiry > new Date()) return 'vip'
+        return 'vip_expired'
+      }
+      return 'vip' // No expiry = permanent VIP
+    }
+    // Free users with quota = recharge users
+    if ((user.free_quota > 0) || (user.v_ip_quota > 0)) {
+      return 'recharge'
+    }
+    return 'free'
   }
 
   function logout() {
