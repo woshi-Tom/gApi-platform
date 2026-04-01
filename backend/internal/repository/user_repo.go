@@ -104,9 +104,9 @@ func (r *UserRepository) UpdateQuota(userID uint, quotaType string, amount int64
 		return err
 	}
 
-	if quotaType == "permanent" {
-		user.RemainQuota += amount
-	} else {
+	if quotaType == "free" {
+		user.FreeQuota += amount
+	} else if quotaType == "vip" {
 		user.VIPQuota += amount
 	}
 

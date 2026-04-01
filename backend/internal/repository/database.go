@@ -77,6 +77,7 @@ func (d *Database) AutoMigrate() error {
 		&model.Token{},
 		&model.VIPPackage{},
 		&model.RechargePackage{},
+		&model.UserRechargeRecord{},
 		&model.Order{},
 		&model.Payment{},
 		&model.RedemptionCode{},

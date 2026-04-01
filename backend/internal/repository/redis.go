@@ -36,3 +36,19 @@ func NewRedis(cfg *config.RedisConfig) (*RedisClient, error) {
 func (r *RedisClient) Close() error {
 	return r.Client.Close()
 }
+
+// AcquireLock tries to acquire a distributed lock with the given key and TTL.
+// Returns true if lock was acquired, false otherwise.
+func (r *RedisClient) AcquireLock(ctx context.Context, key string, ttl time.Duration) (bool, error) {
+	// Use SET NX EX for atomic lock acquisition
+	result, err := r.Client.SetNX(ctx, key, "1", ttl).Result()
+	if err != nil {
+		return false, fmt.Errorf("acquire lock: %w", err)
+	}
+	return result, nil
+}
+
+// ReleaseLock releases a distributed lock.
+func (r *RedisClient) ReleaseLock(ctx context.Context, key string) error {
+	return r.Client.Del(ctx, key).Err()
+}

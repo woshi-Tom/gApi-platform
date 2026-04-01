@@ -53,7 +53,7 @@ func SetupUserRoutes(
 	userHandler := handler.NewUserHandler(authService, userService, loginLogRepo)
 	tokenHandler := handler.NewTokenHandler(tokenService)
 	orderHandler := handler.NewOrderHandler(orderRepo, userRepo, paymentRepo, vipRepo, rechargeRepo, idempRepo)
-	paymentHandler := handler.NewPaymentHandler(orderRepo, paymentRepo, userRepo, vipRepo, auditRepo, alipayService)
+	paymentHandler := handler.NewPaymentHandler(orderRepo, paymentRepo, userRepo, vipRepo, auditRepo, alipayService, redisClient)
 	productHandler := handler.NewProductHandler(vipRepo, rechargeRepo)
 	apiHandler := handler.NewAPIHandler(tokenService, channelService, userRepo)
 	emailHandler := handler.NewEmailVerificationHandler(emailVerificationService)
@@ -123,6 +123,7 @@ func SetupUserRoutes(
 			userAuth.GET("/quota", userHandler.GetQuota)
 			userAuth.GET("/vip/status", userHandler.GetVIPStatus)
 			userAuth.GET("/stats/usage", userHandler.GetUsageStats)
+			userAuth.GET("/activities", userHandler.GetRecentActivities)
 		}
 
 		tokens := v1.Group("/tokens")
@@ -160,6 +161,7 @@ func SetupUserRoutes(
 			payment.POST("/alipay", paymentHandler.CreateAlipay)
 			payment.GET("/alipay/query/:order_no", paymentHandler.QueryAlipayOrder)
 			payment.POST("/alipay/cancel/:order_no", paymentHandler.CancelAlipayOrder)
+			payment.POST("/refund/:order_no", paymentHandler.RefundOrder)
 			payment.GET("/config", paymentHandler.GetPaymentConfig)
 		}
 
@@ -246,6 +248,7 @@ func SetupAdminRoutes(
 			adminAuth.GET("/products", productHandler.ListAll)
 			adminAuth.POST("/products", productHandler.Create)
 			adminAuth.PUT("/products/:id", productHandler.Update)
+			adminAuth.DELETE("/products/:id", productHandler.Delete)
 			adminAuth.POST("/products/:id/enable", productHandler.Enable)
 			adminAuth.POST("/products/:id/disable", productHandler.Disable)
 

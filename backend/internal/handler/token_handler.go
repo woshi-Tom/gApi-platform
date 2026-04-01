@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"time"
 
+	"gapi-platform/internal/model"
 	"gapi-platform/internal/pkg/response"
 	"gapi-platform/internal/service"
 	"github.com/gin-gonic/gin"
@@ -21,7 +22,7 @@ func NewTokenHandler(tokenService *service.TokenService) *TokenHandler {
 
 // List godoc
 // @Summary List API tokens
-// @Description Get all API tokens for current user
+// @Description Get all API tokens for current user with quota info
 // @Tags tokens
 // @Produce json
 // @Security BearerAuth
@@ -37,7 +38,26 @@ func (h *TokenHandler) List(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, tokens)
+	quota, err := h.tokenService.GetUserQuota(userID)
+	if err != nil {
+		response.InternalError(c, "failed to get quota")
+		return
+	}
+
+	type TokenWithQuota struct {
+		model.Token
+		TotalQuota int64 `json:"total_quota"`
+	}
+
+	result := make([]TokenWithQuota, len(tokens))
+	for i, t := range tokens {
+		result[i] = TokenWithQuota{
+			Token:      t,
+			TotalQuota: quota,
+		}
+	}
+
+	response.Success(c, result)
 }
 
 // Create godoc

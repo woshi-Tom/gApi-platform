@@ -103,8 +103,18 @@ func (h *OrderHandler) Create(c *gin.Context) {
 		}
 	}
 
+	user, err := h.userRepo.GetByID(userID)
+	if err != nil {
+		response.Fail(c, "USER_NOT_FOUND", "用户不存在")
+		return
+	}
+
+	isVIPUser := h.isVIPUser(user)
+
 	var pkgName string
-	var price float64
+	var originalPrice float64
+	var finalPrice float64
+	var isRenewal bool
 
 	switch req.PackageType {
 	case "vip":
@@ -114,7 +124,13 @@ func (h *OrderHandler) Create(c *gin.Context) {
 			return
 		}
 		pkgName = pkg.Name
-		price = pkg.Price
+		originalPrice = pkg.Price
+
+		if isVIPUser {
+			isRenewal = true
+		}
+
+		finalPrice = pkg.Price
 	case "recharge":
 		pkg, err := h.rechargeRepo.GetByID(req.PackageID)
 		if err != nil {
@@ -122,7 +138,13 @@ func (h *OrderHandler) Create(c *gin.Context) {
 			return
 		}
 		pkgName = pkg.Name
-		price = pkg.Price
+		originalPrice = pkg.Price
+
+		if isVIPUser {
+			finalPrice = pkg.Price * 0.9
+		} else {
+			finalPrice = pkg.Price
+		}
 	default:
 		response.Fail(c, "INVALID_PACKAGE_TYPE", "无效的套餐类型")
 		return
@@ -139,8 +161,8 @@ func (h *OrderHandler) Create(c *gin.Context) {
 		PackageID:   &req.PackageID,
 		PackageName: pkgName,
 		Status:      model.OrderStatusPending,
-		TotalAmount: price,
-		PayAmount:   price,
+		TotalAmount: originalPrice,
+		PayAmount:   finalPrice,
 		ExpiresAt:   &expiresAt,
 	}
 
@@ -154,7 +176,7 @@ func (h *OrderHandler) Create(c *gin.Context) {
 		OrderID:       order.ID,
 		PaymentNo:     fmt.Sprintf("PAY%s%s", time.Now().Format("20060102"), uuid.New().String()[:8]),
 		PaymentMethod: req.PaymentMethod,
-		Amount:        price,
+		Amount:        finalPrice,
 		Status:        model.PaymentStatusPending,
 	}
 
@@ -175,13 +197,34 @@ func (h *OrderHandler) Create(c *gin.Context) {
 		})
 	}
 
-	response.Created(c, map[string]interface{}{
-		"order_no":     orderNo,
-		"package_name": pkgName,
-		"amount":       price,
-		"order_id":     order.ID,
-		"expires_at":   expiresAt.Format(time.RFC3339),
-	})
+	result := map[string]interface{}{
+		"order_no":        orderNo,
+		"package_name":    pkgName,
+		"amount":          finalPrice,
+		"original_amount": originalPrice,
+		"order_id":        order.ID,
+		"expires_at":      expiresAt.Format(time.RFC3339),
+	}
+
+	if isRenewal {
+		result["is_renewal"] = true
+	}
+
+	response.Created(c, result)
+}
+
+func (h *OrderHandler) isVIPUser(user *model.User) bool {
+	if user == nil {
+		return false
+	}
+	hasLevel := user.Level == "vip_bronze" || user.Level == "vip_silver" || user.Level == "vip_gold"
+	if !hasLevel {
+		return false
+	}
+	if user.VIPExpiredAt == nil {
+		return false
+	}
+	return user.VIPExpiredAt.After(time.Now())
 }
 
 func (h *OrderHandler) GetByID(c *gin.Context) {

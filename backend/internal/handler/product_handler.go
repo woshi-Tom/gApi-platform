@@ -492,3 +492,34 @@ func (h *ProductHandler) Update(c *gin.Context) {
 
 	response.Fail(c, "INVALID_PRODUCT_TYPE", "product type must be vip or recharge")
 }
+
+func (h *ProductHandler) Delete(c *gin.Context) {
+	idStr := c.Param("id")
+	productType := c.Query("type")
+
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		response.Fail(c, "INVALID_PARAMETER", "invalid product id")
+		return
+	}
+
+	if productType == "vip" {
+		if err := h.vipRepo.Delete(uint(id)); err != nil {
+			response.Fail(c, "DB_ERROR", err.Error())
+			return
+		}
+		response.Success(c, map[string]interface{}{"id": id, "deleted": true})
+		return
+	}
+
+	if productType == "recharge" {
+		if err := h.rechargeRepo.Delete(uint(id)); err != nil {
+			response.Fail(c, "DB_ERROR", err.Error())
+			return
+		}
+		response.Success(c, map[string]interface{}{"id": id, "deleted": true})
+		return
+	}
+
+	response.Fail(c, "INVALID_PRODUCT_TYPE", "product type must be vip or recharge")
+}
