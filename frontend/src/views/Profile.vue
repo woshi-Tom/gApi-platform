@@ -9,8 +9,8 @@
               {{ user?.username?.[0]?.toUpperCase() || 'U' }}
             </el-avatar>
             <h3 class="user-name">{{ user?.username || '用户' }}</h3>
-            <el-tag :type="computeIsVip(user?.level) ? 'warning' : 'info'" size="small">
-              {{ computeIsVip(user?.level) ? 'VIP会员' : '普通用户' }}
+            <el-tag :type="getStatusType(user?.account_status)" size="small">
+              {{ getStatusLabel(user?.account_status) }}
             </el-tag>
           </div>
           
@@ -148,6 +148,10 @@ interface User {
   phone?: string
   level: string
   is_vip: boolean
+  account_status: 'vip' | 'vip_expired' | 'recharge' | 'free' | 'unknown'
+  v_ip_expired_at?: string
+  free_quota?: number
+  v_ip_quota?: number
   remain_quota: number
   token_count: number
   created_at: string
@@ -155,10 +159,23 @@ interface User {
 
 const user = ref<User | null>(null)
 
-// Compute is_vip from level field
-function computeIsVip(level: string | undefined): boolean {
-  if (!level) return false
-  return level !== 'free' && level.startsWith('vip')
+function getStatusLabel(status: string | undefined): string {
+  switch (status) {
+    case 'vip': return 'VIP会员'
+    case 'vip_expired': return 'VIP已过期'
+    case 'recharge': return '充值用户'
+    case 'free': return '普通用户'
+    default: return '普通用户'
+  }
+}
+
+function getStatusType(status: string | undefined): string {
+  switch (status) {
+    case 'vip': return 'warning'
+    case 'vip_expired': return 'info'
+    case 'recharge': return 'success'
+    default: return 'info'
+  }
 }
 const activeTab = ref('0')
 const pwdLoading = ref(false)
