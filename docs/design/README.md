@@ -10,6 +10,7 @@
 | 02 | 渠道健康检测 | [channel-health-check-design.md](./channel-health-check-design.md) | ✅ | ❌ |
 | 03 | 注册配置 | [signup-config-design.md](./signup-config-design.md) | ⚠️ 配置存储 | ⚠️ 部分 |
 | 04 | 兑换码 | [redemption-code-design.md](./redemption-code-design.md) | ❌ | ❌ |
+| 05 | 审计日志优化 | [audit-log-optimization-design.md](./audit-log-optimization-design.md) | 🔴 待评估 | 🔴 待评估 |
 
 ---
 
