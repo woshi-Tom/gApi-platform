@@ -232,6 +232,24 @@ func (h *UserHandler) GetQuota(c *gin.Context) {
 	response.Success(c, quota)
 }
 
+// isValidVIP checks if user has VIP level AND VIP hasn't expired
+func isValidVIP(user *model.User) bool {
+	if user == nil {
+		return false
+	}
+	// Must have VIP level
+	hasLevel := user.Level == "enterprise" ||
+		user.Level == "vip_bronze" || user.Level == "vip_silver" || user.Level == "vip_gold"
+	if !hasLevel {
+		return false
+	}
+	// Must have valid expiry date in the future
+	if user.VIPExpiredAt == nil {
+		return false
+	}
+	return user.VIPExpiredAt.After(time.Now())
+}
+
 // GetVIPStatus godoc
 // @Summary Get VIP status
 // @Description Get current user's VIP membership status
@@ -250,11 +268,23 @@ func (h *UserHandler) GetVIPStatus(c *gin.Context) {
 		return
 	}
 
+	isVIP := isValidVIP(user)
+	var daysRemaining int
+	if isVIP && user.VIPExpiredAt != nil {
+		days := time.Until(*user.VIPExpiredAt).Hours() / 24
+		if days < 0 {
+			daysRemaining = 0
+		} else {
+			daysRemaining = int(days)
+		}
+	}
+
 	status := map[string]interface{}{
 		"level":          user.Level,
 		"vip_expired_at": user.VIPExpiredAt,
 		"vip_quota":      user.VIPQuota,
-		"is_vip":         user.Level == "vip" || user.Level == "enterprise",
+		"is_vip":         isVIP,
+		"days_remaining": daysRemaining,
 	}
 
 	response.Success(c, status)
@@ -323,6 +353,130 @@ func (h *UserHandler) GetUsageStats(c *gin.Context) {
 		"total_tokens_all": totalTokensAll,
 		"total_calls_all":  totalCallsAll,
 	})
+}
+
+// GetRecentActivities godoc
+// @Summary Get recent user activities
+// @Description Get recent user activities including orders and API access (last 20 items)
+// @Tags user
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /api/v1/user/activities [get]
+func (h *UserHandler) GetRecentActivities(c *gin.Context) {
+	userID := c.MustGet("user_id").(uint)
+	db := h.userService.GetDB()
+
+	type Activity struct {
+		ID          uint      `json:"id"`
+		Type        string    `json:"type"` // order|vip|token
+		Title       string    `json:"title"`
+		Description string    `json:"description"`
+		Time        time.Time `json:"time"`
+	}
+
+	var activities []Activity
+
+	// Get recent orders (last 10)
+	var orders []model.Order
+	db.Where("user_id = ?", userID).
+		Order("created_at DESC").
+		Limit(10).
+		Find(&orders)
+
+	for _, order := range orders {
+		var title, desc string
+		switch order.OrderType {
+		case "vip":
+			title = "开通VIP会员"
+			desc = order.PackageName
+		case "recharge":
+			title = "购买配额"
+			desc = order.PackageName
+		default:
+			title = "订单" + order.OrderNo
+			desc = order.PackageName
+		}
+
+		if order.Status == model.OrderStatusCompleted {
+			title = "✗ " + title
+		}
+
+		activities = append(activities, Activity{
+			ID:          order.ID,
+			Type:        "order",
+			Title:       title,
+			Description: desc,
+			Time:        order.CreatedAt,
+		})
+	}
+
+	// Get recent API access logs (last 10)
+	var apiLogs []model.APIAccessLog
+	db.Where("user_id = ?", userID).
+		Order("created_at DESC").
+		Limit(10).
+		Find(&apiLogs)
+
+	for _, log := range apiLogs {
+		var title string
+		if log.StatusCode >= 200 && log.StatusCode < 300 {
+			title = "API调用成功"
+		} else {
+			title = "API调用失败"
+		}
+
+		activities = append(activities, Activity{
+			ID:          log.ID,
+			Type:        "token",
+			Title:       title,
+			Description: log.Model + " - " + log.Endpoint,
+			Time:        log.CreatedAt,
+		})
+	}
+
+	// Get recent login logs (last 10)
+	var loginLogs []model.LoginLog
+	db.Where("user_id = ?", userID).
+		Order("created_at DESC").
+		Limit(10).
+		Find(&loginLogs)
+
+	for _, log := range loginLogs {
+		var title, desc string
+		if log.Success {
+			title = "用户登录"
+			desc = log.IP
+		} else {
+			title = "登录失败"
+			desc = log.FailReason
+		}
+
+		activities = append(activities, Activity{
+			ID:          log.ID,
+			Type:        "login",
+			Title:       title,
+			Description: desc,
+			Time:        log.CreatedAt,
+		})
+	}
+
+	// Sort by time descending
+	for i := 0; i < len(activities)-1; i++ {
+		for j := i + 1; j < len(activities); j++ {
+			if activities[j].Time.After(activities[i].Time) {
+				activities[i], activities[j] = activities[j], activities[i]
+			}
+		}
+	}
+
+	// Limit to 20 total
+	if len(activities) > 20 {
+		activities = activities[:20]
+	}
+
+	response.Success(c, activities)
 }
 
 var _ = model.User{}

@@ -9,13 +9,27 @@ INSERT INTO admin_users (id, username, email, password_hash, role, status, creat
 (1, 'admin', 'admin@example.com', '$2a$10$N9qo8uLOickgx2ZMRZoMye.Y5RjlVRNQFMpBJ7qP2z6dBZG5vR5S', 'super_admin', 'active', NOW())
 ON CONFLICT (username) DO NOTHING;
 
+-- VIP Packages (Bronze/Silver/Gold - 30 days)
+INSERT INTO vip_packages (id, name, description, price, duration_days, quota, rpm_limit, tpm_limit, concurrent_limit, is_recommended, is_popular, level, status, is_visible, sort_order) VALUES
+(1, 'VIP青铜', '青铜会员套餐', 29.90, 30, 500000, 100, 50000, 2, false, false, 'vip_bronze', 'active', true, 1),
+(2, 'VIP白银', '白银会员套餐', 59.90, 30, 1000000, 200, 100000, 3, true, false, 'vip_silver', 'active', true, 2),
+(3, 'VIP黄金', '黄金会员套餐', 99.90, 30, 0, 500, 500000, 5, false, true, 'vip_gold', 'active', true, 3)
+ON CONFLICT (id) DO NOTHING;
+
+-- Recharge Packages (3/5/7 days validity)
+INSERT INTO recharge_packages (id, name, description, price, quota, valid_days, rpm_limit, tpm_limit, is_recommended, is_popular, status, is_visible, sort_order) VALUES
+(1, '试用装', '首次试用体验', 5.90, 100000, 3, 30, 3000, true, false, 'active', true, 1),
+(2, '基础装', '临时项目需求', 9.90, 300000, 5, 60, 6000, false, true, 'active', true, 2),
+(3, '标准装', '一周稳定使用', 19.90, 1000000, 7, 100, 10000, false, false, 'active', true, 3)
+ON CONFLICT (id) DO NOTHING;
+
 -- Create test users
-INSERT INTO users (id, username, email, password_hash, level, remain_quota, status, created_at) VALUES
-(1, 'testuser1', 'test1@test.com', '$2a$10$N9qo8uLOickgx2ZMRZoMye.Y5RjlVRNQFMpBJ7qP', 'vip', 100000, 'active', NOW() - INTERVAL '30 days'),
-(2, 'testuser2', 'test2@test.com', '$2a$10$N9qo8uLOickgx2ZMRZoMye.Y5RjlVRNQFMpBJ7P', 'vip', 50000, 'active', NOW() - INTERVAL '25 days'),
-(3, 'testuser3', 'test3@test.com', '$2a$10$N9qo8uLOickgx2ZMRZoMye.Y5RjlVRNQFMpBJ7P', 'free', 5000, 'active', NOW() - INTERVAL '20 days'),
-(4, 'testuser4', 'test4@test.com', '$2a$10$N9qo8uLOickgx2ZMRZoMye.Y5RjlVRNQFMpBJ7P', 'vip', 200000, 'active', NOW() - INTERVAL '15 days'),
-(5, 'testuser5', 'test5@test.com', '$2a$10$N9qo8uLOickgx2ZMRZoMye.Y5RjlVRNQFMpBJ7P', 'free', 10000, 'active', NOW() - INTERVAL '10 days')
+INSERT INTO users (id, username, email, password_hash, level, free_quota, free_expired_at, v_ip_quota, v_ip_expired_at, status, created_at) VALUES
+(1, 'testuser1', 'test1@test.com', '$2a$10$N9qo8uLOickgx2ZMRZoMye.Y5RjlVRNQFMpBJ7qP', 'vip_gold', 50000, NOW() + INTERVAL '7 days', 1000000, NOW() + INTERVAL '30 days', 'active', NOW() - INTERVAL '30 days'),
+(2, 'testuser2', 'test2@test.com', '$2a$10$N9qo8uLOickgx2ZMRZoMye.Y5RjlVRNQFMpBJ7P', 'vip_silver', 50000, NOW() + INTERVAL '7 days', 500000, NOW() + INTERVAL '30 days', 'active', NOW() - INTERVAL '25 days'),
+(3, 'testuser3', 'test3@test.com', '$2a$10$N9qo8uLOickgx2ZMRZoMye.Y5RjlVRNQFMpBJ7P', 'free', 50000, NOW() + INTERVAL '7 days', 0, NULL, 'active', NOW() - INTERVAL '20 days'),
+(4, 'testuser4', 'test4@test.com', '$2a$10$N9qo8uLOickgx2ZMRZoMye.Y5RjlVRNQFMpBJ7P', 'vip_bronze', 50000, NOW() + INTERVAL '7 days', 200000, NOW() + INTERVAL '30 days', 'active', NOW() - INTERVAL '15 days'),
+(5, 'testuser5', 'test5@test.com', '$2a$10$N9qo8uLOickgx2ZMRZoMye.Y5RjlVRNQFMpBJ7P', 'free', 50000, NOW() + INTERVAL '7 days', 0, NULL, 'active', NOW() - INTERVAL '10 days')
 ON CONFLICT (id) DO NOTHING;
 
 -- Create tokens for users

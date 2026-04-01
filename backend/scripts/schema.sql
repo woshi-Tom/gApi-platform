@@ -64,11 +64,15 @@ CREATE TABLE IF NOT EXISTS users (
     email_verified  BOOLEAN DEFAULT FALSE,
     verify_token    VARCHAR(100),
     verify_expired  TIMESTAMPTZ,
-    level           VARCHAR(20) DEFAULT 'free',
+    level           VARCHAR(20) DEFAULT 'free',  -- free|vip_bronze|vip_silver|vip_gold
     vip_expired_at  TIMESTAMPTZ,
     vip_package_id   BIGINT,
-    remain_quota    BIGINT DEFAULT 0,
-    vip_quota       BIGINT DEFAULT 0,
+    -- New quota fields (all quotas expire)
+    free_quota      BIGINT DEFAULT 0,           -- Free quota (7 days)
+    free_expired_at TIMESTAMPTZ,                -- Free quota expiry
+    vip_quota       BIGINT DEFAULT 0,           -- VIP quota (30 days)
+    -- Legacy field kept for backward compatibility
+    remain_quota    BIGINT DEFAULT 0,           -- Deprecated, use free_quota
     status          VARCHAR(20) DEFAULT 'active',
     disabled_reason VARCHAR(200),
     last_login_at   TIMESTAMPTZ,
@@ -183,6 +187,7 @@ CREATE TABLE IF NOT EXISTS vip_packages (
     sort_order       INTEGER DEFAULT 0,
     is_recommended   BOOLEAN DEFAULT FALSE,
     is_popular       BOOLEAN DEFAULT FALSE,
+    level            VARCHAR(20) DEFAULT 'vip_bronze',
     status           VARCHAR(20) DEFAULT 'active',
     is_visible       BOOLEAN DEFAULT TRUE,
     created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -203,6 +208,7 @@ CREATE TABLE IF NOT EXISTS recharge_packages (
     original_price   DECIMAL(10,2),
     quota            BIGINT NOT NULL,
     bonus_quota      BIGINT DEFAULT 0,
+    valid_days       INTEGER DEFAULT 7,          -- Validity period in days
     rpm_limit        INTEGER DEFAULT 60,
     tpm_limit        INTEGER DEFAULT 6000,
     sort_order       INTEGER DEFAULT 0,
@@ -217,6 +223,23 @@ CREATE TABLE IF NOT EXISTS recharge_packages (
 CREATE INDEX IF NOT EXISTS idx_recharge_packages_tenant ON recharge_packages(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_recharge_packages_status ON recharge_packages(status);
 CREATE INDEX IF NOT EXISTS idx_recharge_packages_deleted ON recharge_packages(deleted_at) WHERE deleted_at IS NOT NULL;
+
+-- User Recharge Records (for FIFO consumption tracking)
+CREATE TABLE IF NOT EXISTS user_recharge_records (
+    id          BIGSERIAL PRIMARY KEY,
+    user_id     BIGINT NOT NULL,
+    package_id  BIGINT NOT NULL,
+    order_id    BIGINT NOT NULL,
+    quota       BIGINT NOT NULL,
+    remaining   BIGINT NOT NULL,
+    expired_at  TIMESTAMPTZ NOT NULL,
+    status      VARCHAR(20) DEFAULT 'active',  -- active|used|expired
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_user_recharge_user ON user_recharge_records(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_recharge_order ON user_recharge_records(order_id);
+CREATE INDEX IF NOT EXISTS idx_user_recharge_status ON user_recharge_records(status);
 
 -- ============================================================
 -- Orders & Payments
@@ -500,8 +523,8 @@ CREATE INDEX IF NOT EXISTS idx_signup_configs_tenant ON signup_configs(tenant_id
 -- ============================================================
 
 -- Insert default signup config
-INSERT INTO signup_configs (tenant_id, quota_amount, quota_type) 
-VALUES (1, 10000, 'permanent')
+INSERT INTO signup_configs (tenant_id, quota_amount, quota_type, trial_quota) 
+VALUES (1, 50000, 'free', 50000)
 ON CONFLICT DO NOTHING;
 
 -- Insert default system configs
@@ -510,8 +533,11 @@ VALUES
     ('system_initialized', 'false', 'boolean', 'general', 'System initialization completed'),
     ('allow_register', 'true', 'boolean', 'general', 'Allow new user registration'),
     ('require_email_verify', 'false', 'boolean', 'general', 'Require email verification for signup'),
-    ('default_vip_quota', '100000', 'number', 'quota', 'Default VIP quota for new users'),
-    ('default_free_quota', '5000', 'number', 'quota', 'Default free quota for new users')
+    ('default_vip_quota', '100000', 'number', 'quota', 'Default VIP quota for new VIP users'),
+    ('default_free_quota', '50000', 'number', 'quota', 'Default free quota for new users (50K tokens)'),
+    ('free_quota_days', '7', 'number', 'quota', 'Free quota validity period in days'),
+    ('vip_discount', '90', 'number', 'vip', 'VIP user recharge discount percentage (90 = 9折)'),
+    ('vip_recharge_discount', 'true', 'boolean', 'vip', 'Enable VIP user recharge discount')
 ON CONFLICT DO NOTHING;
 
 COMMIT;
