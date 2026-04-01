@@ -2,22 +2,30 @@ import { adminAPI } from './request'
 
 export { adminAPI }
 
-export interface AuditLog {
+export interface AuditLogBrief {
   id: number
   action: string
   action_group: string
   resource_type?: string
   resource_id?: number
-  user_id?: number
   username?: string
-  request_ip?: string
-  request_path?: string
   request_method?: string
+  request_path?: string
+  request_ip?: string
   success: boolean
   error_message?: string
+  log_type?: string
+  created_at: string
+}
+
+export interface AuditLog extends AuditLogBrief {
+  user_id?: number
+  request_body?: string
+  response_body?: string
   old_value?: Record<string, any>
   new_value?: Record<string, any>
-  created_at: string
+  status_code?: number
+  user_agent?: string
 }
 
 export interface AuditLogQuery {
@@ -25,6 +33,7 @@ export interface AuditLogQuery {
   page_size?: number
   action?: string
   action_group?: string
+  log_type?: string
   user_id?: number
   resource_type?: string
   resource_id?: number
@@ -37,10 +46,13 @@ export const auditLogApi = {
   list: (params?: AuditLogQuery) =>
     adminAPI.get<{ 
       data: { 
-        list: AuditLog[]; 
+        list: AuditLogBrief[]; 
         pagination: { total: number; page: number; page_size: number } 
       } 
     }>('/logs/operation', { params }),
+  
+  getDetail: (id: number) =>
+    adminAPI.get<{ data: AuditLog }>(`/logs/operation/${id}`),
   
   export: (params?: AuditLogQuery) =>
     adminAPI.get('/logs/operation/export', { params, responseType: 'blob' }),
@@ -57,6 +69,12 @@ export const ACTION_GROUPS = [
   { label: '配额', value: 'quota' },
   { label: 'VIP', value: 'vip' },
   { label: '系统', value: 'system' },
+]
+
+export const LOG_TYPES = [
+  { label: '全部', value: '' },
+  { label: '业务操作', value: 'operation' },
+  { label: '访问记录', value: 'access' },
 ]
 
 export const ACTIONS = {

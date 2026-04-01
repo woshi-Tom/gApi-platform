@@ -59,6 +59,8 @@ func AuditLog(auditRepo *repository.AuditRepository) gin.HandlerFunc {
 
 		// Record audit log asynchronously
 		go func() {
+			startTime := time.Now()
+
 			// Get user info from context
 			var userID *uint
 			var username string
@@ -81,23 +83,43 @@ func AuditLog(auditRepo *repository.AuditRepository) gin.HandlerFunc {
 
 			statusCode := c.Writer.Status()
 			success := statusCode < 400
+			responseTimeMs := int(time.Since(startTime).Milliseconds())
+
+			// Determine log type based on request method
+			logType := model.LogTypeOperation
+			if c.Request.Method == "GET" {
+				logType = model.LogTypeAccess
+			}
+
+			// Limit body size to prevent data bloat
+			maxBodySize := 50000
+			responseBody := maskSensitiveData(writer.body.String())
+			if len(responseBody) > maxBodySize {
+				responseBody = responseBody[:maxBodySize] + "...[truncated]"
+			}
+			requestBodyMasked := maskSensitiveData(requestBody)
+			if len(requestBodyMasked) > maxBodySize {
+				requestBodyMasked = requestBodyMasked[:maxBodySize] + "...[truncated]"
+			}
 
 			log := &model.AuditLog{
-				UserID:        userID,
-				Username:      username,
-				Action:        action,
-				ActionGroup:   group,
-				ResourceType:  resourceType,
-				ResourceID:    resourceID,
-				RequestMethod: c.Request.Method,
-				RequestPath:   c.Request.URL.Path,
-				RequestBody:   maskSensitiveData(requestBody),
-				RequestIP:     c.ClientIP(),
-				StatusCode:    &statusCode,
-				ResponseBody:  maskSensitiveData(writer.body.String()),
-				Success:       success,
-				UserAgent:     c.Request.UserAgent(),
-				CreatedAt:     time.Now(),
+				UserID:         userID,
+				Username:       username,
+				Action:         action,
+				ActionGroup:    group,
+				ResourceType:   resourceType,
+				ResourceID:     resourceID,
+				RequestMethod:  c.Request.Method,
+				RequestPath:    c.Request.URL.Path,
+				RequestBody:    requestBodyMasked,
+				RequestIP:      c.ClientIP(),
+				StatusCode:     &statusCode,
+				ResponseBody:   responseBody,
+				Success:        success,
+				LogType:        logType,
+				ResponseTimeMs: responseTimeMs,
+				UserAgent:      c.Request.UserAgent(),
+				CreatedAt:      time.Now(),
 			}
 
 			auditRepo.Create(log)
