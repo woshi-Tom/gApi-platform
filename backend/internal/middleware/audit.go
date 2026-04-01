@@ -26,9 +26,11 @@ var sensitiveFields = map[string]bool{
 
 // skipPaths contains paths that should not be audited
 var skipPaths = map[string]bool{
-	"/api/v1/internal/health": true,
-	"/health":                 true,
-	"/ping":                   true,
+	"/api/v1/internal/health":      true,
+	"/health":                      true,
+	"/ping":                        true,
+	"/api/v1/admin/logs/operation": true, // 避免审计日志本身的记录形成数据膨胀
+	"/api/v1/admin/logs/login":     true,
 }
 
 // AuditLog creates an audit logging middleware
