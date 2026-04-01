@@ -36,10 +36,18 @@ export const useAuthStore = defineStore('auth', () => {
     if (!token.value) return
     try {
       const { data } = await request.get('/user/profile')
-      userData.value = JSON.stringify(data.data)
+      const user = data.data
+      // Compute is_vip from level field
+      user.is_vip = computeIsVip(user.level)
+      userData.value = JSON.stringify(user)
       localStorage.setItem('user', userData.value)
     } catch {
     }
+  }
+
+  function computeIsVip(level: string | undefined): boolean {
+    if (!level) return false
+    return level !== 'free' && level.startsWith('vip')
   }
 
   function logout() {
