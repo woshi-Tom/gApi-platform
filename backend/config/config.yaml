@@ -7,6 +7,10 @@ server:
   admin_frontend: "http://localhost:5174"
   admin_secret: "gapi-admin-secret-key-2026"
 
+jwt:
+  secret: "gapi-jwt-secret-key-2026-at-least-32-characters-long"
+  expiry_hours: 168
+
 admin_users:
   - username: "admin"
     password: "admin123"
@@ -16,7 +20,7 @@ admin_users:
     role: "operator"
 
 database:
-  host: "localhost"
+  host: "gapi-postgres"
   port: 5432
   user: "gapi"
   password: "gapi123"
@@ -25,40 +29,10 @@ database:
   max_idle: 10
 
 redis:
-  host: "localhost"
+  host: "gapi-redis"
   port: 6379
-  password: ""
+  password: "redis123"
   db: 0
 
 rabbitmq:
-  host: "localhost"
-  port: 5672
-  user: "gapi"
-  password: "gapi123"
-
-jwt:
-  secret: "gapi-platform-jwt-secret-key-change-in-production"
-  expire_hour: 24
-
-payment:
-  alipay:
-    enabled: false
-  wechat:
-    enabled: false
-
-smtp:
-  host: ""
-  port: 587
-  username: ""
-  password: ""
-  from: ""
-  from_name: ""
-  tls: false
-
-log:
-  level: "info"
-  path: ""
-  format: "console"
-
-security:
-  encrypt_key: "gapi-platform-encryption-key-32ch!"
+  url: "amqp://guest:guest@gapi-rabbitmq:5672/"

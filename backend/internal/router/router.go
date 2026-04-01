@@ -242,6 +242,7 @@ func SetupAdminRoutes(
 			adminAuth.GET("/orders", adminHandler.ListOrders)
 
 			adminAuth.GET("/logs/operation", adminHandler.GetAuditLogs)
+			adminAuth.GET("/logs/operation/:id", adminHandler.GetAuditLogDetail)
 			adminAuth.GET("/logs/login", adminHandler.GetLoginLogs)
 			adminAuth.GET("/test", func(c *gin.Context) { c.String(200, "test") })
 

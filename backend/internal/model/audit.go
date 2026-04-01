@@ -4,6 +4,13 @@ import (
 	"time"
 )
 
+// LogType constants for audit logs
+const (
+	LogTypeOperation = "operation"
+	LogTypeAccess    = "access"
+	LogTypeSystem    = "system"
+)
+
 // AuditLog represents audit logs
 type AuditLog struct {
 	ID       uint   `json:"id" gorm:"primaryKey"`
@@ -37,12 +44,31 @@ type AuditLog struct {
 	NewValue string `json:"new_value" gorm:"type:text"`
 
 	// Metadata
-	UserAgent string `json:"user_agent" gorm:"size:500"`
-	SessionID string `json:"session_id" gorm:"size:100"`
-	TraceID   string `json:"trace_id" gorm:"size:64"`
+	LogType        string `json:"log_type" gorm:"size:20;default:operation;index"`
+	ResponseTimeMs int    `json:"response_time_ms" gorm:"default:0"`
+	UserAgent      string `json:"user_agent" gorm:"size:500"`
+	SessionID      string `json:"session_id" gorm:"size:100"`
+	TraceID        string `json:"trace_id" gorm:"size:64"`
 
 	// Timestamp
 	CreatedAt time.Time `json:"created_at" gorm:"index"`
+}
+
+// AuditLogBrief represents brief audit log info for list view
+type AuditLogBrief struct {
+	ID            uint      `json:"id"`
+	Action        string    `json:"action"`
+	ActionGroup   string    `json:"action_group"`
+	ResourceType  string    `json:"resource_type"`
+	ResourceID    *uint     `json:"resource_id"`
+	Username      string    `json:"username"`
+	RequestMethod string    `json:"request_method"`
+	RequestPath   string    `json:"request_path"`
+	RequestIP     string    `json:"request_ip"`
+	Success       bool      `json:"success"`
+	ErrorMessage  string    `json:"error_message,omitempty"`
+	LogType       string    `json:"log_type"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 func (AuditLog) TableName() string {

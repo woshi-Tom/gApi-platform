@@ -325,13 +325,12 @@ func (h *AdminHandler) ListOrders(c *gin.Context) {
 	})
 }
 
-// GetAuditLogs returns audit logs
+// GetAuditLogs returns brief audit logs for list view
 func (h *AdminHandler) GetAuditLogs(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
 	actionGroup := c.Query("action_group")
-	action := c.Query("action")
-	resourceType := c.Query("resource_type")
+	logType := c.Query("log_type")
 	startTime := c.Query("start_time")
 	endTime := c.Query("end_time")
 
@@ -341,7 +340,7 @@ func (h *AdminHandler) GetAuditLogs(c *gin.Context) {
 		success = &b
 	}
 
-	logs, total, err := h.auditRepo.List(page, pageSize, 0, actionGroup, action, resourceType, startTime, endTime, success)
+	logs, total, err := h.auditRepo.ListBrief(page, pageSize, 0, actionGroup, logType, startTime, endTime, success)
 	if err != nil {
 		response.InternalError(c, "failed to list audit logs")
 		return
@@ -355,6 +354,24 @@ func (h *AdminHandler) GetAuditLogs(c *gin.Context) {
 			"total":     total,
 		},
 	})
+}
+
+// GetAuditLogDetail returns full audit log by ID
+func (h *AdminHandler) GetAuditLogDetail(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		response.Fail(c, "INVALID_PARAMETER", "invalid log id")
+		return
+	}
+
+	log, err := h.auditRepo.GetByID(uint(id))
+	if err != nil {
+		response.NotFound(c, "audit log not found")
+		return
+	}
+
+	response.Success(c, log)
 }
 
 // GetLoginLogs returns login logs

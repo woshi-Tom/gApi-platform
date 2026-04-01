@@ -288,8 +288,40 @@ func (r *AuditRepository) Create(log *model.AuditLog) error {
 	return r.db.Create(log).Error
 }
 
+// ListBrief returns brief audit logs without large fields
+func (r *AuditRepository) ListBrief(page, pageSize int, userID uint, actionGroup, logType, startTime, endTime string, success *bool) ([]model.AuditLogBrief, int64, error) {
+	var logs []model.AuditLogBrief
+	var total int64
+
+	query := r.db.Model(&model.AuditLog{}).
+		Select("id, action, action_group, resource_type, resource_id, username, request_method, request_path, request_ip, success, error_message, log_type, created_at")
+
+	if userID > 0 {
+		query = query.Where("user_id = ?", userID)
+	}
+	if actionGroup != "" {
+		query = query.Where("action_group = ?", actionGroup)
+	}
+	if logType != "" {
+		query = query.Where("log_type = ?", logType)
+	}
+	if success != nil {
+		query = query.Where("success = ?", *success)
+	}
+	if startTime != "" {
+		query = query.Where("created_at >= ?", startTime)
+	}
+	if endTime != "" {
+		query = query.Where("created_at <= ?", endTime)
+	}
+
+	query.Count(&total)
+	err := query.Offset((page - 1) * pageSize).Limit(pageSize).Order("created_at DESC").Find(&logs).Error
+	return logs, total, err
+}
+
 // List lists audit logs with pagination and filters
-func (r *AuditRepository) List(page, pageSize int, userID uint, actionGroup, action, resourceType, startTime, endTime string, success *bool) ([]model.AuditLog, int64, error) {
+func (r *AuditRepository) List(page, pageSize int, userID uint, actionGroup, logType, resourceType, startTime, endTime string, success *bool) ([]model.AuditLog, int64, error) {
 	var logs []model.AuditLog
 	var total int64
 	query := r.db.Model(&model.AuditLog{})
@@ -299,12 +331,31 @@ func (r *AuditRepository) List(page, pageSize int, userID uint, actionGroup, act
 	if actionGroup != "" {
 		query = query.Where("action_group = ?", actionGroup)
 	}
+	if logType != "" {
+		query = query.Where("log_type = ?", logType)
+	}
 	if success != nil {
 		query = query.Where("success = ?", *success)
+	}
+	if startTime != "" {
+		query = query.Where("created_at >= ?", startTime)
+	}
+	if endTime != "" {
+		query = query.Where("created_at <= ?", endTime)
 	}
 	query.Count(&total)
 	err := query.Offset((page - 1) * pageSize).Limit(pageSize).Order("created_at DESC").Find(&logs).Error
 	return logs, total, err
+}
+
+// GetByID returns full audit log by ID
+func (r *AuditRepository) GetByID(id uint) (*model.AuditLog, error) {
+	var log model.AuditLog
+	err := r.db.First(&log, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &log, nil
 }
 
 // LoginLogRepository handles login log database operations
