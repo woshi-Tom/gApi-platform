@@ -6,7 +6,7 @@
     </div>
 
     <el-card class="payment-card" v-loading="loading || loadingOrderInfo">
-      <el-result v-if="status === 'paid'" icon="success" title="支付成功">
+      <el-result v-if="status === 'paid' || status === 'completed'" icon="success" title="支付成功">
         <template #sub-title>
           <p>您的订单已支付成功，配额已到账</p>
           <el-button type="primary" @click="$router.push('/profile')">查看配额</el-button>
@@ -93,20 +93,24 @@ const amountDisplay = computed(() => {
 
 const statusLabel = computed(() => {
   switch (status.value) {
+    case 'completed':
     case 'paid': return '已支付'
     case 'pending': return '待支付'
     case 'expired': return '已过期'
     case 'cancelled': return '已取消'
+    case 'refunded': return '已退款'
   }
   return status.value
 })
 
 const statusType = computed(() => {
   switch (status.value) {
+    case 'completed':
     case 'paid': return 'success'
     case 'pending': return 'warning'
     case 'expired': return 'danger'
-    case 'cancelled': return 'info'
+    case 'cancelled':
+    case 'refunded': return 'info'
   }
   return 'info'
 })
@@ -222,9 +226,12 @@ function startPolling() {
         expireAt.value = data.qr_expire_at
         initCountdown()
       }
-      if (status.value === 'paid') {
+      if (status.value === 'paid' || status.value === 'completed') {
         stopAllTimers()
         ElMessage.success('支付成功！配额已到账')
+        setTimeout(() => {
+          router.push('/orders')
+        }, 1500)
       } else if (status.value === 'expired' || status.value === 'cancelled') {
         stopAllTimers()
         qrCodeUrl.value = ''
@@ -272,6 +279,12 @@ onMounted(async () => {
     await fetchOrderInfo()
     if (status.value === 'pending') {
       await startPayment()
+    } else if (status.value === 'paid' || status.value === 'completed') {
+      // 订单已完成，直接跳转
+      ElMessage.success('订单已完成')
+      setTimeout(() => {
+        router.push('/orders')
+      }, 1500)
     }
   } else {
     ElMessage.error('无效的订单')

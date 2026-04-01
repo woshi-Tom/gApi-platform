@@ -2,13 +2,16 @@
   <div class="dashboard">
     <!-- Stats Cards -->
     <div class="stats-grid">
-      <el-card shadow="hover" class="stat-card">
+      <el-card shadow="hover" class="stat-card" :class="{ 'urgent-card': isFreeExpiringSoon }">
         <div class="stat-icon blue">
           <el-icon size="24"><Coin /></el-icon>
         </div>
         <div class="stat-info">
-          <div class="stat-label">剩余配额</div>
-          <div class="stat-value">{{ formatQuota(quota?.remain_quota) }}</div>
+          <div class="stat-label">可用额度</div>
+          <div class="stat-value">{{ formatQuota(getTotalAvailableQuota()) }}</div>
+          <div class="stat-sub" v-if="!quota?.is_vip && quota?.free_expired_at">
+            <el-tag type="danger" size="small" effect="plain">免费额度仅剩 {{ getFreeDaysRemaining() }} 天</el-tag>
+          </div>
         </div>
       </el-card>
       
@@ -22,13 +25,15 @@
         </div>
       </el-card>
       
-      <el-card shadow="hover" class="stat-card">
+      <el-card shadow="hover" class="stat-card" :class="{ 'vip-card': quota?.is_vip }">
         <div class="stat-icon orange">
           <el-icon size="24"><Star /></el-icon>
         </div>
         <div class="stat-info">
-          <div class="stat-label">会员状态</div>
-          <div class="stat-value">{{ quota?.is_vip ? 'VIP会员' : '免费用户' }}</div>
+          <div class="stat-label">{{ quota?.is_vip ? 'VIP剩余天数' : '会员状态' }}</div>
+          <div class="stat-value" :class="{ 'vip-value': quota?.is_vip }">
+            {{ quota?.is_vip ? getVIPDaysRemaining() + ' 天' : '免费用户' }}
+          </div>
         </div>
       </el-card>
       
@@ -107,41 +112,63 @@ curl http://localhost:8080/api/v1/chat/completions \
       <!-- Quota Details -->
       <el-card class="quota-card">
         <template #header>
-          <span>配额详情</span>
+          <div class="card-header">
+            <span>我的额度</span>
+            <el-tag v-if="quota?.is_vip" type="warning" size="small" effect="plain">
+              <el-icon><Star /></el-icon> VIP会员
+            </el-tag>
+            <el-tag v-else type="info" size="small" effect="plain">
+              免费用户
+            </el-tag>
+          </div>
         </template>
         
-        <div class="quota-item">
-          <span class="item-label">账户等级</span>
-          <el-tag :type="quota?.is_vip ? 'warning' : 'info'" size="small">
-            {{ quota?.level || 'free' }}
-          </el-tag>
+        <div class="quota-main">
+          <div class="quota-big">
+            <span class="quota-number">{{ formatQuota(getTotalAvailableQuota()) }}</span>
+            <span class="quota-unit">Tokens</span>
+          </div>
+          <div class="quota-hint" :class="{ urgent: !quota?.is_vip && isFreeExpiringSoon() }">
+            <el-icon><Timer /></el-icon>
+            <span v-if="quota?.is_vip">VIP额度每月重置，还剩 {{ getVIPDaysRemaining() }} 天</span>
+            <span v-else>免费额度仅剩 {{ getFreeDaysRemaining() }} 天，请尽快购买续命！</span>
+          </div>
         </div>
         
-        <el-divider style="margin: 12px 0" />
+        <el-divider style="margin: 16px 0" />
         
-        <div class="quota-item">
-          <span class="item-label">永久配额</span>
-          <span class="item-value">{{ formatQuota(quota?.remain_quota) }}</span>
+        <div class="quota-breakdown">
+          <div class="quota-item-row">
+            <span class="quota-label">免费额度</span>
+            <span class="quota-value-row">
+              <span class="quota-amount">{{ formatQuota(quota?.free_quota) }}</span>
+              <el-tag type="info" size="small" effect="plain">{{ getFreeDaysRemaining() }}天后清零</el-tag>
+            </span>
+          </div>
+          <div class="quota-item-row" v-if="quota?.is_vip">
+            <span class="quota-label">VIP额度</span>
+            <span class="quota-value-row">
+              <span class="quota-amount vip">{{ formatQuota(quota?.vip_quota) }}</span>
+              <el-tag type="warning" size="small" effect="plain">{{ getVIPDaysRemaining() }}天后重置</el-tag>
+            </span>
+          </div>
+          <div class="quota-item-row" v-if="usageStats?.used_today">
+            <span class="quota-label">今日消耗</span>
+            <span class="quota-amount danger">{{ formatQuota(usageStats.used_today) }}</span>
+          </div>
         </div>
         
-        <div class="quota-item">
-          <span class="item-label">VIP 配额</span>
-          <span class="item-value vip">{{ formatQuota(quota?.vip_quota) }}</span>
-        </div>
-        
-        <div class="quota-item">
-          <span class="item-label">累计Token</span>
-          <span class="item-value">{{ formatQuota(usageStats?.total_tokens) }}</span>
-        </div>
-        
-        <el-divider style="margin: 12px 0" />
+        <el-divider style="margin: 16px 0" />
         
         <div class="actions">
-          <el-button type="primary" size="small" @click="$router.push('/products')">
-            <el-icon><ShoppingCart /></el-icon> 购买配额
+          <el-button type="primary" size="default" @click="$router.push('/products')">
+            <el-icon><ShoppingCart /></el-icon> 购买额度
           </el-button>
-          <el-button size="small" @click="$router.push('/vip')">
-            <el-icon><Star /></el-icon> 开通VIP
+          <el-button v-if="!quota?.is_vip" type="warning" size="default" @click="$router.push('/vip')">
+            <el-icon><Star /></el-icon> 开通VIP（更优惠）
+          </el-button>
+          <el-button v-else type="warning" plain size="default" @click="$router.push('/vip')">
+            <el-icon><Star /></el-icon> VIP续费
           </el-button>
         </div>
       </el-card>
@@ -152,7 +179,7 @@ curl http://localhost:8080/api/v1/chat/completions \
       <template #header>
         <div class="card-header">
           <span>最近活动</span>
-          <el-button text size="small" @click="$router.push('/logs')">
+          <el-button text size="small" @click="$router.push('/activities')">
             查看全部 <el-icon><ArrowRight /></el-icon>
           </el-button>
         </div>
@@ -192,17 +219,17 @@ import { GridComponent, TooltipComponent } from 'echarts/components'
 import VChart from 'vue-echarts'
 import { 
   Coin, TrendCharts, Star, Key, CopyDocument, 
-  ShoppingCart, ArrowRight 
+  ShoppingCart, ArrowRight, Timer
 } from '@element-plus/icons-vue'
 import request from '@/api/request'
 
 use([CanvasRenderer, LineChart, GridComponent, TooltipComponent])
 
 interface Quota {
-  remain_quota: number
-  used_quota_today: number
-  used_quota_month: number
+  free_quota: number
+  free_expired_at: string
   vip_quota: number
+  vip_expired_at: string
   is_vip: boolean
   level: string
 }
@@ -244,6 +271,45 @@ function formatQuota(n: number | undefined): string {
   if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M'
   if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K'
   return n.toLocaleString()
+}
+
+function formatVIPExpiry(dateStr: string | undefined): string {
+  if (!dateStr) return '-'
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diff = date.getTime() - now.getTime()
+  const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
+  const dateDisplay = date.toLocaleDateString('zh-CN', {
+    month: 'long',
+    day: 'numeric',
+  })
+  return `${dateDisplay} (${days}天后)`
+}
+
+function getVIPDaysRemaining(): number {
+  if (!quota.value?.vip_expired_at) return 0
+  const expiry = new Date(quota.value.vip_expired_at)
+  const now = new Date()
+  const diff = expiry.getTime() - now.getTime()
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)))
+}
+
+function getFreeDaysRemaining(): number {
+  if (!quota.value?.free_expired_at) return 0
+  const expiry = new Date(quota.value.free_expired_at)
+  const now = new Date()
+  const diff = expiry.getTime() - now.getTime()
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)))
+}
+
+function getTotalAvailableQuota(): number {
+  if (!quota.value) return 0
+  return (quota.value.free_quota || 0) + (quota.value.vip_quota || 0)
+}
+
+function isFreeExpiringSoon(): boolean {
+  if (!quota.value?.free_expired_at) return false
+  return getFreeDaysRemaining() <= 3
 }
 
 function formatTime(date: Date): string {
@@ -405,37 +471,17 @@ onMounted(async () => {
       usageStats.value = usageRes.data.data
       dailyUsage.value = usageRes.data.data.daily_usage || []
     }
-    
-    // Fallback demo data when data is empty or all values are 0
-    const hasData = dailyUsage.value.length > 0 && dailyUsage.value.some(d => (d.total_calls || 0) > 0)
-    if (!hasData) {
-      dailyUsage.value = [
-        { date: '03-22', total_calls: 10, success_calls: 9, failed_calls: 1, total_tokens: 5000 },
-        { date: '03-23', total_calls: 15, success_calls: 14, failed_calls: 1, total_tokens: 7500 },
-        { date: '03-24', total_calls: 8, success_calls: 8, failed_calls: 0, total_tokens: 4000 },
-        { date: '03-25', total_calls: 20, success_calls: 19, failed_calls: 1, total_tokens: 10000 },
-        { date: '03-26', total_calls: 25, success_calls: 24, failed_calls: 1, total_tokens: 12500 },
-        { date: '03-27', total_calls: 18, success_calls: 17, failed_calls: 1, total_tokens: 9000 },
-        { date: '03-28', total_calls: 30, success_calls: 29, failed_calls: 1, total_tokens: 15000 }
-      ]
+
+    const activitiesRes = await request.get('/user/activities')
+    if (activitiesRes.data.data && activitiesRes.data.data.length > 0) {
+      recentActivity.value = activitiesRes.data.data.map((item: any) => ({
+        id: item.id,
+        type: item.type as 'token' | 'order' | 'vip',
+        title: item.title,
+        description: item.description,
+        time: new Date(item.time)
+      }))
     }
-    
-    recentActivity.value = [
-      {
-        id: 1,
-        type: 'token',
-        title: '创建 API 密钥',
-        description: '开发环境密钥',
-        time: new Date(Date.now() - 3600000)
-      },
-      {
-        id: 2,
-        type: 'order',
-        title: '购买配额',
-        description: '10M tokens',
-        time: new Date(Date.now() - 86400000)
-      }
-    ]
   } catch (e: any) {
     console.error('Failed to load data:', e)
   }
@@ -491,6 +537,14 @@ onMounted(async () => {
   font-size: 22px;
   font-weight: 600;
   color: var(--el-text-color-primary);
+}
+
+.stat-value.vip-value {
+  color: var(--el-color-warning);
+}
+
+.vip-card :deep(.stat-icon) {
+  background: linear-gradient(135deg, #e6a23c 0%, #b88230 100%);
 }
 
 .charts-grid {

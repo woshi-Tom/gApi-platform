@@ -56,15 +56,23 @@
             <span class="quota-value">{{ formatQuota(row.remain_quota) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="VIP配额" width="120">
+        <el-table-column label="VIP附赠配额" width="120">
           <template #default="{ row }">
-            <span :class="row.vip_quota > 0 ? 'quota-value vip' : ''">{{ formatQuota(row.vip_quota) }}</span>
+            <span v-if="row.vip_quota > 0" class="quota-value vip">{{ formatQuota(row.vip_quota) }}</span>
+            <span v-else class="text-muted">-</span>
           </template>
         </el-table-column>
-        <el-table-column label="VIP到期" width="120">
+        <el-table-column label="VIP到期" width="140">
           <template #default="{ row }">
-            <span v-if="row.vip_expired_at">{{ formatDate(row.vip_expired_at) }}</span>
-            <span v-else>-</span>
+            <template v-if="row.level === 'vip' || row.level === 'enterprise'">
+              <el-tag v-if="isVIPActive(row)" type="success" size="small" effect="plain">
+                {{ formatDate(row.vip_expired_at) }}
+              </el-tag>
+              <el-tag v-else type="info" size="small" effect="plain">
+                已过期
+              </el-tag>
+            </template>
+            <span v-else class="text-muted">-</span>
           </template>
         </el-table-column>
         <el-table-column label="已使用" width="100">
@@ -115,7 +123,9 @@
         <el-form-item label="用户等级">
           <el-select v-model="ef.level" style="width: 100%">
             <el-option label="免费用户" value="free" />
-            <el-option label="VIP 会员" value="vip" />
+            <el-option label="VIP青铜" value="vip_bronze" />
+            <el-option label="VIP白银" value="vip_silver" />
+            <el-option label="VIP黄金" value="vip_gold" />
             <el-option label="企业版" value="enterprise" />
           </el-select>
         </el-form-item>
@@ -218,17 +228,23 @@ const ef = reactive({
 
 const levelType = (level: string) => {
   switch (level) {
-    case 'vip': return 'warning'
+    case 'vip_gold': return 'danger'
+    case 'vip_silver': return 'warning'
+    case 'vip_bronze': return 'info'
     case 'enterprise': return 'danger'
+    case 'free': return 'info'
     default: return 'info'
   }
 }
 
 const levelName = (level: string) => {
   switch (level) {
-    case 'vip': return 'VIP'
+    case 'vip_bronze': return 'VIP青铜'
+    case 'vip_silver': return 'VIP白银'
+    case 'vip_gold': return 'VIP黄金'
     case 'enterprise': return '企业版'
-    default: return '免费'
+    case 'free': return '免费用户'
+    default: return level || '免费用户'
   }
 }
 
@@ -249,6 +265,11 @@ function formatDate(dateStr: string | undefined): string {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+function isVIPActive(row: User): boolean {
+  if (!row.vip_expired_at) return false
+  return new Date(row.vip_expired_at) > new Date()
 }
 
 async function load() {
@@ -380,6 +401,10 @@ onMounted(load)
 
 .quota-value.vip {
   color: var(--el-color-warning);
+}
+
+.text-muted {
+  color: var(--el-text-color-placeholder);
 }
 
 .pagination {

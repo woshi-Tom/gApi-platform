@@ -94,7 +94,7 @@ onBeforeMount(() => {
           <span>修改密码</span>
         </el-menu-item>
         <el-divider style="margin: 10px 0; border-color: #333" />
-        <el-menu-item @click="handleLogout">
+        <el-menu-item index="/logout" @click="handleLogout">
           <el-icon><Back /></el-icon>
           <span>退出登录</span>
         </el-menu-item>

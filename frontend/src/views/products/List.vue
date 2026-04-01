@@ -4,7 +4,7 @@
     <el-tabs v-model="tab">
       <el-tab-pane label="充值套餐" name="recharge">
         <el-row :gutter="20"><el-col :span="8" v-for="p in rc" :key="p.id">
-          <el-card shadow="hover" class="pc"><template #header><div style="display:flex;justify-content:space-between"><span>{{ p.name }}</span><el-tag v-if="p.is_popular" type="danger" size="small">热销</el-tag></div></template>
+          <el-card shadow="hover" class="pc"><template #header><div style="display:flex;justify-content:space-between"><span>{{ p.name }}</span><el-tag v-if="p.is_recommended" type="warning" size="small">推荐</el-tag><el-tag v-if="p.is_hot" type="danger" size="small" style="margin-left:4px">热门</el-tag></div></template>
             <div class="price">¥{{ p.price }}<span v-if="p.original_price" class="org">¥{{ p.original_price }}</span></div>
             <div class="info">配额：{{ (p.quota ?? 0).toLocaleString() }} Token</div>
             <div class="info" v-if="p.bonus_quota">赠送：{{ (p.bonus_quota ?? 0).toLocaleString() }} Token</div>
@@ -18,7 +18,7 @@
       </el-tab-pane>
       <el-tab-pane label="VIP套餐" name="vip">
         <el-row :gutter="20"><el-col :span="8" v-for="p in vp" :key="p.id">
-          <el-card shadow="hover" class="pc" :class="{rec:p.is_recommended}"><template #header><div style="display:flex;justify-content:space-between"><span>{{ p.name }}</span><el-tag v-if="p.is_recommended" type="warning" size="small">推荐</el-tag></div></template>
+          <el-card shadow="hover" class="pc" :class="{rec:p.is_recommended}"><template #header><div style="display:flex;justify-content:space-between"><span>{{ p.name }}</span><el-tag v-if="p.is_recommended" type="warning" size="small">推荐</el-tag><el-tag v-if="p.is_hot" type="danger" size="small" style="margin-left:4px">热门</el-tag></div></template>
             <div class="price">¥{{ p.price }}<span v-if="p.original_price" class="org">¥{{ p.original_price }}</span></div>
             <div class="info">有效期：{{ p.vip_days || p.duration_days || 30 }} 天</div>
             <div class="info">配额：{{ ((p.vip_quota ?? p.quota) || 0).toLocaleString() }} Token</div>

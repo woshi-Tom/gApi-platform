@@ -2,22 +2,36 @@
   <div>
     <div class="page-header">
       <h2>API 密钥管理</h2>
-      <el-button type="primary" @click="dlg = true">
-        <el-icon><Plus /></el-icon> 创建密钥
-      </el-button>
+      <div class="header-info">
+        <span class="token-count">{{ list.length }} / {{ maxTokens }} 个密钥</span>
+        <el-button type="primary" @click="dlg = true" :disabled="list.length >= maxTokens">
+          <el-icon><Plus /></el-icon> 创建密钥
+        </el-button>
+      </div>
     </div>
+
+    <el-alert v-if="maxTokens === 1" type="warning" :closable="false" show-icon style="margin-bottom: 16px;">
+      您的VIP已过期，当前为免费用户，最多只能创建1个API密钥。升级VIP可获得更多密钥。
+    </el-alert>
 
     <el-card class="token-card">
       <el-table :data="list" v-loading="ld" stripe>
-        <el-table-column prop="name" label="名称" min-width="120" />
+        <el-table-column prop="name" label="名称" min-width="120">
+          <template #default="{ row }">
+            <span :class="{ 'disabled-text': isTokenDisabled(row) }">{{ row.name }}</span>
+          </template>
+        </el-table-column>
         <el-table-column label="密钥" min-width="300">
           <template #default="{ row }">
-            <code class="token-key">{{ getDisplayKey(row) }}</code>
+            <code class="token-key" :class="{ 'disabled-text': isTokenDisabled(row) }">
+              {{ getDisplayKey(row) }}
+            </code>
             <el-button 
               text 
               size="small" 
               @click="toggleShow(row.id)" 
               :title="showKeys[row.id] ? '隐藏密钥' : '显示密钥'"
+              :disabled="isTokenDisabled(row)"
             >
               <el-icon><View v-if="!showKeys[row.id]" /><Hide v-else /></el-icon>
             </el-button>
@@ -26,6 +40,7 @@
               size="small" 
               @click="copyToken(row.token_key)" 
               title="复制密钥"
+              :disabled="isTokenDisabled(row)"
             >
               <el-icon><CopyDocument /></el-icon>
             </el-button>
@@ -33,13 +48,15 @@
         </el-table-column>
         <el-table-column label="剩余配额" width="140">
           <template #default="{ row }">
-            <span class="quota-value">{{ formatQuota(row.remain_quota) }}</span>
+            <span class="quota-value" :class="{ 'disabled-text': isTokenDisabled(row) }">
+              {{ formatQuota(row.total_quota) }}
+            </span>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'active' ? 'success' : 'danger'" size="small">
-              {{ row.status === 'active' ? '正常' : '禁用' }}
+            <el-tag :type="isTokenDisabled(row) ? 'info' : (row.status === 'active' ? 'success' : 'danger')" size="small">
+              {{ isTokenDisabled(row) ? '已限制' : (row.status === 'active' ? '正常' : '禁用') }}
             </el-tag>
           </template>
         </el-table-column>
@@ -97,7 +114,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { View, Hide, Plus, CopyDocument } from '@element-plus/icons-vue'
 import request from '@/api/request'
@@ -106,9 +123,15 @@ interface Token {
   id: number
   name: string
   token_key: string
+  total_quota: number
   remain_quota: number
   status: string
   created_at: string
+}
+
+interface UserStatus {
+  level: string
+  is_vip: boolean
 }
 
 const list = ref<Token[]>([])
@@ -116,6 +139,7 @@ const ld = ref(false)
 const crt = ref(false)
 const dlg = ref(false)
 const showKeys = ref<Record<number, boolean>>({})
+const userStatus = ref<UserStatus | null>(null)
 
 const f = reactive({ 
   name: '', 
@@ -123,6 +147,26 @@ const f = reactive({
   ips: '', 
   exp: null as Date | null 
 })
+
+// Calculate max tokens based on user level
+const maxTokens = computed(() => {
+  if (!userStatus.value) return 1
+  const level = userStatus.value.level
+  if (level === 'vip_gold') return 5
+  if (level === 'vip_silver') return 3
+  if (level === 'vip_bronze') return 2
+  if (userStatus.value.is_vip) return 2 // fallback for generic vip
+  return 1 // free user
+})
+
+// Check if a token should be disabled (beyond limit)
+function isTokenDisabled(token: Token): boolean {
+  if (maxTokens.value >= list.value.length) return false
+  // Find the index of this token in the list
+  const index = list.value.findIndex(t => t.id === token.id)
+  // Disable tokens beyond the max limit (keep first maxTokens items active)
+  return index >= maxTokens.value
+}
 
 const availableModels = [
   { label: 'GPT-3.5-Turbo', value: 'gpt-3.5-turbo' },
@@ -194,8 +238,13 @@ function formatDate(dateStr: string): string {
 async function load() { 
   ld.value = true
   try { 
-    const res = await request.get('/tokens')
-    list.value = res.data.data || []
+    // Load user status and tokens in parallel
+    const [tokenRes, userRes] = await Promise.all([
+      request.get('/tokens'),
+      request.get('/user/vip/status').catch(() => ({ data: { data: { level: 'free', is_vip: false } } }))
+    ])
+    list.value = tokenRes.data.data || []
+    userStatus.value = userRes.data.data
     // Reset show state when reloading
     showKeys.value = {}
   } catch (e: any) {
@@ -260,6 +309,17 @@ onMounted(load)
   color: var(--el-text-color-primary);
 }
 
+.header-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.token-count {
+  color: var(--el-text-color-secondary);
+  font-size: 14px;
+}
+
 .token-card {
   border-radius: 8px;
 }
@@ -282,6 +342,10 @@ onMounted(load)
 .quota-value {
   font-weight: 500;
   color: var(--el-color-success);
+}
+
+.disabled-text {
+  color: var(--el-text-color-placeholder);
 }
 
 .create-form {
