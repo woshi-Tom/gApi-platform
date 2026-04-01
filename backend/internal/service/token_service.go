@@ -129,6 +129,20 @@ func (s *TokenService) Validate(tokenKey string) (*model.Token, error) {
 	return token, nil
 }
 
+// GetUserQuota returns user's total available quota (permanent + VIP)
+func (s *TokenService) GetUserQuota(userID uint) (int64, error) {
+	if s.userRepo == nil {
+		return 0, nil
+	}
+
+	user, err := s.userRepo.GetByID(userID)
+	if err != nil {
+		return 0, err
+	}
+
+	return user.FreeQuota + user.VIPQuota, nil
+}
+
 func joinStrings(slice []string, sep string) string {
 	if len(slice) == 0 {
 		return ""
@@ -156,24 +170,22 @@ func (s *TokenService) checkTokenLimit(userID uint) error {
 	}
 
 	var maxTokens int
-	switch user.Level {
-	case "vip":
+	isVIP := user.Level == "vip_bronze" || user.Level == "vip_silver" || user.Level == "vip_gold"
+
+	if isVIP {
 		if user.VIPPackageID > 0 {
 			pkg, err := s.vipPackageRepo.GetByID(user.VIPPackageID)
-			if err == nil && pkg != nil {
+			if err == nil && pkg != nil && pkg.ConcurrentLimit > 0 {
 				maxTokens = pkg.ConcurrentLimit
-				if maxTokens == 0 {
-					maxTokens = 5
-				}
 			} else {
-				maxTokens = 5
+				maxTokens = 3
 			}
 		} else {
-			maxTokens = 5
+			maxTokens = 3
 		}
-	case "enterprise":
-		maxTokens = 10
-	default:
+	} else if user.Level == "enterprise" {
+		maxTokens = 5
+	} else {
 		maxTokens = 1
 	}
 

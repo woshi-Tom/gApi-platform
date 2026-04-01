@@ -55,7 +55,11 @@ func (s *AuthService) Register(username, email, password string) (*model.Registe
 		PasswordHash: string(hash),
 		Level:        "free",
 		Status:       "active",
-		RemainQuota:  100000, // Default signup bonus
+		FreeQuota:    50000, // Default signup bonus (50K tokens)
+		FreeExpiredAt: func() *time.Time {
+			t := time.Now().AddDate(0, 0, 7) // 7 days validity
+			return &t
+		}(),
 	}
 
 	if err := s.userRepo.Create(user); err != nil {
@@ -66,8 +70,8 @@ func (s *AuthService) Register(username, email, password string) (*model.Registe
 		UserID:       user.ID,
 		Username:     user.Username,
 		Email:        user.Email,
-		Quota:        user.RemainQuota,
-		QuotaType:    "permanent",
+		Quota:        user.FreeQuota,
+		QuotaType:    "free",
 		TrialVIPDays: 0,
 		NeedVerify:   false,
 	}, nil
@@ -216,17 +220,19 @@ func (s *UserService) GetQuota(userID uint) (*model.QuotaInfo, error) {
 		return nil, err
 	}
 
-	isVIP := user.Level == "vip" || user.Level == "enterprise"
-	if user.VIPExpiredAt != nil && user.VIPExpiredAt.Before(time.Now()) {
+	isVIP := user.Level == "enterprise" ||
+		user.Level == "vip_bronze" || user.Level == "vip_silver" || user.Level == "vip_gold"
+	if !isVIP || user.VIPExpiredAt == nil || user.VIPExpiredAt.Before(time.Now()) {
 		isVIP = false
 	}
 
 	return &model.QuotaInfo{
-		RemainQuota:  user.RemainQuota,
-		VIPQuota:     user.VIPQuota,
-		VIPExpiredAt: user.VIPExpiredAt,
-		IsVIP:        isVIP,
-		Level:        user.Level,
+		FreeQuota:     user.FreeQuota,
+		FreeExpiredAt: user.FreeExpiredAt,
+		VIPQuota:      user.VIPQuota,
+		VIPExpiredAt:  user.VIPExpiredAt,
+		IsVIP:         isVIP,
+		Level:         user.Level,
 	}, nil
 }
 

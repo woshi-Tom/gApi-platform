@@ -137,6 +137,9 @@ type VIPPackage struct {
 	IsRecommended bool `json:"is_recommended" gorm:"default:false"`
 	IsPopular     bool `json:"is_popular" gorm:"default:false"`
 
+	// VIP level mapping
+	Level string `json:"level" gorm:"size:20;default:'vip_bronze'"` // vip_bronze|vip_silver|vip_gold
+
 	// Status
 	Status    string `json:"status" gorm:"size:20;default:'active'"` // active|disabled|deleted
 	IsVisible bool   `json:"is_visible" gorm:"default:true"`
@@ -164,6 +167,9 @@ type RechargePackage struct {
 	Quota      int64 `json:"quota" gorm:"not null"`        // tokens
 	BonusQuota int64 `json:"bonus_quota" gorm:"default:0"` // bonus tokens
 
+	// Duration
+	ValidDays int `json:"valid_days" gorm:"default:7"` // validity period in days
+
 	// Rate limits
 	RPMLimit int `json:"rpm_limit" gorm:"default:60"`   // requests per minute
 	TPMLimit int `json:"tpm_limit" gorm:"default:6000"` // tokens per minute
@@ -185,4 +191,22 @@ type RechargePackage struct {
 
 func (RechargePackage) TableName() string {
 	return "recharge_packages"
+}
+
+// UserRechargeRecord tracks user's recharge packages for FIFO consumption
+type UserRechargeRecord struct {
+	ID        uint      `json:"id" gorm:"primaryKey"`
+	UserID    uint      `json:"user_id" gorm:"not null;index"`
+	PackageID uint      `json:"package_id" gorm:"not null"`
+	OrderID   uint      `json:"order_id" gorm:"not null;index"`
+	Quota     int64     `json:"quota" gorm:"not null"`                  // original quota
+	Remaining int64     `json:"remaining" gorm:"not null"`              // remaining quota
+	ExpiredAt time.Time `json:"expired_at" gorm:"not null"`             // expiry time
+	Status    string    `json:"status" gorm:"size:20;default:'active'"` // active|used|expired
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+func (UserRechargeRecord) TableName() string {
+	return "user_recharge_records"
 }

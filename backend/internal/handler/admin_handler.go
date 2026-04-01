@@ -161,9 +161,9 @@ func (h *AdminHandler) UpdateUser(c *gin.Context) {
 		user.Level = req.Level
 	}
 	if req.QuotaAdjust != 0 {
-		user.RemainQuota += req.QuotaAdjust
-		if user.RemainQuota < 0 {
-			user.RemainQuota = 0
+		user.FreeQuota += req.QuotaAdjust
+		if user.FreeQuota < 0 {
+			user.FreeQuota = 0
 		}
 	}
 	if req.VIPQuotaAdjust != 0 {
@@ -388,7 +388,7 @@ func (h *AdminHandler) GetDashboardStats(c *gin.Context) {
 
 	db.Model(&model.User{}).Where("last_login_at >= ?", today).Count((*int64)(&stats.ActiveUsersToday))
 
-	db.Model(&model.User{}).Where("level IN ?", []string{"vip", "enterprise"}).Count((*int64)(&stats.VIPUsersCount))
+	db.Model(&model.User{}).Where("level IN ?", []string{"enterprise", "vip_bronze", "vip_silver", "vip_gold"}).Count((*int64)(&stats.VIPUsersCount))
 
 	db.Model(&model.Channel{}).Count((*int64)(&stats.TotalChannels))
 
@@ -396,7 +396,7 @@ func (h *AdminHandler) GetDashboardStats(c *gin.Context) {
 
 	db.Model(&model.Order{}).Where("created_at >= ?", today).Count((*int64)(&stats.TotalOrdersToday))
 
-	db.Model(&model.Order{}).Where("status = ? AND created_at >= ?", "paid", today).
+	db.Model(&model.Order{}).Where("status = ? AND created_at >= ?", "completed", today).
 		Select("COALESCE(SUM(pay_amount), 0)").Scan(&stats.TotalRevenueToday)
 
 	db.Model(&model.UsageLog{}).Where("created_at >= ?", today).

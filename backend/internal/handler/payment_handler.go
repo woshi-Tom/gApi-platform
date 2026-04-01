@@ -1,9 +1,9 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"gapi-platform/internal/model"
@@ -23,6 +23,7 @@ type PaymentHandler struct {
 	vipRepo       *repository.VIPPackageRepository
 	auditRepo     *repository.AuditRepository
 	alipayService *service.AlipayService
+	redisClient   *repository.RedisClient
 }
 
 func NewPaymentHandler(
@@ -32,6 +33,7 @@ func NewPaymentHandler(
 	vipRepo *repository.VIPPackageRepository,
 	auditRepo *repository.AuditRepository,
 	alipayService *service.AlipayService,
+	redisClient *repository.RedisClient,
 ) *PaymentHandler {
 	return &PaymentHandler{
 		orderRepo:     orderRepo,
@@ -40,6 +42,7 @@ func NewPaymentHandler(
 		vipRepo:       vipRepo,
 		auditRepo:     auditRepo,
 		alipayService: alipayService,
+		redisClient:   redisClient,
 	}
 }
 
@@ -282,10 +285,17 @@ func (h *PaymentHandler) QueryAlipayOrder(c *gin.Context) {
 		result, err := h.alipayService.QueryOrder(orderNo)
 		if err == nil && result != nil {
 			if result.TradeStatus == "TRADE_SUCCESS" || result.TradeStatus == "TRADE_FINISHED" {
-				h.processPaymentSuccess(order, result.TradeNo, result.TotalAmount)
-				resp.Status = "paid"
-				paidAt := time.Now().Format("2006-01-02 15:04:05")
-				resp.PaidAt = &paidAt
+				processErr := h.processPaymentSuccess(order, result.TradeNo, result.TotalAmount)
+				if processErr != nil {
+					log.Error().Err(processErr).Str("order_no", orderNo).Msg("processPaymentSuccess failed in QueryAlipayOrder")
+				} else {
+					paidAt := time.Now().Format("2006-01-02 15:04:05")
+					resp.PaidAt = &paidAt
+				}
+				updatedOrder, _ := h.orderRepo.GetByOrderNo(orderNo)
+				if updatedOrder != nil {
+					resp.Status = updatedOrder.Status
+				}
 			}
 		}
 	}
@@ -295,8 +305,24 @@ func (h *PaymentHandler) QueryAlipayOrder(c *gin.Context) {
 
 func (h *PaymentHandler) CancelAlipayOrder(c *gin.Context) {
 	orderNo := c.Param("order_no")
-
 	userID := c.MustGet("user_id").(uint)
+
+	var acquiredLock bool
+	var lockKey string
+	if h.redisClient != nil {
+		lockKey = fmt.Sprintf("order:lock:%s", orderNo)
+		ctx := context.Background()
+		var err error
+		acquiredLock, err = h.redisClient.AcquireLock(ctx, lockKey, 10*time.Second)
+		if err != nil {
+			log.Warn().Err(err).Str("order_no", orderNo).Msg("failed to acquire cancel lock")
+		}
+		if !acquiredLock {
+			response.Fail(c, "ORDER_BEING_PROCESSED", "order is being processed, please try again later")
+			return
+		}
+		defer h.redisClient.ReleaseLock(context.Background(), lockKey)
+	}
 
 	order, err := h.orderRepo.GetByOrderNo(orderNo)
 	if err != nil {
@@ -344,15 +370,140 @@ func (h *PaymentHandler) CancelAlipayOrder(c *gin.Context) {
 	response.Success(c, nil)
 }
 
-func (h *PaymentHandler) processPaymentSuccess(order *model.Order, tradeNo string, amount string) {
-	if order == nil {
-		return
+func (h *PaymentHandler) RefundOrder(c *gin.Context) {
+	orderNo := c.Param("order_no")
+	userID := c.MustGet("user_id").(uint)
+
+	var acquiredLock bool
+	var lockKey string
+	if h.redisClient != nil {
+		lockKey = fmt.Sprintf("order:lock:%s", orderNo)
+		ctx := context.Background()
+		var err error
+		acquiredLock, err = h.redisClient.AcquireLock(ctx, lockKey, 30*time.Second)
+		if err != nil {
+			log.Warn().Err(err).Str("order_no", orderNo).Msg("failed to acquire refund lock")
+		}
+		if !acquiredLock {
+			response.Fail(c, "ORDER_BEING_PROCESSED", "order is being processed, please try again later")
+			return
+		}
+		defer h.redisClient.ReleaseLock(context.Background(), lockKey)
 	}
-	if order.Status == model.OrderStatusPaid || order.Status == model.OrderStatusCompleted {
+
+	order, err := h.orderRepo.GetByOrderNo(orderNo)
+	if err != nil {
+		response.NotFound(c, "order not found")
 		return
 	}
 
+	if order.UserID != userID {
+		response.Forbidden(c, "not your order")
+		return
+	}
+
+	if order.Status != model.OrderStatusCompleted {
+		response.Fail(c, "ORDER_NOT_REFUNDABLE", "only completed orders can be refunded")
+		return
+	}
+
+	err = h.orderRepo.GetDB().Transaction(func(tx *gorm.DB) error {
+		var user model.User
+		if err := tx.First(&user, order.UserID).Error; err != nil {
+			return fmt.Errorf("failed to get user: %w", err)
+		}
+
+		if order.OrderType == "vip" {
+			originalQuota := user.VIPQuota
+			user.Level = "free"
+			user.VIPQuota = 0
+			user.VIPExpiredAt = nil
+			user.VIPPackageID = 0
+			if err := tx.Save(&user).Error; err != nil {
+				return fmt.Errorf("failed to revoke VIP: %w", err)
+			}
+			log.Info().
+				Str("order_no", orderNo).
+				Uint("user_id", userID).
+				Int64("revoked_quota", originalQuota).
+				Msg("VIP revoked due to refund")
+		} else if order.OrderType == "recharge" {
+			if user.VIPQuota > 0 {
+				user.VIPQuota = 0
+				if err := tx.Save(&user).Error; err != nil {
+					return fmt.Errorf("failed to revoke quota: %w", err)
+				}
+			}
+		}
+
+		order.Status = model.OrderStatusRefunded
+		now := time.Now()
+		order.RefundReason = "user requested refund"
+		refundAmt := order.PayAmount
+		order.RefundAmount = &refundAmt
+		if err := tx.Save(order).Error; err != nil {
+			return fmt.Errorf("failed to update order: %w", err)
+		}
+
+		var payment model.Payment
+		if err := tx.Where("order_id = ?", order.ID).First(&payment).Error; err == nil {
+			payment.Status = model.PaymentStatusRefunded
+			if err := tx.Save(&payment).Error; err != nil {
+				return fmt.Errorf("failed to update payment: %w", err)
+			}
+		}
+
+		log.Info().
+			Str("order_no", orderNo).
+			Uint("user_id", userID).
+			Float64("refund_amount", refundAmt).
+			Time("refund_time", now).
+			Msg("refund processed successfully")
+		return nil
+	})
+
+	if err != nil {
+		log.Error().Err(err).Str("order_no", orderNo).Msg("refund failed")
+		response.Fail(c, "REFUND_FAILED", err.Error())
+		return
+	}
+
+	response.Success(c, gin.H{
+		"order_no":      orderNo,
+		"refund_amount": order.PayAmount,
+		"message":       "refund processed, VIP has been revoked",
+	})
+}
+
+func (h *PaymentHandler) processPaymentSuccess(order *model.Order, tradeNo string, amount string) error {
+	if order == nil {
+		return fmt.Errorf("order is nil")
+	}
+	if order.Status == model.OrderStatusPaid || order.Status == model.OrderStatusCompleted {
+		return nil
+	}
+
+	if h.redisClient != nil {
+		ctx := context.Background()
+		lockKey := fmt.Sprintf("order:lock:%s", order.OrderNo)
+		acquired, err := h.redisClient.AcquireLock(ctx, lockKey, 30*time.Second)
+		if err != nil {
+			log.Warn().Err(err).Str("order_no", order.OrderNo).Msg("failed to acquire lock")
+		}
+		if !acquired {
+			return fmt.Errorf("order is being processed by another request")
+		}
+		defer h.redisClient.ReleaseLock(ctx, lockKey)
+	}
+
 	err := h.orderRepo.GetDB().Transaction(func(tx *gorm.DB) error {
+		var currentOrder model.Order
+		if err := tx.First(&currentOrder, order.ID).Error; err != nil {
+			return fmt.Errorf("failed to fetch order: %w", err)
+		}
+		if currentOrder.Status == model.OrderStatusPaid || currentOrder.Status == model.OrderStatusCompleted {
+			return fmt.Errorf("order already processed: %s", currentOrder.Status)
+		}
 		order.Status = model.OrderStatusPaid
 		now := time.Now()
 		order.PaidAt = &now
@@ -382,36 +533,67 @@ func (h *PaymentHandler) processPaymentSuccess(order *model.Order, tradeNo strin
 				return fmt.Errorf("VIP package not found for id %d", *order.PackageID)
 			}
 
-			if err := tx.Model(&model.User{}).Where("id = ?", order.UserID).
-				UpdateColumn("vip_quota", gorm.Expr("vip_quota + ?", pkg.Quota)).Error; err != nil {
-				return fmt.Errorf("update VIP quota: %w", err)
+			var user model.User
+			if err := tx.First(&user, order.UserID).Error; err != nil {
+				return fmt.Errorf("failed to get user: %w", err)
 			}
-			log.Info().
-				Str("order_no", order.OrderNo).
-				Uint("user_id", order.UserID).
-				Int64("vip_quota_added", pkg.Quota).
-				Msg("VIP quota added to user account")
 
-			vipExpireAt := now.AddDate(0, 0, pkg.DurationDays)
-			if err := tx.Model(&model.User{}).Where("id = ?", order.UserID).Updates(map[string]interface{}{
-				"level":          "vip",
-				"vip_expired_at": vipExpireAt,
-				"vip_package_id": pkg.ID,
-			}).Error; err != nil {
-				return fmt.Errorf("failed to update VIP status: %w", err)
+			isVIP := user.Level == "vip_bronze" || user.Level == "vip_silver" || user.Level == "vip_gold"
+
+			if isVIP {
+				newQuota := user.VIPQuota + pkg.Quota
+				if err := tx.Model(&model.User{}).Where("id = ?", order.UserID).
+					Update("v_ip_quota", newQuota).Error; err != nil {
+					return fmt.Errorf("update VIP quota: %w", err)
+				}
+
+				var newExpireAt time.Time
+				if user.VIPExpiredAt != nil && user.VIPExpiredAt.After(now) {
+					newExpireAt = user.VIPExpiredAt.AddDate(0, 0, pkg.DurationDays)
+				} else {
+					newExpireAt = now.AddDate(0, 0, pkg.DurationDays)
+				}
+
+				if err := tx.Model(&model.User{}).Where("id = ?", order.UserID).Updates(map[string]interface{}{
+					"v_ip_expired_at": newExpireAt,
+					"v_ip_package_id": pkg.ID,
+				}).Error; err != nil {
+					return fmt.Errorf("failed to update VIP status: %w", err)
+				}
+
+				log.Info().
+					Str("order_no", order.OrderNo).
+					Uint("user_id", order.UserID).
+					Int64("vip_quota_new", newQuota).
+					Str("vip_expire_at", newExpireAt.Format("2006-01-02 15:04:05")).
+					Msg("VIP renewed with quota accumulation")
+			} else {
+				if err := tx.Model(&model.User{}).Where("id = ?", order.UserID).
+					Update("v_ip_quota", pkg.Quota).Error; err != nil {
+					return fmt.Errorf("update VIP quota: %w", err)
+				}
+
+				vipExpireAt := now.AddDate(0, 0, pkg.DurationDays)
+				if err := tx.Model(&model.User{}).Where("id = ?", order.UserID).Updates(map[string]interface{}{
+					"level":           h.getVIPLevelName(pkg),
+					"v_ip_expired_at": vipExpireAt,
+					"v_ip_package_id": pkg.ID,
+				}).Error; err != nil {
+					return fmt.Errorf("failed to update VIP status: %w", err)
+				}
+
+				log.Info().
+					Str("order_no", order.OrderNo).
+					Uint("user_id", order.UserID).
+					Str("vip_level", h.getVIPLevelName(pkg)).
+					Str("vip_expire_at", vipExpireAt.Format("2006-01-02 15:04:05")).
+					Msg("VIP activated")
 			}
+		} else if order.OrderType == "recharge" {
 			log.Info().
 				Str("order_no", order.OrderNo).
 				Uint("user_id", order.UserID).
-				Str("vip_expire_at", vipExpireAt.Format("2006-01-02 15:04:05")).
-				Msg("VIP status updated")
-		} else if order.OrderType == "recharge" || order.OrderType == "package" {
-			quota, _ := strconv.ParseFloat(amount, 64)
-			tokenAmount := int64(quota * 100000)
-			if err := tx.Model(&model.User{}).Where("id = ?", order.UserID).
-				UpdateColumn("remain_quota", gorm.Expr("remain_quota + ?", tokenAmount)).Error; err != nil {
-				return fmt.Errorf("update user quota: %w", err)
-			}
+				Msg("Recharge order completed - create user_recharge_record")
 		}
 
 		order.Status = model.OrderStatusCompleted
@@ -436,29 +618,41 @@ func (h *PaymentHandler) processPaymentSuccess(order *model.Order, tradeNo strin
 				CreatedAt:    time.Now(),
 			})
 		}
-	} else {
-		log.Info().
-			Str("order_no", order.OrderNo).
-			Str("trade_no", tradeNo).
-			Str("amount", amount).
-			Str("user_id", fmt.Sprintf("%d", order.UserID)).
-			Msg("payment success processed")
-
-		if h.auditRepo != nil {
-			h.auditRepo.Create(&model.AuditLog{
-				UserID:        &order.UserID,
-				Action:        "payment.success",
-				ActionGroup:   "payment",
-				ResourceType:  "order",
-				ResourceID:    &order.ID,
-				RequestMethod: "POST",
-				RequestPath:   "/api/v1/payment/callback/alipay",
-				RequestBody:   fmt.Sprintf(`{"order_no":"%s","trade_no":"%s","amount":"%s"}`, order.OrderNo, tradeNo, amount),
-				Success:       true,
-				CreatedAt:     time.Now(),
-			})
-		}
+		return err
 	}
+
+	log.Info().
+		Str("order_no", order.OrderNo).
+		Str("trade_no", tradeNo).
+		Str("amount", amount).
+		Str("user_id", fmt.Sprintf("%d", order.UserID)).
+		Msg("payment success processed")
+
+	if h.auditRepo != nil {
+		h.auditRepo.Create(&model.AuditLog{
+			UserID:        &order.UserID,
+			Action:        "payment.success",
+			ActionGroup:   "payment",
+			ResourceType:  "order",
+			ResourceID:    &order.ID,
+			RequestMethod: "POST",
+			RequestPath:   "/api/v1/payment/callback/alipay",
+			RequestBody:   fmt.Sprintf(`{"order_no":"%s","trade_no":"%s","amount":"%s"}`, order.OrderNo, tradeNo, amount),
+			Success:       true,
+			CreatedAt:     time.Now(),
+		})
+	}
+	return nil
+}
+
+func (h *PaymentHandler) getVIPLevelName(pkg *model.VIPPackage) string {
+	if pkg == nil {
+		return "vip_bronze"
+	}
+	if pkg.Level != "" {
+		return pkg.Level
+	}
+	return "vip_bronze"
 }
 
 func (h *PaymentHandler) AlipayNotify(c *gin.Context) {
@@ -492,7 +686,9 @@ func (h *PaymentHandler) AlipayNotify(c *gin.Context) {
 			if amount == "" {
 				amount = fmt.Sprintf("%.2f", order.PayAmount)
 			}
-			h.processPaymentSuccess(order, result.TradeNo, amount)
+			if err := h.processPaymentSuccess(order, result.TradeNo, amount); err != nil {
+				log.Error().Err(err).Str("order_no", result.OutTradeNo).Msg("AlipayNotify: processPaymentSuccess failed")
+			}
 		}
 	}
 
