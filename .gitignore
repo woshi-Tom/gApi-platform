@@ -28,6 +28,10 @@ server.log
 .env.local
 .env.*.local
 
+# Runtime config (auto-generated, contains sensitive data)
+backend/config/config.yaml
+config/config.yaml
+
 # Temporary files
 tmp/
 temp/
