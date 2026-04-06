@@ -6,7 +6,6 @@ import (
 	"gapi-platform/internal/config"
 	"gapi-platform/internal/handler"
 	"gapi-platform/internal/middleware"
-	"gapi-platform/internal/mq"
 	"gapi-platform/internal/repository"
 	"gapi-platform/internal/service"
 	"github.com/gin-gonic/gin"
@@ -32,7 +31,7 @@ func SetupUserRoutes(
 	_ = idempRepo
 
 	settingsService := service.NewSettingsService(db.GetDB())
-	authService := service.NewAuthService(userRepo, tokenRepo, settingsService, &cfg.JWT)
+	authService := service.NewAuthService(userRepo, tokenRepo, &cfg.JWT)
 	userService := service.NewUserService(userRepo)
 	tokenService := service.NewTokenService(tokenRepo)
 	tokenService.SetUserRepo(userRepo, vipRepo)
@@ -60,11 +59,7 @@ func SetupUserRoutes(
 	apiAccessLogHandler := handler.NewAPIAccessLogHandler(apiAccessLogRepo)
 
 	// Init handler for setup wizard
-	var mqClient *mq.Client
-	if mq.DefaultClient != nil {
-		mqClient = mq.DefaultClient()
-	}
-	initHandler := handler.NewInitHandler(db.GetDB(), redisClient, mqClient, cfg.AdminUsers, settingsService)
+	initHandler := handler.NewInitHandler(db.GetDB(), redisClient, nil, cfg.AdminUsers)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
@@ -85,7 +80,6 @@ func SetupUserRoutes(
 		}
 
 		init := v1.Group("/init")
-		init.Use(middleware.InitProtected(settingsService))
 		{
 			init.GET("/status", initHandler.GetStatus)
 			init.POST("/test-db", initHandler.TestDatabase)
@@ -182,7 +176,6 @@ func SetupUserRoutes(
 		v1.POST("/embeddings", middleware.TokenAuth(tokenService), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.Embeddings)
 
 		internal := v1.Group("/internal")
-		internal.Use(middleware.InitProtected(settingsService))
 		{
 			internal.GET("/health", func(c *gin.Context) {
 				c.JSON(200, gin.H{"status": "ok"})
@@ -195,8 +188,6 @@ func SetupUserRoutes(
 				channels.PUT("/:id", handler.NewChannelHandler(channelService, auditRepo).Update)
 				channels.DELETE("/:id", handler.NewChannelHandler(channelService, auditRepo).Delete)
 				channels.POST("/:id/test", handler.NewChannelHandler(channelService, auditRepo).Test)
-				channels.POST("/:id/enable", handler.NewChannelHandler(channelService, auditRepo).Enable)
-				channels.POST("/:id/disable", handler.NewChannelHandler(channelService, auditRepo).Disable)
 			}
 		}
 	}
@@ -220,7 +211,7 @@ func SetupAdminRoutes(
 	apiAccessLogRepo := repository.NewAPIAccessLogRepository(db.GetDB())
 
 	settingsService := service.NewSettingsService(db.GetDB())
-	authService := service.NewAuthService(userRepo, tokenRepo, settingsService, &cfg.JWT)
+	authService := service.NewAuthService(userRepo, tokenRepo, &cfg.JWT)
 	channelService := service.NewChannelService(channelRepo)
 	alipayService := service.NewAlipayService(
 		settingsService,
@@ -251,8 +242,6 @@ func SetupAdminRoutes(
 			adminAuth.POST("/channels", adminHandler.CreateChannel)
 			adminAuth.PUT("/channels/:id", adminHandler.UpdateChannel)
 			adminAuth.POST("/channels/:id/test", adminHandler.TestChannel)
-			adminAuth.POST("/channels/:id/enable", handler.NewChannelHandler(channelService, auditRepo).Enable)
-			adminAuth.POST("/channels/:id/disable", handler.NewChannelHandler(channelService, auditRepo).Disable)
 
 			adminAuth.GET("/orders", adminHandler.ListOrders)
 
@@ -265,8 +254,6 @@ func SetupAdminRoutes(
 			adminAuth.POST("/products", productHandler.Create)
 			adminAuth.PUT("/products/:id", productHandler.Update)
 			adminAuth.DELETE("/products/:id", productHandler.Delete)
-			adminAuth.POST("/products/:id/enable", productHandler.Enable)
-			adminAuth.POST("/products/:id/disable", productHandler.Disable)
 
 			adminAuth.GET("/stats/overview", adminHandler.GetDashboardStats)
 			adminAuth.GET("/stats/trends", adminHandler.GetStatsTrends)
@@ -286,8 +273,6 @@ func SetupAdminRoutes(
 			adminAuth.PUT("/settings/register", settingsHandler.UpdateRegisterSettings)
 			adminAuth.GET("/settings/payment", settingsHandler.GetPaymentConfig)
 			adminAuth.PUT("/settings/payment", settingsHandler.UpdatePaymentConfig)
-			adminAuth.GET("/settings/system", settingsHandler.GetSystemConfig)
-			adminAuth.PUT("/settings/system", settingsHandler.UpdateSystemConfig)
 
 			redemptionCacheService := service.NewRedemptionCacheService(redisClient)
 			redemptionHandler := handler.NewRedemptionHandler(db.GetDB(), userRepo, auditRepo, redemptionCacheService)
