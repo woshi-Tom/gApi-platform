@@ -5,8 +5,11 @@ vendor/
 # Build outputs
 dist/
 dist-admin/
+dist_user_build/
+dist_admin_build/
 *.exe
 gapi-server
+gapi-server-*
 
 # Logs
 *.log
@@ -46,3 +49,15 @@ coverage/
 # Misc
 *.bak
 *.orig
+*.png
+
+# Testing
+test-results/
+.playwright-mcp/
+
+# OpenCode (project-specific config)
+.opencode/
+
+# Local dev
+channel-form*.png
+admin-*-channel*.png
