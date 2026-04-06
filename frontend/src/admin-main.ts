@@ -7,9 +7,6 @@ import adminRouter from './admin-router'
 import AdminApp from './admin-app.vue'
 import './style.css'
 
-// Initialize admin secret for API requests
-localStorage.setItem('admin_secret', 'admin123')
-
 const app = createApp(AdminApp)
 
 // Register all Element Plus icons globally

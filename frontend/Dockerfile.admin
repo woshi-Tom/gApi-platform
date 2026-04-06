@@ -8,7 +8,12 @@ RUN npm ci
 COPY . .
 
 ARG VITE_API_BASE_URL=http://localhost:8080
+ARG VITE_ADMIN_SECRET=
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
+RUN if [ -n "$VITE_ADMIN_SECRET" ]; then \
+        sed -i "s|const ADMIN_SECRET = .*|const ADMIN_SECRET = '$VITE_ADMIN_SECRET'|" /app/src/api/request.ts; \
+    fi
 
 RUN npm run build:admin
 
