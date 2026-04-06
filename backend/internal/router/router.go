@@ -29,15 +29,14 @@ func SetupUserRoutes(
 	loginLogRepo := repository.NewLoginLogRepository(db.GetDB())
 	apiAccessLogRepo := repository.NewAPIAccessLogRepository(db.GetDB())
 	idempRepo := repository.NewIdempotencyRepository(db.GetDB())
-	paymentLogRepo := repository.NewPaymentLogRepository(db.GetDB())
-	_ = paymentLogRepo
+	_ = idempRepo
 
-	authService := service.NewAuthService(userRepo, tokenRepo, &cfg.JWT)
+	settingsService := service.NewSettingsService(db.GetDB())
+	authService := service.NewAuthService(userRepo, tokenRepo, settingsService, &cfg.JWT)
 	userService := service.NewUserService(userRepo)
 	tokenService := service.NewTokenService(tokenRepo)
 	tokenService.SetUserRepo(userRepo, vipRepo)
 	channelService := service.NewChannelService(channelRepo)
-	settingsService := service.NewSettingsService(db.GetDB())
 	emailVerificationService := service.NewEmailVerificationService(db.GetDB(), redisClient, &cfg.Email, settingsService)
 	captchaService := service.NewSliderCaptchaService(redisClient.Client)
 
@@ -65,12 +64,13 @@ func SetupUserRoutes(
 	if mq.DefaultClient != nil {
 		mqClient = mq.DefaultClient()
 	}
-	initHandler := handler.NewInitHandler(db.GetDB(), redisClient, mqClient, cfg.AdminUsers)
+	initHandler := handler.NewInitHandler(db.GetDB(), redisClient, mqClient, cfg.AdminUsers, settingsService)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
+	r.Use(middleware.SecurityHeaders())
 	r.Use(corsMiddleware([]string{cfg.Server.Frontend, cfg.Server.AdminFrontend}))
 
 	// 审计日志中间件
@@ -85,6 +85,7 @@ func SetupUserRoutes(
 		}
 
 		init := v1.Group("/init")
+		init.Use(middleware.InitProtected(settingsService))
 		{
 			init.GET("/status", initHandler.GetStatus)
 			init.POST("/test-db", initHandler.TestDatabase)
@@ -167,11 +168,21 @@ func SetupUserRoutes(
 
 		v1.POST("/payment/callback/alipay", paymentHandler.AlipayNotify)
 
+		redemption := v1.Group("/redemption")
+		redemption.Use(middleware.JWTAuth(authService))
+		{
+			redemptionCacheService := service.NewRedemptionCacheService(redisClient)
+			redemptionHandler := handler.NewRedemptionHandler(db.GetDB(), userRepo, auditRepo, redemptionCacheService)
+			redemption.POST("/redeem", redemptionHandler.Redeem)
+			redemption.GET("/history", redemptionHandler.GetUserHistory)
+		}
+
 		v1.POST("/chat/completions", middleware.TokenAuth(tokenService), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.ChatCompletions)
 		v1.GET("/models", middleware.TokenAuth(tokenService), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.ListModels)
 		v1.POST("/embeddings", middleware.TokenAuth(tokenService), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.Embeddings)
 
 		internal := v1.Group("/internal")
+		internal.Use(middleware.InitProtected(settingsService))
 		{
 			internal.GET("/health", func(c *gin.Context) {
 				c.JSON(200, gin.H{"status": "ok"})
@@ -184,6 +195,8 @@ func SetupUserRoutes(
 				channels.PUT("/:id", handler.NewChannelHandler(channelService, auditRepo).Update)
 				channels.DELETE("/:id", handler.NewChannelHandler(channelService, auditRepo).Delete)
 				channels.POST("/:id/test", handler.NewChannelHandler(channelService, auditRepo).Test)
+				channels.POST("/:id/enable", handler.NewChannelHandler(channelService, auditRepo).Enable)
+				channels.POST("/:id/disable", handler.NewChannelHandler(channelService, auditRepo).Disable)
 			}
 		}
 	}
@@ -206,9 +219,9 @@ func SetupAdminRoutes(
 	rechargeRepo := repository.NewRechargePackageRepository(db.GetDB())
 	apiAccessLogRepo := repository.NewAPIAccessLogRepository(db.GetDB())
 
-	authService := service.NewAuthService(userRepo, tokenRepo, &cfg.JWT)
-	channelService := service.NewChannelService(channelRepo)
 	settingsService := service.NewSettingsService(db.GetDB())
+	authService := service.NewAuthService(userRepo, tokenRepo, settingsService, &cfg.JWT)
+	channelService := service.NewChannelService(channelRepo)
 	alipayService := service.NewAlipayService(
 		settingsService,
 		orderRepo,
@@ -238,6 +251,8 @@ func SetupAdminRoutes(
 			adminAuth.POST("/channels", adminHandler.CreateChannel)
 			adminAuth.PUT("/channels/:id", adminHandler.UpdateChannel)
 			adminAuth.POST("/channels/:id/test", adminHandler.TestChannel)
+			adminAuth.POST("/channels/:id/enable", handler.NewChannelHandler(channelService, auditRepo).Enable)
+			adminAuth.POST("/channels/:id/disable", handler.NewChannelHandler(channelService, auditRepo).Disable)
 
 			adminAuth.GET("/orders", adminHandler.ListOrders)
 
@@ -271,6 +286,15 @@ func SetupAdminRoutes(
 			adminAuth.PUT("/settings/register", settingsHandler.UpdateRegisterSettings)
 			adminAuth.GET("/settings/payment", settingsHandler.GetPaymentConfig)
 			adminAuth.PUT("/settings/payment", settingsHandler.UpdatePaymentConfig)
+			adminAuth.GET("/settings/system", settingsHandler.GetSystemConfig)
+			adminAuth.PUT("/settings/system", settingsHandler.UpdateSystemConfig)
+
+			redemptionCacheService := service.NewRedemptionCacheService(redisClient)
+			redemptionHandler := handler.NewRedemptionHandler(db.GetDB(), userRepo, auditRepo, redemptionCacheService)
+			adminAuth.GET("/redemption/codes", redemptionHandler.List)
+			adminAuth.POST("/redemption/codes", redemptionHandler.Create)
+			adminAuth.POST("/redemption/codes/:id/disable", redemptionHandler.Disable)
+			adminAuth.GET("/redemption/codes/:id/usage", redemptionHandler.GetUsage)
 		}
 	}
 }

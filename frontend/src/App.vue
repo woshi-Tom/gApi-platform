@@ -33,6 +33,10 @@
           <el-icon><Star /></el-icon>
           <span>VIP 会员</span>
         </el-menu-item>
+        <el-menu-item index="/redeem">
+          <el-icon><Ticket /></el-icon>
+          <span>兑换码</span>
+        </el-menu-item>
         <el-menu-item index="/profile">
           <el-icon><User /></el-icon>
           <span>个人中心</span>
@@ -72,7 +76,7 @@ import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
 import {
-  HomeFilled, Key, ShoppingCart, List, Star, User, 
+  HomeFilled, Key, ShoppingCart, List, Star, User, Ticket,
   ArrowDown, Avatar, Monitor
 } from '@element-plus/icons-vue'
 

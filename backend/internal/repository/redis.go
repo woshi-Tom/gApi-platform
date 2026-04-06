@@ -7,6 +7,7 @@ import (
 
 	"gapi-platform/internal/config"
 	"github.com/go-redis/redis/v8"
+	"github.com/google/uuid"
 )
 
 // RedisClient wraps redis client
@@ -38,17 +39,29 @@ func (r *RedisClient) Close() error {
 }
 
 // AcquireLock tries to acquire a distributed lock with the given key and TTL.
-// Returns true if lock was acquired, false otherwise.
-func (r *RedisClient) AcquireLock(ctx context.Context, key string, ttl time.Duration) (bool, error) {
-	// Use SET NX EX for atomic lock acquisition
-	result, err := r.Client.SetNX(ctx, key, "1", ttl).Result()
+// Returns the lock token if acquired, empty string otherwise.
+func (r *RedisClient) AcquireLock(ctx context.Context, key string, ttl time.Duration) (string, error) {
+	token := uuid.New().String()
+	ok, err := r.Client.SetNX(ctx, key, token, ttl).Result()
 	if err != nil {
-		return false, fmt.Errorf("acquire lock: %w", err)
+		return "", fmt.Errorf("acquire lock: %w", err)
 	}
-	return result, nil
+	if !ok {
+		return "", nil
+	}
+	return token, nil
 }
 
-// ReleaseLock releases a distributed lock.
-func (r *RedisClient) ReleaseLock(ctx context.Context, key string) error {
-	return r.Client.Del(ctx, key).Err()
+// ReleaseLock releases a distributed lock using ownership token.
+// Uses Lua script to ensure atomic check-and-delete.
+func (r *RedisClient) ReleaseLock(ctx context.Context, key string, token string) error {
+	script := redis.NewScript(`
+		if redis.call("get", KEYS[1]) == ARGV[1] then
+			return redis.call("del", KEYS[1])
+		else
+			return 0
+		end
+	`)
+	_, err := script.Run(ctx, r.Client, []string{key}, token).Result()
+	return err
 }

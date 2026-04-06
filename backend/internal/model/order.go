@@ -14,6 +14,24 @@ const (
 	OrderStatusRefunded  = "refunded"
 )
 
+const (
+	RedemptionCodeTypeRecharge = "recharge"
+	RedemptionCodeTypeVIP      = "vip"
+	RedemptionCodeTypeQuota    = "quota"
+)
+
+const (
+	QuotaTypePermanent = "permanent"
+	QuotaTypeVIP       = "vip"
+)
+
+const (
+	RedemptionStatusActive   = "active"
+	RedemptionStatusDisabled = "disabled"
+	RedemptionStatusExpired  = "expired"
+	RedemptionStatusUsed     = "used"
+)
+
 // Order represents an order
 type Order struct {
 	ID       uint `json:"id" gorm:"primaryKey"`
@@ -140,13 +158,65 @@ type RedemptionCode struct {
 	// Status
 	Status string `json:"status" gorm:"size:20;default:'active'"` // active|disabled|expired|used
 
+	// Batch
+	BatchID string `json:"batch_id" gorm:"size:50"`
+
 	// Info
 	CreatedBy *uint      `json:"created_by"`
 	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
 	UsedAt    *time.Time `json:"used_at"`
 	DeletedAt *time.Time `json:"deleted_at" gorm:"index"`
 }
 
 func (RedemptionCode) TableName() string {
 	return "redemption_codes"
+}
+
+type RedemptionUsage struct {
+	ID           uint      `json:"id" gorm:"primaryKey"`
+	CodeID       uint      `json:"code_id" gorm:"not null;index"`
+	UserID       uint      `json:"user_id" gorm:"not null;index"`
+	QuotaGranted int64     `json:"quota_granted" gorm:"default:0"`
+	VIPGranted   bool      `json:"vip_granted" gorm:"column:vip_granted;default:false"`
+	VIPDays      int       `json:"vip_days" gorm:"column:vip_days;default:0"`
+	RedeemedAt   time.Time `json:"redeemed_at" gorm:"not null;default:now()"`
+	IPAddress    string    `json:"ip_address" gorm:"size:50"`
+	UserAgent    string    `json:"user_agent" gorm:"size:500"`
+}
+
+func (RedemptionUsage) TableName() string {
+	return "redemption_usage"
+}
+
+func (r *RedemptionCode) IsValid() bool {
+	now := time.Now()
+	if r.Status != RedemptionStatusActive {
+		return false
+	}
+	if r.UsedCount >= r.MaxUses {
+		return false
+	}
+	if r.ValidFrom != nil && now.Before(*r.ValidFrom) {
+		return false
+	}
+	if r.ValidUntil != nil && now.After(*r.ValidUntil) {
+		return false
+	}
+	return true
+}
+
+func GenerateCode(prefix string) string {
+	timestamp := time.Now().Format("0601021504")
+	suffix := randomString(4)
+	return prefix + timestamp + suffix
+}
+
+func randomString(length int) string {
+	const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	result := make([]byte, length)
+	for i := range result {
+		result[i] = charset[time.Now().UnixNano()%int64(len(charset))]
+	}
+	return string(result)
 }
