@@ -2,7 +2,7 @@ import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
 
-const ADMIN_SECRET = 'gapi-admin-secret-key-2026'
+const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET || 'CHANGE_ME_admin_secret_not_set'
 
 const createRequest = (baseURL: string) => {
   const instance = axios.create({
