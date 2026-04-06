@@ -307,21 +307,21 @@ func (h *PaymentHandler) CancelAlipayOrder(c *gin.Context) {
 	orderNo := c.Param("order_no")
 	userID := c.MustGet("user_id").(uint)
 
-	var acquiredLock bool
+	var lockToken string
 	var lockKey string
 	if h.redisClient != nil {
 		lockKey = fmt.Sprintf("order:lock:%s", orderNo)
 		ctx := context.Background()
-		var err error
-		acquiredLock, err = h.redisClient.AcquireLock(ctx, lockKey, 10*time.Second)
+		token, err := h.redisClient.AcquireLock(ctx, lockKey, 10*time.Second)
 		if err != nil {
 			log.Warn().Err(err).Str("order_no", orderNo).Msg("failed to acquire cancel lock")
 		}
-		if !acquiredLock {
+		if token == "" {
 			response.Fail(c, "ORDER_BEING_PROCESSED", "order is being processed, please try again later")
 			return
 		}
-		defer h.redisClient.ReleaseLock(context.Background(), lockKey)
+		lockToken = token
+		defer h.redisClient.ReleaseLock(context.Background(), lockKey, lockToken)
 	}
 
 	order, err := h.orderRepo.GetByOrderNo(orderNo)
@@ -374,21 +374,21 @@ func (h *PaymentHandler) RefundOrder(c *gin.Context) {
 	orderNo := c.Param("order_no")
 	userID := c.MustGet("user_id").(uint)
 
-	var acquiredLock bool
+	var lockToken string
 	var lockKey string
 	if h.redisClient != nil {
 		lockKey = fmt.Sprintf("order:lock:%s", orderNo)
 		ctx := context.Background()
-		var err error
-		acquiredLock, err = h.redisClient.AcquireLock(ctx, lockKey, 30*time.Second)
+		token, err := h.redisClient.AcquireLock(ctx, lockKey, 30*time.Second)
 		if err != nil {
 			log.Warn().Err(err).Str("order_no", orderNo).Msg("failed to acquire refund lock")
 		}
-		if !acquiredLock {
+		if token == "" {
 			response.Fail(c, "ORDER_BEING_PROCESSED", "order is being processed, please try again later")
 			return
 		}
-		defer h.redisClient.ReleaseLock(context.Background(), lockKey)
+		lockToken = token
+		defer h.redisClient.ReleaseLock(context.Background(), lockKey, lockToken)
 	}
 
 	order, err := h.orderRepo.GetByOrderNo(orderNo)
@@ -486,14 +486,14 @@ func (h *PaymentHandler) processPaymentSuccess(order *model.Order, tradeNo strin
 	if h.redisClient != nil {
 		ctx := context.Background()
 		lockKey := fmt.Sprintf("order:lock:%s", order.OrderNo)
-		acquired, err := h.redisClient.AcquireLock(ctx, lockKey, 30*time.Second)
+		token, err := h.redisClient.AcquireLock(ctx, lockKey, 30*time.Second)
 		if err != nil {
 			log.Warn().Err(err).Str("order_no", order.OrderNo).Msg("failed to acquire lock")
 		}
-		if !acquired {
+		if token == "" {
 			return fmt.Errorf("order is being processed by another request")
 		}
-		defer h.redisClient.ReleaseLock(ctx, lockKey)
+		defer h.redisClient.ReleaseLock(ctx, lockKey, token)
 	}
 
 	err := h.orderRepo.GetDB().Transaction(func(tx *gorm.DB) error {
