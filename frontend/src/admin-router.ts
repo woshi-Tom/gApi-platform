@@ -15,6 +15,7 @@ const adminRouter = createRouter({
     { path: '/products', name: 'AdminProducts', component: () => import('@/views/admin/products/List.vue') },
     { path: '/channels', name: 'AdminChannels', component: () => import('@/views/admin/channels/List.vue') },
     { path: '/orders', name: 'AdminOrders', component: () => import('@/views/admin/orders/List.vue') },
+    { path: '/redemption', name: 'AdminRedemption', component: () => import('@/views/admin/redemption/List.vue') },
     { path: '/logs', name: 'AdminLogs', component: () => import('@/views/admin/logs/Index.vue') },
     { path: '/settings', name: 'AdminSettings', component: () => import('@/views/admin/settings/Index.vue') },
     { path: '/change-password', name: 'AdminChangePassword', component: () => import('@/views/admin/ChangePassword.vue') }

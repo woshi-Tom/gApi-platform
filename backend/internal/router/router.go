@@ -75,8 +75,8 @@ func SetupUserRoutes(
 	{
 		user := v1.Group("/user")
 		{
-			user.POST("/register", userHandler.Register)
-			user.POST("/login", userHandler.Login)
+			user.POST("/register", middleware.RateLimit(5, 10), userHandler.Register)
+			user.POST("/login", middleware.RateLimit(10, 20), userHandler.Login)
 		}
 
 		init := v1.Group("/init")
@@ -91,8 +91,8 @@ func SetupUserRoutes(
 
 		email := v1.Group("/email")
 		{
-			email.POST("/send-code", emailHandler.SendCode)
-			email.POST("/verify-code", emailHandler.VerifyCode)
+			email.POST("/send-code", middleware.RateLimit(5, 10), emailHandler.SendCode)
+			email.POST("/verify-code", middleware.RateLimit(10, 20), emailHandler.VerifyCode)
 		}
 
 		auth := v1.Group("/auth")
@@ -105,8 +105,8 @@ func SetupUserRoutes(
 		captcha := v1.Group("/captcha")
 		{
 			captcha.GET("/generate", captchaHandler.Generate)
-			captcha.POST("/verify", captchaHandler.Verify)
-			captcha.GET("/validate", captchaHandler.ValidateToken)
+			captcha.POST("/verify", middleware.RateLimit(10, 20), captchaHandler.Verify)
+			captcha.GET("/validate", middleware.RateLimit(60, 100), captchaHandler.ValidateToken)
 		}
 
 		userAuth := v1.Group("/user")
@@ -171,9 +171,9 @@ func SetupUserRoutes(
 			redemption.GET("/history", redemptionHandler.GetUserHistory)
 		}
 
-		v1.POST("/chat/completions", middleware.TokenAuth(tokenService), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.ChatCompletions)
-		v1.GET("/models", middleware.TokenAuth(tokenService), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.ListModels)
-		v1.POST("/embeddings", middleware.TokenAuth(tokenService), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.Embeddings)
+		v1.POST("/chat/completions", middleware.TokenAuth(tokenService), middleware.TokenRateLimit(), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.ChatCompletions)
+		v1.GET("/models", middleware.TokenAuth(tokenService), middleware.TokenRateLimit(), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.ListModels)
+		v1.POST("/embeddings", middleware.TokenAuth(tokenService), middleware.TokenRateLimit(), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.Embeddings)
 
 		internal := v1.Group("/internal")
 		{
@@ -213,6 +213,7 @@ func SetupAdminRoutes(
 	settingsService := service.NewSettingsService(db.GetDB())
 	authService := service.NewAuthService(userRepo, tokenRepo, &cfg.JWT)
 	channelService := service.NewChannelService(channelRepo)
+	healthCheckService := service.NewHealthCheckService(channelRepo)
 	alipayService := service.NewAlipayService(
 		settingsService,
 		orderRepo,
@@ -222,7 +223,7 @@ func SetupAdminRoutes(
 		fmt.Sprintf("%s/api/v1/payment/callback/alipay", cfg.Server.Frontend),
 	)
 
-	adminHandler := handler.NewAdminHandler(authService, userRepo, channelService, orderRepo, auditRepo, loginLogRepo, apiAccessLogRepo, cfg.AdminUsers)
+	adminHandler := handler.NewAdminHandler(authService, userRepo, channelService, orderRepo, auditRepo, loginLogRepo, apiAccessLogRepo, cfg.AdminUsers, healthCheckService)
 	productHandler := handler.NewProductHandler(vipRepo, rechargeRepo)
 	settingsHandler := handler.NewSettingsHandler(settingsService, alipayService)
 
@@ -242,6 +243,7 @@ func SetupAdminRoutes(
 			adminAuth.POST("/channels", adminHandler.CreateChannel)
 			adminAuth.PUT("/channels/:id", adminHandler.UpdateChannel)
 			adminAuth.POST("/channels/:id/test", adminHandler.TestChannel)
+			adminAuth.POST("/channels/:id/health", adminHandler.TriggerHealthCheck)
 
 			adminAuth.GET("/orders", adminHandler.ListOrders)
 

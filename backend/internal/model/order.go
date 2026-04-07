@@ -175,8 +175,8 @@ func (RedemptionCode) TableName() string {
 
 type RedemptionUsage struct {
 	ID           uint      `json:"id" gorm:"primaryKey"`
-	CodeID       uint      `json:"code_id" gorm:"not null;index"`
-	UserID       uint      `json:"user_id" gorm:"not null;index"`
+	CodeID       uint      `json:"code_id" gorm:"not null;index;uniqueIndex:idx_code_user"`
+	UserID       uint      `json:"user_id" gorm:"not null;index;uniqueIndex:idx_code_user"`
 	QuotaGranted int64     `json:"quota_granted" gorm:"default:0"`
 	VIPGranted   bool      `json:"vip_granted" gorm:"column:vip_granted;default:false"`
 	VIPDays      int       `json:"vip_days" gorm:"column:vip_days;default:0"`

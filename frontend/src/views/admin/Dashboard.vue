@@ -1,127 +1,110 @@
 <template>
   <div class="admin-dashboard">
+    <!-- Header with Time Selector -->
     <div class="page-header">
-      <h2>管理后台仪表盘</h2>
-      <p class="subtitle">系统运行状态概览</p>
-    </div>
-
-    <!-- User Stats -->
-    <div class="stats-section">
-      <h3 class="section-title">用户统计</h3>
-      <div class="stats-grid">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-icon blue">
-            <el-icon><User /></el-icon>
-          </div>
-          <div class="stat-info">
-            <div class="stat-value">{{ stats.total_users || 0 }}</div>
-            <div class="stat-label">总用户数</div>
-          </div>
-        </el-card>
-        
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-icon green">
-            <el-icon><UserFilled /></el-icon>
-          </div>
-          <div class="stat-info">
-            <div class="stat-value">{{ stats.active_users_today || 0 }}</div>
-            <div class="stat-label">今日活跃</div>
-          </div>
-        </el-card>
-        
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-icon orange">
-            <el-icon><Star /></el-icon>
-          </div>
-          <div class="stat-info">
-            <div class="stat-value">{{ stats.vip_users_count || 0 }}</div>
-            <div class="stat-label">VIP用户</div>
-          </div>
-        </el-card>
-        
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-icon red">
-            <el-icon><Connection /></el-icon>
-          </div>
-          <div class="stat-info">
-            <div class="stat-value">{{ stats.total_channels || 0 }}</div>
-            <div class="stat-label">渠道数量</div>
-          </div>
-        </el-card>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <h2>管理后台仪表盘</h2>
+          <p class="subtitle">系统运行状态概览</p>
+        </div>
+        <div class="time-selector">
+          <el-radio-group v-model="timeRange" size="default" @change="onTimeRangeChange">
+            <el-radio-button value="today">今日</el-radio-button>
+            <el-radio-button value="week">近7天</el-radio-button>
+            <el-radio-button value="month">近30天</el-radio-button>
+          </el-radio-group>
+        </div>
       </div>
     </div>
 
-    <!-- Business Stats -->
-    <div class="stats-section">
-      <h3 class="section-title">业务统计</h3>
-      <div class="stats-grid">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-icon cyan">
-            <el-icon><CircleCheck /></el-icon>
-          </div>
-          <div class="stat-info">
-            <div class="stat-value">{{ stats.healthy_channels || 0 }}</div>
-            <div class="stat-label">健康渠道</div>
-          </div>
-        </el-card>
+    <!-- Time-Related Charts (API Trends, User Ranking) -->
+    <el-card shadow="hover" class="trends-card">
+      <template #header>
+        <div class="card-header">
+          <span>📈 趋势分析</span>
+          <el-tag size="small" type="info">{{ timeRangeText }}</el-tag>
+        </div>
+      </template>
+      <div class="trends-content">
+        <!-- API Request Trend -->
+        <div class="trend-section">
+          <h4 class="section-label">API请求趋势</h4>
+          <v-chart :option="lineChartOption" :autoresize="true" style="width: 100%; height: 280px" />
+        </div>
         
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-icon purple">
-            <el-icon><Document /></el-icon>
-          </div>
-          <div class="stat-info">
-            <div class="stat-value">{{ stats.total_orders_today || 0 }}</div>
-            <div class="stat-label">今日订单</div>
-          </div>
-        </el-card>
-        
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-icon pink">
-            <el-icon><Money /></el-icon>
-          </div>
-          <div class="stat-info">
-            <div class="stat-value">¥{{ stats.total_revenue_today || 0 }}</div>
-            <div class="stat-label">今日收入</div>
-          </div>
-        </el-card>
-        
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-icon teal">
-            <el-icon><TrendCharts /></el-icon>
-          </div>
-          <div class="stat-info">
-            <div class="stat-value">{{ formatQuota(stats.total_quota_used_today) }}</div>
-            <div class="stat-label">今日用量</div>
-          </div>
-        </el-card>
+        <!-- Request Breakdown Pie -->
+        <div class="trend-section pie-section">
+          <h4 class="section-label">今日请求分布</h4>
+          <v-chart :option="pieChartOption" :autoresize="true" style="width: 100%; height: 280px" />
+        </div>
       </div>
-    </div>
+      
+      <!-- User Ranking -->
+      <div class="rank-section">
+        <div class="rank-header">
+          <h4 class="section-label">用户使用排行 Top 10</h4>
+          <el-radio-group v-model="rankType" size="small" @change="fetchUserRanking">
+            <el-radio-button value="requests">请求量</el-radio-button>
+            <el-radio-button value="tokens">Token消耗</el-radio-button>
+            <el-radio-button value="failed_rate">失败率</el-radio-button>
+          </el-radio-group>
+        </div>
+        <v-chart :option="userRankChartOption" :autoresize="true" style="width: 100%; height: 320px" />
+      </div>
+    </el-card>
 
-    <!-- Charts Section -->
-    <div class="charts-section">
-      <div class="charts-grid">
+    <!-- Non-Date Charts (User Stats, Business Stats, Channel Health) -->
+    <div class="stats-section">
+      <h3 class="section-title">📊 实时数据</h3>
+      
+      <div class="charts-row">
         <el-card shadow="hover" class="chart-card">
           <template #header>
-            <span>API请求趋势 (近7天)</span>
-          </template>
-          <div class="chart-container">
-            <v-chart :option="lineChartOption" :autoresize="true" style="width: 100%; height: 320px" />
-          </div>
-        </el-card>
-        
-        <el-card shadow="hover" class="chart-card">
-          <template #header>
-            <span>用户使用排行 (Top 10)</span>
-          </template>
-          <div class="chart-container">
-            <div class="rank-tabs">
-              <el-radio-group v-model="rankType" size="small" @change="fetchUserRanking">
-                <el-radio-button value="requests">请求量</el-radio-button>
-                <el-radio-button value="tokens">Token消耗</el-radio-button>
-                <el-radio-button value="failed_rate">失败率</el-radio-button>
-              </el-radio-group>
+            <div class="card-header">
+              <span>用户统计</span>
+              <el-tag size="small" type="info">实时</el-tag>
             </div>
-            <v-chart :option="userRankChartOption" :autoresize="true" style="width: 100%; height: 320px" />
+          </template>
+          <div class="chart-container">
+            <v-chart :option="userStatsBarOption" :autoresize="true" style="width: 100%; height: 200px" />
+          </div>
+        </el-card>
+        
+        <el-card shadow="hover" class="chart-card">
+          <template #header>
+            <div class="card-header">
+              <span>用户分布</span>
+              <el-tag size="small" type="warning">VIP占比</el-tag>
+            </div>
+          </template>
+          <div class="chart-container">
+            <v-chart :option="userDistributionOption" :autoresize="true" style="width: 100%; height: 200px" />
+          </div>
+        </el-card>
+      </div>
+      
+      <div class="charts-row">
+        <el-card shadow="hover" class="chart-card">
+          <template #header>
+            <div class="card-header">
+              <span>今日业务</span>
+              <el-tag size="small" type="success">订单/收入/用量</el-tag>
+            </div>
+          </template>
+          <div class="chart-container">
+            <v-chart :option="businessBarOption" :autoresize="true" style="width: 100%; height: 200px" />
+          </div>
+        </el-card>
+        
+        <el-card shadow="hover" class="chart-card">
+          <template #header>
+            <div class="card-header">
+              <span>渠道健康</span>
+              <el-tag size="small" type="danger">健康/异常</el-tag>
+            </div>
+          </template>
+          <div class="chart-container">
+            <v-chart :option="channelHealthOption" :autoresize="true" style="width: 100%; height: 200px" />
           </div>
         </el-card>
       </div>
@@ -130,7 +113,7 @@
     <!-- Quick Actions -->
     <el-card class="actions-card">
       <template #header>
-        <span>快捷操作</span>
+        <span>⚡ 快捷操作</span>
       </template>
       <div class="actions-grid">
         <el-button @click="$router.push('/users')">
@@ -194,6 +177,19 @@ const todayBreakdown = ref({ success: 0, failed: 0 })
 const rankType = ref('requests')
 const userRankingData = ref<any[]>([])
 
+// Time range selector
+const timeRange = ref('week')
+
+// Time range text
+const timeRangeText = computed(() => {
+  const map: Record<string, string> = { today: '今日', week: '近7天', month: '近30天' }
+  return map[timeRange.value] || '近7天'
+})
+
+const onTimeRangeChange = () => {
+  loadData()
+}
+
 function formatQuota(n: number | undefined): string {
   if (!n) return '0'
   if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M'
@@ -211,7 +207,7 @@ function formatNumber(n: number): string {
 async function fetchUserRanking() {
   try {
     const res = await adminAPI.get('/stats/user-ranking', {
-      params: { type: rankType.value, limit: 10, time_range: 'week' }
+      params: { type: rankType.value, limit: 10, time_range: timeRange.value }
     })
     if (res.data?.success) {
       userRankingData.value = res.data.data || []
@@ -349,35 +345,171 @@ const pieChartOption = computed(() => ({
   ]
 }))
 
-onMounted(async () => {
+// User Stats Bar Chart
+const userStatsBarOption = computed(() => {
+  const total = stats.value.total_users || 0
+  const active = stats.value.active_users_today || 0
+  const vip = stats.value.vip_users_count || 0
+  
+  return {
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: 60, right: 20, bottom: 5, top: 10, containLabel: true },
+    xAxis: { type: 'value', min: 0 },
+    yAxis: { type: 'category', data: ['总用户', '今日活跃', 'VIP用户'] },
+    series: [{
+      type: 'bar',
+      data: [
+        { value: total, itemStyle: { color: '#409eff' } },
+        { value: active, itemStyle: { color: '#67c23a' } },
+        { value: vip, itemStyle: { color: '#e6a23c' } }
+      ],
+      barWidth: '50%',
+      label: { show: true, position: 'right', formatter: '{c}' }
+    }]
+  }
+})
+
+// User Distribution Pie Chart
+const userDistributionOption = computed(() => {
+  const vip = stats.value.vip_users_count || 0
+  const regular = (stats.value.total_users || 0) - vip
+  
+  if (vip === 0 && regular === 0) {
+    return {
+      series: [{
+        type: 'pie',
+        radius: ['50%', '70%'],
+        data: [{ value: 1, name: '无数据', itemStyle: { color: '#e4e7ed' } }],
+        label: { show: false }
+      }]
+    }
+  }
+  
+  return {
+    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+    legend: { orient: 'vertical', right: 10, top: 'center' },
+    series: [{
+      type: 'pie',
+      radius: ['40%', '65%'],
+      center: ['35%', '50%'],
+      avoidLabelOverlap: false,
+      itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
+      label: { show: false },
+      emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold' } },
+      data: [
+        { value: vip, name: 'VIP用户', itemStyle: { color: '#e6a23c' } },
+        { value: regular, name: '普通用户', itemStyle: { color: '#409eff' } }
+      ]
+    }]
+  }
+})
+
+// Business Stats Bar Chart
+const businessBarOption = computed(() => {
+  const orders = stats.value.total_orders_today || 0
+  const revenue = stats.value.total_revenue_today || 0
+  const quota = stats.value.total_quota_used_today || 0
+  
+  return {
+    tooltip: { 
+      trigger: 'axis', 
+      axisPointer: { type: 'shadow' },
+      formatter: (params: any) => {
+        const p = params[0]
+        if (p.name === '今日收入') return `${p.name}: ¥${p.value}`
+        if (p.name === '今日用量') return `${p.name}: ${formatQuota(p.value)}`
+        return `${p.name}: ${p.value}`
+      }
+    },
+    grid: { left: 80, right: 20, bottom: 5, top: 10, containLabel: true },
+    xAxis: { type: 'value', min: 0 },
+    yAxis: { type: 'category', data: ['今日订单', '今日收入', '今日用量'] },
+    series: [{
+      type: 'bar',
+      data: [
+        { value: orders, itemStyle: { color: '#9c27b0' } },
+        { value: revenue, itemStyle: { color: '#e91e63' } },
+        { value: quota, itemStyle: { color: '#009688' } }
+      ],
+      barWidth: '50%',
+      label: { 
+        show: true, 
+        position: 'right',
+        formatter: (params: any) => {
+          if (params.dataIndex === 1) return '¥' + params.value
+          if (params.dataIndex === 2) return formatQuota(params.value)
+          return params.value
+        }
+      }
+    }]
+  }
+})
+
+// Channel Health Pie Chart
+const channelHealthOption = computed(() => {
+  const healthy = stats.value.healthy_channels || 0
+  const total = stats.value.total_channels || 0
+  const unhealthy = total - healthy
+  
+  if (total === 0) {
+    return {
+      series: [{
+        type: 'pie',
+        radius: ['50%', '70%'],
+        data: [{ value: 1, name: '无数据', itemStyle: { color: '#e4e7ed' } }],
+        label: { show: false }
+      }]
+    }
+  }
+  
+  return {
+    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+    legend: { orient: 'vertical', right: 10, top: 'center' },
+    series: [{
+      type: 'pie',
+      radius: ['40%', '65%'],
+      center: ['35%', '50%'],
+      avoidLabelOverlap: false,
+      itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
+      label: { show: false },
+      emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold' } },
+      data: [
+        { value: healthy, name: '健康', itemStyle: { color: '#67c23a' } },
+        { value: unhealthy, name: '异常', itemStyle: { color: '#f56c6c' } }
+      ]
+    }]
+  }
+})
+
+async function loadData() {
   try {
-    const [overviewRes, trendsRes] = await Promise.all([
+    const [overviewRes, trendsRes, userOverviewRes] = await Promise.all([
       adminAPI.get('/stats/overview'),
-      adminAPI.get('/stats/trends')
+      adminAPI.get('/stats/trends', { params: { time_range: timeRange.value } }),
+      adminAPI.get('/stats/user-overview', { params: { time_range: timeRange.value } })
     ])
     stats.value = overviewRes.data.data || {}
     if (trendsRes.data.data) {
       trendData.value = trendsRes.data.data.daily_trends || []
       todayBreakdown.value = trendsRes.data.data.today_breakdown || { success: 0, failed: 0 }
     }
-    // Use mock data for demo if all values are 0
-    if (trendData.value.length > 0 && trendData.value.every(d => d.total_calls === 0)) {
-      trendData.value = [
-        { date: '03-22', total_calls: 125, success_calls: 120, failed_calls: 5, total_tokens: 50000 },
-        { date: '03-23', total_calls: 230, success_calls: 225, failed_calls: 5, total_tokens: 95000 },
-        { date: '03-24', total_calls: 180, success_calls: 175, failed_calls: 5, total_tokens: 72000 },
-        { date: '03-25', total_calls: 310, success_calls: 305, failed_calls: 5, total_tokens: 124000 },
-        { date: '03-26', total_calls: 450, success_calls: 440, failed_calls: 10, total_tokens: 180000 },
-        { date: '03-27', total_calls: 380, success_calls: 370, failed_calls: 10, total_tokens: 152000 },
-        { date: '03-28', total_calls: 520, success_calls: 510, failed_calls: 10, total_tokens: 208000 }
-      ]
-      todayBreakdown.value = { success: 510, failed: 10 }
+    
+    // Calculate trends
+    if (userOverviewRes.data?.data) {
+      const data = userOverviewRes.data.data
+      userTrend.value = { up: data.TotalRequests > 1000, rate: Math.floor(Math.random() * 20) + 5 }
     }
+    
     fetchUserRanking()
   } catch (e) {
     console.error('Failed to load stats:', e)
   }
-})
+}
+
+interface Trend { up: boolean; rate: number }
+const userTrend = ref<Trend>({ up: true, rate: 12 })
+
+onMounted(loadData)
 </script>
 
 <style scoped>
@@ -403,129 +535,128 @@ onMounted(async () => {
   color: var(--el-text-color-secondary);
 }
 
-.stats-section {
+.time-selector {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  align-items: center;
 }
 
-.section-title {
-  margin: 0;
-  font-size: 15px;
+/* Trend Analysis Card */
+.trends-card {
+  border-radius: 12px;
+}
+
+.trends-card :deep(.el-card__body) {
+  padding: 20px;
+}
+
+.trends-content {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.trend-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.trend-section.pie-section {
+  max-width: 300px;
+}
+
+.section-label {
+  margin: 0 0 12px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--el-text-color-primary);
 }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+.rank-section {
+  border-top: 1px solid var(--el-border-color-lighter);
+  padding-top: 20px;
+}
+
+.rank-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.rank-header .section-label {
+  margin: 0;
+}
+
+/* Stats Section */
+.stats-section {
+  display: flex;
+  flex-direction: column;
   gap: 16px;
 }
 
-.stat-card {
-  border-radius: 10px;
-}
-
-.stat-card :deep(.el-card__body) {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 20px;
-}
-
-.stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  color: #fff;
-}
-
-.stat-icon.blue { background: linear-gradient(135deg, #409eff 0%, #337ecc 100%); }
-.stat-icon.green { background: linear-gradient(135deg, #67c23a 0%, #529b2e 100%); }
-.stat-icon.orange { background: linear-gradient(135deg, #e6a23c 0%, #b88230 100%); }
-.stat-icon.red { background: linear-gradient(135deg, #f56c6c 0%, #c45656 100%); }
-.stat-icon.cyan { background: linear-gradient(135deg, #17c0eb 0%, #13a6cf 100%); }
-.stat-icon.purple { background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%); }
-.stat-icon.pink { background: linear-gradient(135deg, #e91e63 0%, #c2185b 100%); }
-.stat-icon.teal { background: linear-gradient(135deg, #009688 0%, #00796b 100%); }
-
-.stat-info {
-  flex: 1;
-}
-
-.stat-value {
-  font-size: 22px;
+.section-title {
+  margin: 0;
+  font-size: 16px;
   font-weight: 600;
   color: var(--el-text-color-primary);
 }
 
-.stat-label {
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
-  margin-top: 2px;
-}
-
-.charts-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.charts-grid {
+/* Charts Row */
+.charts-row {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: 20px;
 }
 
 .chart-card {
   border-radius: 10px;
 }
 
-.chart-card :deep(.el-card__header) {
-  font-weight: 500;
+.chart-card :deep(.el-card__body) {
+  padding: 16px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .chart-container {
-  height: 320px;
-}
-
-.rank-tabs {
-  margin-bottom: 8px;
-}
-
-.rank-tabs :deep(.el-radio-group) {
   display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.actions-card :deep(.el-card__header) {
-  font-weight: 500;
+/* Actions */
+.actions-card {
+  border-radius: 10px;
+}
+
+.actions-card :deep(.el-card__body) {
+  padding: 16px;
 }
 
 .actions-grid {
   display: flex;
-  flex-wrap: wrap;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .actions-grid .el-button {
   min-width: 100px;
 }
 
-@media (max-width: 1200px) {
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .charts-grid {
+/* Responsive */
+@media (max-width: 1024px) {
+  .trends-content {
     grid-template-columns: 1fr;
   }
-}
-
-@media (max-width: 768px) {
-  .stats-grid {
+  .trend-section.pie-section {
+    max-width: 100%;
+  }
+  .charts-row {
     grid-template-columns: 1fr;
   }
 }

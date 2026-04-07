@@ -61,20 +61,17 @@
           </template>
         </el-table-column>
         <el-table-column prop="sort_order" label="排序" width="60" />
-        <el-table-column label="操作" width="240" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" size="small" @click="handleEdit(row)">
-              编辑
+            <el-button size="small" link type="primary" @click="handleEdit(row)">编辑</el-button>
+            <el-button size="small" link :type="row.status==='active'?'warning':'success'" @click="row.status==='active'?handleDisable(row):handleEnable(row)">
+              {{ row.status==='active'?'下架':'上架' }}
             </el-button>
-            <el-button v-if="row.status==='active'" type="warning" size="small" @click="handleDisable(row)">
-              下架
-            </el-button>
-            <el-button v-else type="success" size="small" @click="handleEnable(row)">
-              上架
-            </el-button>
-            <el-button type="danger" size="small" @click="handleDelete(row)">
-              删除
-            </el-button>
+            <el-popconfirm title="确定删除？" @confirm="handleDelete(row)">
+              <template #reference>
+                <el-button size="small" link type="danger">删除</el-button>
+              </template>
+            </el-popconfirm>
           </template>
         </el-table-column>
       </el-table>
