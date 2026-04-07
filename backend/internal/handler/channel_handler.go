@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"gapi-platform/internal/model"
@@ -234,6 +235,7 @@ func (h *ChannelHandler) Test(c *gin.Context) {
 
 func testModels(baseURL, apiKey string) model.ChannelTestResponse {
 	client := &http.Client{Timeout: 10 * time.Second}
+	baseURL = strings.TrimSuffix(baseURL, "/v1")
 	req, err := http.NewRequest("GET", baseURL+"/v1/models", nil)
 	if err != nil {
 		return model.ChannelTestResponse{
@@ -282,6 +284,7 @@ func testModels(baseURL, apiKey string) model.ChannelTestResponse {
 }
 
 func testChat(baseURL, apiKey string, testReq *model.ChannelTestRequest) model.ChannelTestResponse {
+	baseURL = strings.TrimSuffix(baseURL, "/v1")
 	body := map[string]interface{}{
 		"model":    testReq.Model,
 		"messages": testReq.Messages,
@@ -347,6 +350,7 @@ func testChat(baseURL, apiKey string, testReq *model.ChannelTestRequest) model.C
 }
 
 func testEmbeddings(baseURL, apiKey string, testReq *model.ChannelTestRequest) model.ChannelTestResponse {
+	baseURL = strings.TrimSuffix(baseURL, "/v1")
 	body := map[string]interface{}{
 		"model": testReq.Model,
 		"input": testReq.Input,
