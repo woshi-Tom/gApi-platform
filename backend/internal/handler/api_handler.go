@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -32,6 +33,8 @@ func NewAPIHandler(tokenService *service.TokenService, channelService *service.C
 	}
 }
 
+const maxChannelRetries = 3
+
 func (h *APIHandler) ChatCompletions(c *gin.Context) {
 	var req model.ChatCompletionsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -54,12 +57,99 @@ func (h *APIHandler) ChatCompletions(c *gin.Context) {
 		return
 	}
 
-	selectedChannel, err := h.channelService.SelectChannel(req.Model)
+	chatReq := &adapter.ChatRequest{
+		Model:       req.Model,
+		Messages:    req.Messages,
+		Temperature: req.Temperature,
+		MaxTokens:   req.MaxTokens,
+		TopP:        req.TopP,
+		Stream:      req.Stream,
+		User:        req.User,
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 120*time.Second)
+	defer cancel()
+
+	if req.Stream {
+		h.handleStreamWithFailover(ctx, c, chatReq)
+		return
+	}
+
+	resp, err := h.chatWithFailover(ctx, chatReq)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, model.APIErrorResponse{
+			Error: &model.APIError{
+				Code:    "UPSTREAM_ERROR",
+				Message: err.Error(),
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
+
+func (h *APIHandler) chatWithFailover(ctx context.Context, chatReq *adapter.ChatRequest) (interface{}, error) {
+	var lastErr error
+	attemptedChannels := make(map[uint]bool)
+
+	for attempt := 0; attempt < maxChannelRetries; attempt++ {
+		selectedChannel, err := h.channelService.SelectChannel(chatReq.Model)
+		if err != nil {
+			return nil, fmt.Errorf("no available channel for model: %s", chatReq.Model)
+		}
+
+		if attemptedChannels[selectedChannel.ID] {
+			continue
+		}
+		attemptedChannels[selectedChannel.ID] = true
+
+		apiKey, err := crypto.Decrypt(selectedChannel.APIKeyEncrypted)
+		if err != nil {
+			apiKey = selectedChannel.APIKeyEncrypted
+		}
+
+		channel := &adapter.Channel{
+			ID:           selectedChannel.ID,
+			Type:         selectedChannel.Type,
+			Name:         selectedChannel.Name,
+			BaseURL:      selectedChannel.BaseURL,
+			APIKey:       apiKey,
+			Models:       selectedChannel.GetModels(),
+			ModelMapping: selectedChannel.GetModelMapping(),
+			Timeout:      120,
+		}
+
+		chatAdapter, err := adapter.GetAdapter(selectedChannel.Type)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+
+		resp, err := chatAdapter.Chat(ctx, channel, chatReq)
+		if err != nil {
+			h.channelService.IncrementFailureCount(selectedChannel.ID)
+			lastErr = err
+			continue
+		}
+
+		h.channelService.ResetFailureCount(selectedChannel.ID)
+		return resp, nil
+	}
+
+	if lastErr != nil {
+		return nil, fmt.Errorf("all channels failed after %d attempts: %v", maxChannelRetries, lastErr)
+	}
+	return nil, fmt.Errorf("no available channel")
+}
+
+func (h *APIHandler) handleStreamWithFailover(ctx context.Context, c *gin.Context, chatReq *adapter.ChatRequest) {
+	selectedChannel, err := h.channelService.SelectChannel(chatReq.Model)
 	if err != nil {
 		c.JSON(http.StatusServiceUnavailable, model.APIErrorResponse{
 			Error: &model.APIError{
 				Code:    "NO_CHANNEL",
-				Message: "no available channel for model: " + req.Model,
+				Message: "no available channel for model: " + chatReq.Model,
 			},
 		})
 		return
@@ -81,16 +171,6 @@ func (h *APIHandler) ChatCompletions(c *gin.Context) {
 		Timeout:      120,
 	}
 
-	chatReq := &adapter.ChatRequest{
-		Model:       req.Model,
-		Messages:    req.Messages,
-		Temperature: req.Temperature,
-		MaxTokens:   req.MaxTokens,
-		TopP:        req.TopP,
-		Stream:      req.Stream,
-		User:        req.User,
-	}
-
 	chatAdapter, err := adapter.GetAdapter(selectedChannel.Type)
 	if err != nil {
 		c.JSON(http.StatusBadGateway, model.APIErrorResponse{
@@ -102,26 +182,7 @@ func (h *APIHandler) ChatCompletions(c *gin.Context) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 120*time.Second)
-	defer cancel()
-
-	if req.Stream {
-		h.handleStream(ctx, c, chatAdapter, channel, chatReq, selectedChannel.ID)
-		return
-	}
-
-	resp, err := chatAdapter.Chat(ctx, channel, chatReq)
-	if err != nil {
-		c.JSON(http.StatusBadGateway, model.APIErrorResponse{
-			Error: &model.APIError{
-				Code:    "UPSTREAM_ERROR",
-				Message: err.Error(),
-			},
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, resp)
+	h.handleStream(ctx, c, chatAdapter, channel, chatReq, selectedChannel.ID)
 }
 
 func (h *APIHandler) handleStream(ctx context.Context, c *gin.Context, chatAdapter adapter.Adapter, channel *adapter.Channel, chatReq *adapter.ChatRequest, channelID uint) {
@@ -187,18 +248,18 @@ func (h *APIHandler) ListModels(c *gin.Context) {
 				Created    int    `json:"created"`
 				OwnedBy    string `json:"owned_by"`
 				Permission []struct {
-					ID                  string      `json:"id"`
-					Object              string      `json:"object"`
-					Created             int         `json:"created"`
-					AllowCreateEngine   bool        `json:"allow_create_engine"`
-					AllowSampling       bool        `json:"allow_sampling"`
-					AllowLogprobs       bool        `json:"allow_logprobs"`
-					AllowSearchIndices  bool        `json:"allow_search_indices"`
-					AllowView           bool        `json:"allow_view"`
-					AllowFineTuning     bool        `json:"allow_fine_tuning"`
-					Organization        string      `json:"organization"`
-					Group               interface{} `json:"group"`
-					IsBlocking          bool        `json:"is_blocking"`
+					ID                 string      `json:"id"`
+					Object             string      `json:"object"`
+					Created            int         `json:"created"`
+					AllowCreateEngine  bool        `json:"allow_create_engine"`
+					AllowSampling      bool        `json:"allow_sampling"`
+					AllowLogprobs      bool        `json:"allow_logprobs"`
+					AllowSearchIndices bool        `json:"allow_search_indices"`
+					AllowView          bool        `json:"allow_view"`
+					AllowFineTuning    bool        `json:"allow_fine_tuning"`
+					Organization       string      `json:"organization"`
+					Group              interface{} `json:"group"`
+					IsBlocking         bool        `json:"is_blocking"`
 				} `json:"permission,omitempty"`
 			}{},
 		})
@@ -206,9 +267,9 @@ func (h *APIHandler) ListModels(c *gin.Context) {
 	}
 
 	modelMap := make(map[string]struct {
-		id       string
-		ownedBy  string
-		created  int
+		id      string
+		ownedBy string
+		created int
 	})
 	now := int(time.Now().Unix())
 
@@ -218,16 +279,16 @@ func (h *APIHandler) ListModels(c *gin.Context) {
 				chatAdapter, err := adapter.GetAdapter(ch.Type)
 				if err != nil {
 					modelMap[m] = struct {
-						id       string
-						ownedBy  string
-						created  int
+						id      string
+						ownedBy string
+						created int
 					}{id: m, ownedBy: ch.Type, created: now}
 					continue
 				}
 				modelMap[m] = struct {
-					id       string
-					ownedBy  string
-					created  int
+					id      string
+					ownedBy string
+					created int
 				}{id: m, ownedBy: chatAdapter.GetName(), created: now}
 			}
 		}
@@ -239,18 +300,18 @@ func (h *APIHandler) ListModels(c *gin.Context) {
 		Created    int    `json:"created"`
 		OwnedBy    string `json:"owned_by"`
 		Permission []struct {
-			ID        string `json:"id"`
-			Object    string `json:"object"`
-			Created   int    `json:"created"`
-			AllowCreateEngine bool `json:"allow_create_engine"`
-			AllowSampling bool `json:"allow_sampling"`
-			AllowLogprobs bool `json:"allow_logprobs"`
-			AllowSearchIndices bool `json:"allow_search_indices"`
-			AllowView bool `json:"allow_view"`
-			AllowFineTuning bool `json:"allow_fine_tuning"`
-			Organization string `json:"organization"`
-			Group interface{} `json:"group"`
-			IsBlocking bool `json:"is_blocking"`
+			ID                 string      `json:"id"`
+			Object             string      `json:"object"`
+			Created            int         `json:"created"`
+			AllowCreateEngine  bool        `json:"allow_create_engine"`
+			AllowSampling      bool        `json:"allow_sampling"`
+			AllowLogprobs      bool        `json:"allow_logprobs"`
+			AllowSearchIndices bool        `json:"allow_search_indices"`
+			AllowView          bool        `json:"allow_view"`
+			AllowFineTuning    bool        `json:"allow_fine_tuning"`
+			Organization       string      `json:"organization"`
+			Group              interface{} `json:"group"`
+			IsBlocking         bool        `json:"is_blocking"`
 		} `json:"permission,omitempty"`
 	}, 0, len(modelMap))
 
@@ -261,18 +322,18 @@ func (h *APIHandler) ListModels(c *gin.Context) {
 			Created    int    `json:"created"`
 			OwnedBy    string `json:"owned_by"`
 			Permission []struct {
-				ID        string `json:"id"`
-				Object    string `json:"object"`
-				Created   int    `json:"created"`
-				AllowCreateEngine bool `json:"allow_create_engine"`
-				AllowSampling bool `json:"allow_sampling"`
-				AllowLogprobs bool `json:"allow_logprobs"`
-				AllowSearchIndices bool `json:"allow_search_indices"`
-				AllowView bool `json:"allow_view"`
-				AllowFineTuning bool `json:"allow_fine_tuning"`
-				Organization string `json:"organization"`
-				Group interface{} `json:"group"`
-				IsBlocking bool `json:"is_blocking"`
+				ID                 string      `json:"id"`
+				Object             string      `json:"object"`
+				Created            int         `json:"created"`
+				AllowCreateEngine  bool        `json:"allow_create_engine"`
+				AllowSampling      bool        `json:"allow_sampling"`
+				AllowLogprobs      bool        `json:"allow_logprobs"`
+				AllowSearchIndices bool        `json:"allow_search_indices"`
+				AllowView          bool        `json:"allow_view"`
+				AllowFineTuning    bool        `json:"allow_fine_tuning"`
+				Organization       string      `json:"organization"`
+				Group              interface{} `json:"group"`
+				IsBlocking         bool        `json:"is_blocking"`
 			} `json:"permission,omitempty"`
 		}{
 			ID:      m,
@@ -304,50 +365,15 @@ func (h *APIHandler) Embeddings(c *gin.Context) {
 		req.Model = "text-embedding-ada-002"
 	}
 
-	selectedChannel, err := h.channelService.SelectChannel(req.Model)
-	if err != nil {
-		c.JSON(http.StatusServiceUnavailable, model.APIErrorResponse{
-			Error: &model.APIError{
-				Code:    "NO_CHANNEL",
-				Message: "no available channel",
-			},
-		})
-		return
-	}
-
-	apiKey, err := crypto.Decrypt(selectedChannel.APIKeyEncrypted)
-	if err != nil {
-		apiKey = selectedChannel.APIKeyEncrypted
-	}
-
-	channel := &adapter.Channel{
-		ID:        selectedChannel.ID,
-		Type:      selectedChannel.Type,
-		BaseURL:   selectedChannel.BaseURL,
-		APIKey:    apiKey,
-		Timeout:   120,
-	}
-
-	chatAdapter, err := adapter.GetAdapter(selectedChannel.Type)
-	if err != nil {
-		c.JSON(http.StatusBadGateway, model.APIErrorResponse{
-			Error: &model.APIError{
-				Code:    "ADAPTER_ERROR",
-				Message: err.Error(),
-			},
-		})
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 120*time.Second)
-	defer cancel()
-
 	embedReq := &adapter.EmbeddingsRequest{
 		Model: req.Model,
 		Input: req.Input,
 	}
 
-	resp, err := chatAdapter.Embeddings(ctx, channel, embedReq)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 120*time.Second)
+	defer cancel()
+
+	resp, err := h.embeddingsWithFailover(ctx, embedReq)
 	if err != nil {
 		c.JSON(http.StatusBadGateway, model.APIErrorResponse{
 			Error: &model.APIError{
@@ -359,6 +385,57 @@ func (h *APIHandler) Embeddings(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, resp)
+}
+
+func (h *APIHandler) embeddingsWithFailover(ctx context.Context, embedReq *adapter.EmbeddingsRequest) (interface{}, error) {
+	var lastErr error
+	attemptedChannels := make(map[uint]bool)
+
+	for attempt := 0; attempt < maxChannelRetries; attempt++ {
+		selectedChannel, err := h.channelService.SelectChannel(embedReq.Model)
+		if err != nil {
+			return nil, fmt.Errorf("no available channel for model: %s", embedReq.Model)
+		}
+
+		if attemptedChannels[selectedChannel.ID] {
+			continue
+		}
+		attemptedChannels[selectedChannel.ID] = true
+
+		apiKey, err := crypto.Decrypt(selectedChannel.APIKeyEncrypted)
+		if err != nil {
+			apiKey = selectedChannel.APIKeyEncrypted
+		}
+
+		channel := &adapter.Channel{
+			ID:      selectedChannel.ID,
+			Type:    selectedChannel.Type,
+			BaseURL: selectedChannel.BaseURL,
+			APIKey:  apiKey,
+			Timeout: 120,
+		}
+
+		chatAdapter, err := adapter.GetAdapter(selectedChannel.Type)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+
+		resp, err := chatAdapter.Embeddings(ctx, channel, embedReq)
+		if err != nil {
+			h.channelService.IncrementFailureCount(selectedChannel.ID)
+			lastErr = err
+			continue
+		}
+
+		h.channelService.ResetFailureCount(selectedChannel.ID)
+		return resp, nil
+	}
+
+	if lastErr != nil {
+		return nil, fmt.Errorf("all channels failed after %d attempts: %v", maxChannelRetries, lastErr)
+	}
+	return nil, fmt.Errorf("no available channel")
 }
 
 func (h *APIHandler) logUsage(c *gin.Context, modelName string, channelID uint, resp *http.Response) {

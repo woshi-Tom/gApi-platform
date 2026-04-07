@@ -17,6 +17,7 @@ export type Channel = {
   last_check_at?: string
   last_error?: string
   response_time_avg: number
+  timeout?: number
   created_at: string
   updated_at: string
 }
@@ -37,6 +38,14 @@ export type ChannelTestResult = {
   models?: string[]
   content?: string
   error?: string
+}
+
+export type ChannelHealthResult = {
+  is_healthy: boolean
+  failure_count: number
+  last_check_at: string
+  last_error?: string
+  response_time_ms: number
 }
 
 export const channelApi = {
@@ -63,6 +72,9 @@ export const channelApi = {
   enable: (id: number) => adminAPI.post(`/channels/${id}/enable`),
   
   disable: (id: number) => adminAPI.post(`/channels/${id}/disable`),
+  
+  triggerHealthCheck: (id: number) => 
+    adminAPI.post<{ data: ChannelHealthResult }>(`/channels/${id}/health`),
 }
 
 export const CHANNEL_TYPES = [

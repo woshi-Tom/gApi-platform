@@ -1,13 +1,24 @@
 <template>
-  <div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-      <h2 style="margin:0">渠道管理</h2>
-      <el-button type="primary" @click="showAdd">
-        <el-icon><Plus /></el-icon> 添加渠道
-      </el-button>
+  <div class="channel-management">
+    <!-- Header -->
+    <div class="page-header">
+      <div class="header-left">
+        <h2>渠道管理</h2>
+        <p class="subtitle">共 {{ pagination.total }} 个渠道</p>
+      </div>
+      <div class="header-actions">
+        <el-button type="info" :loading="batchChecking" @click="batchCheckAll">
+          <el-icon><Refresh /></el-icon> 批量检测
+        </el-button>
+        <el-button type="primary" @click="showAdd">
+          <el-icon><Plus /></el-icon> 添加渠道
+        </el-button>
+      </div>
     </div>
-    <el-card>
-      <el-form :inline="true" style="margin-bottom:16px">
+
+    <!-- Filters -->
+    <el-card class="filter-card">
+      <el-form :inline="true" class="filter-form">
         <el-form-item label="渠道类型">
           <el-select v-model="filters.type" clearable placeholder="全部" style="width:140px" @change="load">
             <el-option v-for="t in CHANNEL_TYPES" :key="t.value" :label="t.label" :value="t.value" />
@@ -25,6 +36,10 @@
           <el-button @click="resetFilters">重置</el-button>
         </el-form-item>
       </el-form>
+    </el-card>
+
+    <!-- Table -->
+    <el-card class="table-card">
       <el-table :data="channels" v-loading="ld" stripe>
         <el-table-column prop="id" label="ID" width="60" />
         <el-table-column prop="name" label="名称" min-width="140" />
@@ -36,8 +51,9 @@
         <el-table-column prop="base_url" label="地址" min-width="220" show-overflow-tooltip />
         <el-table-column label="模型" min-width="180" show-overflow-tooltip>
           <template #default="{ row }">
-            {{ (row.models || []).slice(0, 3).join(', ') }}
-            <span v-if="(row.models || []).length > 3">...</span>
+            <span v-if="Array.isArray(row.models)">{{ row.models.slice(0, 3).join(', ') }}<span v-if="row.models.length > 3">...</span></span>
+            <span v-else-if="row.models">{{ String(row.models).split(',').slice(0, 3).join(', ') }}<span v-if="String(row.models).split(',').length > 3">...</span></span>
+            <span v-else>-</span>
           </template>
         </el-table-column>
         <el-table-column label="权重" width="70">
@@ -53,37 +69,44 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="健康" width="70">
+        <el-table-column label="健康状态" width="180">
           <template #default="{ row }">
-            <el-tag :type="row.is_healthy?'success':'danger'" size="small">
-              {{ row.is_healthy?'正常':'异常' }}
-            </el-tag>
+            <div class="health-cell">
+              <span :class="'health-dot ' + (row.is_healthy ? 'healthy' : row.failure_count > 0 ? 'degraded' : 'unhealthy')"></span>
+              <div class="health-info">
+                <span>{{ row.is_healthy ? '正常' : '异常' }}</span>
+                <span v-if="row.last_check_at" class="health-time">{{ formatLastCheck(row.last_check_at) }}</span>
+              </div>
+            </div>
           </template>
         </el-table-column>
-        <el-table-column label="失败次数" width="90">
+        <el-table-column label="失败" width="70">
           <template #default="{ row }">
-            <span :style="{ color: row.failure_count > 3 ? '#f56c6c' : '' }">{{ row.failure_count }}</span>
+            <span :style="{ color: getFailureColor(row.failure_count) }">{{ row.failure_count }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="响应时间" width="100">
+        <el-table-column label="响应时间" width="90">
           <template #default="{ row }">{{ row.response_time_avg > 0 ? row.response_time_avg + 'ms' : '-' }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" link type="primary" @click="edit(row)">编辑</el-button>
-            <el-button size="small" link type="success" @click="test(row)">测试</el-button>
-            <el-button size="small" link :type="row.status===1?'warning':'success'" @click="toggleStatus(row)">
-              {{ row.status===1?'禁用':'启用' }}
-            </el-button>
-            <el-popconfirm title="确定删除？" @confirm="del(row.id)">
-              <template #reference>
-                <el-button size="small" link type="danger">删除</el-button>
-              </template>
-            </el-popconfirm>
+            <div class="action-buttons">
+              <el-button size="small" link type="primary" @click="edit(row)">编辑</el-button>
+              <el-button size="small" link type="warning" @click="test(row)">测试</el-button>
+              <el-button size="small" link :type="healthChecking[row.id] ? 'info' : 'success'" :loading="healthChecking[row.id]" @click="checkHealth(row)">检测</el-button>
+              <el-button size="small" link :type="row.status===1?'warning':'success'" @click="toggleStatus(row)">
+                {{ row.status===1?'禁用':'启用' }}
+              </el-button>
+              <el-popconfirm title="确定删除？" @confirm="del(row.id)">
+                <template #reference>
+                  <el-button size="small" link type="danger">删除</el-button>
+                </template>
+              </el-popconfirm>
+            </div>
           </template>
         </el-table-column>
       </el-table>
-      <div style="margin-top:16px;display:flex;justify-content:flex-end">
+      <div class="pagination-wrapper">
         <el-pagination
           v-model:current-page="pagination.page"
           v-model:page-size="pagination.pageSize"
@@ -186,11 +209,15 @@
     </el-dialog>
   </div>
 </template>
+
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
+import { Plus, Refresh } from '@element-plus/icons-vue'
 import { channelApi, CHANNEL_TYPES, CHANNEL_STATUS } from '@/api/channel'
 import type { Channel, ChannelTestResult } from '@/api/channel'
+
+const api = channelApi
 
 const channels = ref<Channel[]>([])
 const ld = ref(false)
@@ -202,6 +229,42 @@ const isEdit = ref(false)
 const formRef = ref<FormInstance>()
 const testChannel = ref<Channel | null>(null)
 const testResult = ref<ChannelTestResult | null>(null)
+
+// Health check loading state
+const healthChecking = ref<Record<number, boolean>>({})
+const batchChecking = ref(false)
+
+// Batch health check all channels
+async function batchCheckAll() {
+  if (channels.value.length === 0) {
+    ElMessage.warning('暂无渠道数据')
+    return
+  }
+  batchChecking.value = true
+  let successCount = 0
+  let failCount = 0
+  
+  for (const channel of channels.value) {
+    healthChecking.value[channel.id] = true
+    try {
+      const res = await api.triggerHealthCheck(channel.id)
+      const data = res.data.data || res.data
+      if (data.is_healthy) {
+        successCount++
+      } else {
+        failCount++
+      }
+    } catch {
+      failCount++
+    } finally {
+      healthChecking.value[channel.id] = false
+    }
+  }
+  
+  ElMessage.success(`检测完成: ${successCount} 正常, ${failCount} 异常`)
+  load()
+  batchChecking.value = false
+}
 
 const commonModels = [
   'gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo', 'gpt-4o',
@@ -253,6 +316,24 @@ const rules: FormRules = {
 const getChannelTypeName = (type: string) => {
   const t = CHANNEL_TYPES.find(t => t.value === type)
   return t?.label || type
+}
+
+const formatLastCheck = (timestamp: string) => {
+  if (!timestamp) return ''
+  const date = new Date(timestamp)
+  const now = new Date()
+  const diff = Math.floor((now.getTime() - date.getTime()) / 1000)
+  
+  if (diff < 60) return `${diff}秒前`
+  if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`
+  return date.toLocaleString('zh-CN', { hour12: false })
+}
+
+const getFailureColor = (count: number) => {
+  if (count === 0) return '#67c23a'
+  if (count <= 2) return '#e6a23c'
+  return '#f56c6c'
 }
 
 const resetFilters = () => {
@@ -349,6 +430,24 @@ const toggleStatus = async (c: Channel) => {
   }
 }
 
+const checkHealth = async (c: Channel) => {
+  healthChecking.value[c.id] = true
+  try {
+    const res = await api.triggerHealthCheck(c.id)
+    const data = res.data.data || res.data
+    if (data.is_healthy) {
+      ElMessage.success(`检测成功，响应时间: ${data.response_time_ms}ms`)
+    } else {
+      ElMessage.warning(`检测失败: ${data.last_error || '连接失败'}`)
+    }
+    load()
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || e.response?.data?.error?.message || '检测失败')
+  } finally {
+    healthChecking.value[c.id] = false
+  }
+}
+
 const del = async (id: number) => {
   try {
     await api.delete(id)
@@ -376,6 +475,9 @@ const load = async () => {
       channels.value = res.data.data.list || res.data.data
       pagination.total = res.data.data.pagination?.total || channels.value.length
     }
+  } catch (e: any) {
+    console.error('Failed to load channels:', e)
+    ElMessage.error('加载失败: ' + (e.response?.data?.error?.message || e.message))
   } finally {
     ld.value = false
   }
@@ -383,3 +485,128 @@ const load = async () => {
 
 onMounted(load)
 </script>
+
+<style scoped>
+.channel-management {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Header */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 4px;
+}
+
+.header-left h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.header-left .subtitle {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #909399;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* Filter Card */
+.filter-card {
+  border-radius: 8px;
+}
+
+.filter-card :deep(.el-card__body) {
+  padding: 16px 20px;
+}
+
+.filter-form {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-form :deep(.el-form-item) {
+  margin-bottom: 0;
+  margin-right: 12px;
+}
+
+/* Table Card */
+.table-card {
+  border-radius: 8px;
+}
+
+.table-card :deep(.el-card__body) {
+  padding: 0;
+}
+
+/* Health Cell */
+.health-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.health-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.health-info span:first-child {
+  font-size: 13px;
+  color: #303133;
+}
+
+.health-time {
+  font-size: 11px;
+  color: #909399;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.action-buttons .el-button {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+/* Pagination */
+.pagination-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px 20px;
+  border-top: 1px solid #ebeef5;
+}
+
+/* Health Dot */
+.health-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.health-dot.healthy {
+  background: #67c23a;
+}
+.health-dot.degraded {
+  background: #e6a23c;
+}
+.health-dot.unhealthy {
+  background: #f56c6c;
+}
+</style>

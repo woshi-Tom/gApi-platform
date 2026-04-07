@@ -19,14 +19,15 @@ import (
 
 // AdminHandler handles admin endpoints
 type AdminHandler struct {
-	authService      *service.AuthService
-	userRepo         *repository.UserRepository
-	channelSvc       *service.ChannelService
-	orderRepo        *repository.OrderRepository
-	auditRepo        *repository.AuditRepository
-	loginLogRepo     *repository.LoginLogRepository
-	apiAccessLogRepo *repository.APIAccessLogRepository
-	adminUsers       []config.AdminAccount
+	authService        *service.AuthService
+	userRepo           *repository.UserRepository
+	channelSvc         *service.ChannelService
+	orderRepo          *repository.OrderRepository
+	auditRepo          *repository.AuditRepository
+	loginLogRepo       *repository.LoginLogRepository
+	apiAccessLogRepo   *repository.APIAccessLogRepository
+	adminUsers         []config.AdminAccount
+	healthCheckService *service.HealthCheckService
 }
 
 // NewAdminHandler creates a new admin handler
@@ -39,16 +40,18 @@ func NewAdminHandler(
 	loginLogRepo *repository.LoginLogRepository,
 	apiAccessLogRepo *repository.APIAccessLogRepository,
 	adminUsers []config.AdminAccount,
+	healthCheckService *service.HealthCheckService,
 ) *AdminHandler {
 	return &AdminHandler{
-		authService:      authService,
-		userRepo:         userRepo,
-		channelSvc:       channelSvc,
-		orderRepo:        orderRepo,
-		auditRepo:        auditRepo,
-		loginLogRepo:     loginLogRepo,
-		apiAccessLogRepo: apiAccessLogRepo,
-		adminUsers:       adminUsers,
+		authService:        authService,
+		userRepo:           userRepo,
+		channelSvc:         channelSvc,
+		orderRepo:          orderRepo,
+		auditRepo:          auditRepo,
+		loginLogRepo:       loginLogRepo,
+		apiAccessLogRepo:   apiAccessLogRepo,
+		adminUsers:         adminUsers,
+		healthCheckService: healthCheckService,
 	}
 }
 
@@ -300,6 +303,45 @@ func (h *AdminHandler) UpdateChannel(c *gin.Context) {
 func (h *AdminHandler) TestChannel(c *gin.Context) {
 	// Delegate to channel handler
 	(&ChannelHandler{channelService: h.channelSvc}).Test(c)
+}
+
+func (h *AdminHandler) TriggerHealthCheck(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		response.Fail(c, "INVALID_PARAMETER", "invalid channel id")
+		return
+	}
+
+	channelID := uint(id)
+
+	channel, err := h.channelSvc.GetByID(channelID)
+	if err != nil {
+		response.NotFound(c, "channel not found")
+		return
+	}
+
+	result := h.healthCheckService.CheckChannelManually(channelID)
+
+	now := time.Now()
+	responseData := gin.H{
+		"is_healthy":       result.Success,
+		"failure_count":    channel.FailureCount,
+		"last_check_at":    now.Format(time.RFC3339),
+		"last_error":       result.Error,
+		"response_time_ms": result.ResponseTimeMs,
+	}
+
+	if result.Success {
+		h.channelSvc.ResetFailureCount(channelID)
+		if result.ResponseTimeMs > 0 {
+			h.channelSvc.UpdateResponseTime(channelID, int(result.ResponseTimeMs))
+		}
+		response.Success(c, responseData)
+	} else {
+		h.channelSvc.IncrementFailureCount(channelID)
+		response.SuccessWithMessage(c, responseData, "channel connection failed")
+	}
 }
 
 // ListOrders returns all orders
