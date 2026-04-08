@@ -270,7 +270,7 @@ async function loadVIPStatus() {
       }
     }
   } catch (e) {
-    console.error('Failed to load VIP status:', e)
+    ElMessage.error('加载VIP状态失败')
   }
 }
 

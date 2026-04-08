@@ -229,7 +229,11 @@ func (h *AdminHandler) CreateChannel(c *gin.Context) {
 		return
 	}
 
-	encryptedKey, _ := crypto.Encrypt(req.APIKey)
+	encryptedKey, err := crypto.Encrypt(req.APIKey)
+	if err != nil {
+		response.InternalError(c, "failed to encrypt api key")
+		return
+	}
 	channel := &model.Channel{
 		Name:            req.Name,
 		Type:            req.Type,

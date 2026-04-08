@@ -2,10 +2,10 @@ package service
 
 import (
 	"context"
-	"log"
 	"sync"
 	"time"
 
+	"gapi-platform/internal/logger"
 	"gapi-platform/internal/model"
 	"gapi-platform/internal/pkg/adapter"
 	"gapi-platform/internal/pkg/crypto"
@@ -15,7 +15,7 @@ import (
 const (
 	FailureThreshold     = 3
 	CheckIntervalMinutes = 5
-	DeadRetryHours      = 1
+	DeadRetryHours       = 1
 	RequestTimeout       = 30
 )
 
@@ -48,7 +48,7 @@ func (s *HealthCheckService) Start() {
 	}
 	s.isRunning = true
 	go s.run()
-	log.Println("Health check service started")
+	logger.Info("Health check service started")
 }
 
 func (s *HealthCheckService) Stop() {
@@ -57,7 +57,7 @@ func (s *HealthCheckService) Stop() {
 	}
 	close(s.stopChan)
 	s.isRunning = false
-	log.Println("Health check service stopped")
+	logger.Info("Health check service stopped")
 }
 
 func (s *HealthCheckService) run() {
@@ -79,7 +79,7 @@ func (s *HealthCheckService) run() {
 func (s *HealthCheckService) checkAllChannels() {
 	channels, err := s.channelRepo.GetActiveChannels()
 	if err != nil {
-		log.Printf("Failed to get channels for health check: %v", err)
+		logger.Errorf("Failed to get channels for health check: %v", err)
 		return
 	}
 
@@ -97,7 +97,7 @@ func (s *HealthCheckService) checkAllChannels() {
 func (s *HealthCheckService) checkChannel(channelID uint) {
 	channel, err := s.channelRepo.GetByID(channelID)
 	if err != nil {
-		log.Printf("Failed to get channel %d: %v", channelID, err)
+		logger.Errorf("Failed to get channel %d: %v", channelID, err)
 		return
 	}
 
@@ -108,7 +108,7 @@ func (s *HealthCheckService) checkChannel(channelID uint) {
 
 	chatAdapter, err := adapter.GetAdapter(channel.Type)
 	if err != nil {
-		log.Printf("No adapter for channel %d type %s: %v", channelID, channel.Type, err)
+		logger.Errorf("No adapter for channel %d type %s: %v", channelID, channel.Type, err)
 		s.markUnhealthy(channel, "unsupported channel type: "+channel.Type)
 		return
 	}
@@ -128,7 +128,7 @@ func (s *HealthCheckService) checkChannel(channelID uint) {
 type TestResult struct {
 	Success        bool
 	ResponseTimeMs int64
-	Error         string
+	Error          string
 }
 
 func (s *HealthCheckService) testChannel(ctx context.Context, chatAdapter adapter.Adapter, baseURL, apiKey string) *TestResult {
@@ -163,14 +163,14 @@ func (s *HealthCheckService) testChannel(ctx context.Context, chatAdapter adapte
 func (s *HealthCheckService) markHealthy(channel *model.Channel, responseTimeMs int64) {
 	err := s.channelRepo.ResetFailureCount(channel.ID)
 	if err != nil {
-		log.Printf("Failed to reset failure count for channel %d: %v", channel.ID, err)
+		logger.Errorf("Failed to reset failure count for channel %d: %v", channel.ID, err)
 		return
 	}
 
 	if responseTimeMs > 0 {
 		err = s.channelRepo.UpdateResponseTime(channel.ID, int(responseTimeMs))
 		if err != nil {
-			log.Printf("Failed to update response time for channel %d: %v", channel.ID, err)
+			logger.Errorf("Failed to update response time for channel %d: %v", channel.ID, err)
 		}
 	}
 
@@ -183,13 +183,16 @@ func (s *HealthCheckService) markHealthy(channel *model.Channel, responseTimeMs 
 	}
 	s.mu.Unlock()
 
-	log.Printf("Channel %d (%s) marked healthy, response time: %dms", channel.ID, channel.Name, responseTimeMs)
+	logger.Info("Channel marked healthy",
+		"channel_id", channel.ID,
+		"name", channel.Name,
+		"response_time_ms", responseTimeMs)
 }
 
 func (s *HealthCheckService) markFailed(channel *model.Channel, errorMsg string) {
 	err := s.channelRepo.IncrementFailureCount(channel.ID)
 	if err != nil {
-		log.Printf("Failed to increment failure count for channel %d: %v", channel.ID, err)
+		logger.Errorf("Failed to increment failure count for channel %d: %v", channel.ID, err)
 		return
 	}
 
@@ -211,7 +214,7 @@ func (s *HealthCheckService) markFailed(channel *model.Channel, errorMsg string)
 	if cached.Failures >= FailureThreshold {
 		s.markUnhealthy(channel, errorMsg)
 	} else {
-		log.Printf("Channel %d (%s) failed check (attempt %d/%d): %s",
+		logger.Warnf("Channel %d (%s) failed check (attempt %d/%d): %s",
 			channel.ID, channel.Name, cached.Failures, FailureThreshold, errorMsg)
 	}
 }
@@ -219,7 +222,7 @@ func (s *HealthCheckService) markFailed(channel *model.Channel, errorMsg string)
 func (s *HealthCheckService) markUnhealthy(channel *model.Channel, reason string) {
 	err := s.channelRepo.UpdateHealthStatus(channel.ID, false, FailureThreshold, reason)
 	if err != nil {
-		log.Printf("Failed to mark channel %d unhealthy: %v", channel.ID, err)
+		logger.Errorf("Failed to mark channel %d unhealthy: %v", channel.ID, err)
 		return
 	}
 
@@ -232,7 +235,7 @@ func (s *HealthCheckService) markUnhealthy(channel *model.Channel, reason string
 	}
 	s.mu.Unlock()
 
-	log.Printf("Channel %d (%s) marked unhealthy: %s", channel.ID, channel.Name, reason)
+	logger.Warnf("Channel %d (%s) marked unhealthy: %s", channel.ID, channel.Name, reason)
 }
 
 func (s *HealthCheckService) CheckChannelManually(channelID uint) *TestResult {

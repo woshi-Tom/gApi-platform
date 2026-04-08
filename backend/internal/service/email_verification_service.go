@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"gapi-platform/internal/config"
+	"gapi-platform/internal/logger"
 	"gapi-platform/internal/model"
 	"gapi-platform/internal/repository"
 	"golang.org/x/crypto/bcrypt"
@@ -130,10 +131,12 @@ func (s *EmailVerificationService) SendVerificationCode(email, ip, userAgent, de
 	}
 
 	if err := s.mailer.SendVerificationEmail(email, code, purpose); err != nil {
-		fmt.Printf("Failed to send email: %v\n", err)
+		logger.Warnf("Failed to send verification email to %s: %v", logger.RedactEmail(email), err)
 	}
 
-	fmt.Printf("Verification code for %s (purpose: %s): %s\n", email, purpose, code)
+	logger.Info("Verification code sent",
+		"email", logger.RedactEmail(email),
+		"purpose", purpose)
 	return nil
 }
 
@@ -204,10 +207,11 @@ func (s *EmailVerificationService) SendPasswordResetEmail(email, ip, userAgent, 
 	resetLink := fmt.Sprintf("%s/reset-password?token=%s", frontendURL, token)
 
 	if err := s.mailer.SendPasswordResetEmail(email, resetLink); err != nil {
-		fmt.Printf("Failed to send password reset email: %v\n", err)
+		logger.Warnf("Failed to send password reset email to %s: %v", logger.RedactEmail(email), err)
 	}
 
-	fmt.Printf("Password reset for %s, token: %s\n", email, token)
+	logger.Info("Password reset token generated",
+		"email", logger.RedactEmail(email))
 	return nil
 }
 

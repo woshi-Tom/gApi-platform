@@ -181,7 +181,7 @@ async function generateQRCode(url: string) {
       margin: 2
     })
   } catch (err) {
-    console.error('QR code generation failed:', err)
+    ElMessage.error('二维码生成失败')
     qrCodeImage.value = ''
   }
 }
@@ -238,7 +238,7 @@ function startPolling() {
         qrCodeImage.value = ''
       }
     } catch (err) {
-      console.error('Error while polling payment status:', err)
+      ElMessage.error('查询支付状态失败')
     }
   }, 3000)
 }

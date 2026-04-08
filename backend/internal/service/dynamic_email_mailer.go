@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/smtp"
 	"strings"
+
+	"gapi-platform/internal/logger"
 )
 
 type DynamicEmailMailer struct {
@@ -22,7 +24,9 @@ func (m *DynamicEmailMailer) SendVerificationEmail(toEmail, code, purpose string
 	}
 
 	if !cfg.Enabled {
-		fmt.Printf("[Email] SMTP disabled, would send to: %s, code: %s\n", toEmail, code)
+		logger.Debug("SMTP disabled, email not sent",
+			"to", logger.RedactEmail(toEmail),
+			"purpose", purpose)
 		return nil
 	}
 
@@ -109,7 +113,8 @@ func (m *DynamicEmailMailer) SendPasswordResetEmail(toEmail, resetLink string) e
 	}
 
 	if !cfg.Enabled {
-		fmt.Printf("[Email] SMTP disabled, would send reset link to: %s\n", toEmail)
+		logger.Debug("SMTP disabled, password reset email not sent",
+			"to", logger.RedactEmail(toEmail))
 		return nil
 	}
 

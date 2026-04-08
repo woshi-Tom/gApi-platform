@@ -483,7 +483,7 @@ onMounted(async () => {
       }))
     }
   } catch (e: any) {
-    console.error('Failed to load data:', e)
+    ElMessage.error('加载数据失败')
   }
 })
 </script>

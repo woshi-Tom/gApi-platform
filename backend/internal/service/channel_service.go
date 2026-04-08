@@ -16,9 +16,9 @@ import (
 )
 
 type ChannelService struct {
-	repo     *repository.ChannelRepository
-	crypto   CryptoService
-	mu       sync.RWMutex
+	repo         *repository.ChannelRepository
+	crypto       CryptoService
+	mu           sync.RWMutex
 	channelCache map[uint]*model.Channel
 }
 
@@ -39,16 +39,16 @@ func (c *NoOpCrypto) Decrypt(ciphertext string) (string, error) {
 
 func NewChannelService(repo *repository.ChannelRepository) *ChannelService {
 	return &ChannelService{
-		repo:     repo,
-		crypto:   &NoOpCrypto{},
+		repo:         repo,
+		crypto:       &NoOpCrypto{},
 		channelCache: make(map[uint]*model.Channel),
 	}
 }
 
 func NewChannelServiceWithCrypto(repo *repository.ChannelRepository, crypto CryptoService) *ChannelService {
 	return &ChannelService{
-		repo:     repo,
-		crypto:   crypto,
+		repo:         repo,
+		crypto:       crypto,
 		channelCache: make(map[uint]*model.Channel),
 	}
 }
@@ -178,12 +178,12 @@ func (s *ChannelService) GetStats() (map[string]interface{}, error) {
 }
 
 type ChannelTestResult struct {
-	Success       bool
-	StatusCode   int
+	Success        bool
+	StatusCode     int
 	ResponseTimeMs int64
-	Models        []string
-	Content       string
-	Error         string
+	Models         []string
+	Content        string
+	Error          string
 }
 
 func (s *ChannelService) TestChannel(channel *model.Channel, testType, model string) (*ChannelTestResult, error) {

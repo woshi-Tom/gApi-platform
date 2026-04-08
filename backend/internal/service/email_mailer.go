@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"gapi-platform/internal/config"
+	"gapi-platform/internal/logger"
 )
 
 type EmailMailer struct {
@@ -24,7 +25,7 @@ func (m *EmailMailer) SendVerificationEmail(toEmail, code, purpose string) error
 	if purpose == "reset" {
 		return nil
 	}
-	
+
 	subject = "[gAPI] 您的注册验证码"
 	content = fmt.Sprintf(`
 <!DOCTYPE html>
@@ -111,7 +112,9 @@ func (m *EmailMailer) SendPasswordResetEmail(toEmail, resetLink string) error {
 
 func (m *EmailMailer) sendEmail(to, subject, htmlContent string) error {
 	if !m.cfg.SMTP.Enabled {
-		fmt.Printf("[Email] SMTP disabled, would send to: %s, subject: %s\n", to, subject)
+		logger.Debug("SMTP disabled, email not sent",
+			"to", logger.RedactEmail(to),
+			"subject", subject)
 		return nil
 	}
 
