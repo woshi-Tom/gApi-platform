@@ -213,7 +213,7 @@ async function fetchUserRanking() {
       userRankingData.value = res.data.data || []
     }
   } catch (e) {
-    console.error('Failed to fetch user ranking:', e)
+    ElMessage.error('加载用户排名失败')
     userRankingData.value = []
   }
 }
@@ -502,7 +502,7 @@ async function loadData() {
     
     fetchUserRanking()
   } catch (e) {
-    console.error('Failed to load stats:', e)
+    ElMessage.error('加载统计数据失败')
   }
 }
 

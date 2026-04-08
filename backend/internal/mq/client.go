@@ -4,22 +4,22 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
 	"gapi-platform/internal/config"
+	"gapi-platform/internal/logger"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 const (
-	QueueOrderPayment  = "order.payment"
-	QueueOrderNotify   = "order.notify"
-	QueueEmailSend     = "email.send"
-	QueueUsageLog      = "usage.log"
-	QueueVIPExpire     = "vip.expire"
-	QueueHealthCheck   = "health.check"
+	QueueOrderPayment = "order.payment"
+	QueueOrderNotify  = "order.notify"
+	QueueEmailSend    = "email.send"
+	QueueUsageLog     = "usage.log"
+	QueueVIPExpire    = "vip.expire"
+	QueueHealthCheck  = "health.check"
 )
 
 var (
@@ -147,9 +147,9 @@ func (c *Client) Publish(queue string, msg interface{}) error {
 		false,
 		amqp.Publishing{
 			ContentType:  "application/json",
-			Body:        body,
+			Body:         body,
 			DeliveryMode: amqp.Persistent,
-			Timestamp:   time.Now(),
+			Timestamp:    time.Now(),
 		},
 	)
 	if err != nil {
@@ -181,7 +181,7 @@ func (c *Client) Consume(queue string, handler func([]byte) error) error {
 	go func() {
 		for d := range msgs {
 			if err := handler(d.Body); err != nil {
-				log.Printf("handler error for %s: %v", queue, err)
+				logger.Errorf("Handler error for %s: %v", queue, err)
 				d.Nack(false, true)
 			} else {
 				d.Ack(false)

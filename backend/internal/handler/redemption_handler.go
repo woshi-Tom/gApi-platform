@@ -116,11 +116,19 @@ func (h *RedemptionHandler) Create(c *gin.Context) {
 		}
 
 		if req.ValidFrom != nil {
-			t, _ := time.Parse("2006-01-02", *req.ValidFrom)
+			t, err := time.Parse("2006-01-02", *req.ValidFrom)
+			if err != nil {
+				response.Fail(c, "INVALID_PARAMETER", "invalid valid_from date format, expected YYYY-MM-DD")
+				return
+			}
 			redemptionCode.ValidFrom = &t
 		}
 		if req.ValidUntil != nil {
-			t, _ := time.Parse("2006-01-02", *req.ValidUntil)
+			t, err := time.Parse("2006-01-02", *req.ValidUntil)
+			if err != nil {
+				response.Fail(c, "INVALID_PARAMETER", "invalid valid_until date format, expected YYYY-MM-DD")
+				return
+			}
 			redemptionCode.ValidUntil = &t
 		}
 
@@ -214,7 +222,7 @@ func (h *RedemptionHandler) Redeem(c *gin.Context) {
 	lockAcquired := false
 
 	if h.cache != nil {
-		token, err := h.cache.AcquireLock(ctx, codeID, userID, 10*time.Second)
+		token, err := h.cache.AcquireLock(ctx, codeID, userID, 30*time.Second)
 		if err == nil && token != "" {
 			lockToken = token
 			lockAcquired = true
@@ -237,7 +245,7 @@ func (h *RedemptionHandler) Redeem(c *gin.Context) {
 	var user model.User
 
 	err := h.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.First(&user, userID).Error; err != nil {
+		if err := tx.Set("gorm:query", "FOR UPDATE").First(&user, userID).Error; err != nil {
 			return err
 		}
 

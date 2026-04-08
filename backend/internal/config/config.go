@@ -330,9 +330,6 @@ func (c *Config) setDefaults() {
 	if c.Log.Level == "" {
 		c.Log.Level = "info"
 	}
-	if c.Security.EncryptKey == "" {
-		c.Security.EncryptKey = "gapi-platform-default-encrypt-key-32ch"
-	}
 	if c.Log.Format == "" {
 		c.Log.Format = "console"
 	}
@@ -380,6 +377,14 @@ func (c *Config) Validate() error {
 	// Redis validation
 	if c.Redis.Host == "" {
 		return fmt.Errorf("redis host is required")
+	}
+
+	// Encryption key validation
+	if c.Security.EncryptKey == "" || c.Security.EncryptKey == "gapi-platform-default-encrypt-key-32ch" {
+		return fmt.Errorf("security.encrypt_key must be set to a secure value (not the default)")
+	}
+	if len(c.Security.EncryptKey) < 32 {
+		return fmt.Errorf("security.encrypt_key must be at least 32 characters")
 	}
 
 	// JWT validation

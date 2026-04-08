@@ -341,7 +341,7 @@ async function fetchOverview() {
       overviewStats.value = res.data.data
     }
   } catch (e) {
-    console.error('Failed to fetch overview:', e)
+    ElMessage.error('加载概览数据失败')
   }
 }
 
@@ -358,7 +358,7 @@ async function fetchRanking() {
       rankingData.value = res.data.data
     }
   } catch (e) {
-    console.error('Failed to fetch ranking:', e)
+    ElMessage.error('加载排名数据失败')
   }
 }
 
@@ -380,7 +380,7 @@ async function fetchUserList() {
       totalUsers.value = res.data.pagination?.total || 0
     }
   } catch (e) {
-    console.error('Failed to fetch user list:', e)
+    ElMessage.error('加载用户列表失败')
   }
 }
 
@@ -397,7 +397,7 @@ async function fetchAbnormalUsers() {
       abnormalUsers.value = res.data.data
     }
   } catch (e) {
-    console.error('Failed to fetch abnormal users:', e)
+    ElMessage.error('加载异常用户失败')
   }
 }
 
@@ -410,7 +410,7 @@ async function fetchUserDetail(userId: number) {
       userDetail.value = res.data.data
     }
   } catch (e) {
-    console.error('Failed to fetch user detail:', e)
+    ElMessage.error('加载用户详情失败')
   }
 }
 

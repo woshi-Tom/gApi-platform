@@ -324,7 +324,7 @@ async function loadEmailConfig() {
       emailForm.from_email = data.from_email
     }
   } catch (e) {
-    console.error('Failed to load email config:', e)
+    ElMessage.error('加载邮箱配置失败')
   }
 }
 
@@ -341,7 +341,7 @@ async function loadRegisterSettings() {
       registerForm.trial_vip_days = data.trial_vip_days
     }
   } catch (e) {
-    console.error('Failed to load register settings:', e)
+    ElMessage.error('加载注册设置失败')
   }
 }
 
@@ -454,7 +454,7 @@ async function loadPaymentConfig() {
       paymentForm.alipay_private_key = ''
     }
   } catch (e) {
-    console.error('Failed to load payment config:', e)
+    ElMessage.error('加载支付配置失败')
   }
 }
 

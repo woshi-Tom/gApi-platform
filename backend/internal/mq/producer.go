@@ -6,19 +6,19 @@ import (
 )
 
 type OrderPaymentMessage struct {
-	OrderID   uint    `json:"order_id"`
-	OrderNo   string  `json:"order_no"`
-	UserID    uint    `json:"user_id"`
-	Amount    float64 `json:"amount"`
-	PackageID uint    `json:"package_id"`
+	OrderID   uint      `json:"order_id"`
+	OrderNo   string    `json:"order_no"`
+	UserID    uint      `json:"user_id"`
+	Amount    float64   `json:"amount"`
+	PackageID uint      `json:"package_id"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
 type OrderNotifyMessage struct {
-	OrderID   uint   `json:"order_id"`
-	OrderNo   string `json:"order_no"`
-	UserID    uint   `json:"user_id"`
-	Email     string `json:"email"`
+	OrderID    uint   `json:"order_id"`
+	OrderNo    string `json:"order_no"`
+	UserID     uint   `json:"user_id"`
+	Email      string `json:"email"`
 	NotifyType string `json:"notify_type"`
 }
 
@@ -30,18 +30,18 @@ type EmailMessage struct {
 }
 
 type UsageLogMessage struct {
-	UserID    uint   `json:"user_id"`
-	TokenID   uint   `json:"token_id"`
-	ChannelID uint  `json:"channel_id"`
-	Model     string `json:"model"`
-	InputTokens int  `json:"input_tokens"`
-	OutputTokens int `json:"output_tokens"`
-	Cost      float64 `json:"cost"`
-	Timestamp time.Time `json:"timestamp"`
+	UserID       uint      `json:"user_id"`
+	TokenID      uint      `json:"token_id"`
+	ChannelID    uint      `json:"channel_id"`
+	Model        string    `json:"model"`
+	InputTokens  int       `json:"input_tokens"`
+	OutputTokens int       `json:"output_tokens"`
+	Cost         float64   `json:"cost"`
+	Timestamp    time.Time `json:"timestamp"`
 }
 
 type VIPExpireMessage struct {
-	UserID    uint   `json:"user_id"`
+	UserID    uint      `json:"user_id"`
 	ExpiredAt time.Time `json:"expired_at"`
 }
 
@@ -114,14 +114,14 @@ func (p *Producer) SendOrderConfirmation(orderID uint, orderNo string, userID ui
 
 func (p *Producer) LogAPIUsage(userID, tokenID, channelID uint, model string, inputTokens, outputTokens int, cost float64) error {
 	msg := &UsageLogMessage{
-		UserID:     userID,
-		TokenID:    tokenID,
-		ChannelID:  channelID,
-		Model:      model,
-		InputTokens: inputTokens,
+		UserID:       userID,
+		TokenID:      tokenID,
+		ChannelID:    channelID,
+		Model:        model,
+		InputTokens:  inputTokens,
 		OutputTokens: outputTokens,
-		Cost:       cost,
-		Timestamp:  time.Now(),
+		Cost:         cost,
+		Timestamp:    time.Now(),
 	}
 	return p.PublishUsageLog(msg)
 }

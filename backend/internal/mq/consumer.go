@@ -3,21 +3,22 @@ package mq
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"sync"
+
+	"gapi-platform/internal/logger"
 )
 
 type Consumer struct {
-	client  *Client
+	client   *Client
 	handlers map[string]MessageHandler
-	wg      sync.WaitGroup
+	wg       sync.WaitGroup
 }
 
 type MessageHandler func([]byte) error
 
 func NewConsumer(client *Client) *Consumer {
 	return &Consumer{
-		client:  client,
+		client:   client,
 		handlers: make(map[string]MessageHandler),
 	}
 }
@@ -31,7 +32,7 @@ func (c *Consumer) Start() error {
 		if err := c.client.Consume(queue, handler); err != nil {
 			return fmt.Errorf("start consumer for %s: %w", queue, err)
 		}
-		log.Printf("Consumer started for queue: %s", queue)
+		logger.Info("Consumer started", "queue", queue)
 	}
 	return nil
 }
@@ -95,9 +96,14 @@ func DefaultUsageLogHandler(data []byte) error {
 		return err
 	}
 
-	log.Printf("Usage log: user=%d token=%d channel=%d model=%s input=%d output=%d cost=%.4f",
-		msg.UserID, msg.TokenID, msg.ChannelID, msg.Model,
-		msg.InputTokens, msg.OutputTokens, msg.Cost)
+	logger.Info("Usage logged",
+		"user_id", msg.UserID,
+		"token_id", msg.TokenID,
+		"channel_id", msg.ChannelID,
+		"model", msg.Model,
+		"input_tokens", msg.InputTokens,
+		"output_tokens", msg.OutputTokens,
+		"cost", msg.Cost)
 
 	return nil
 }
@@ -108,7 +114,10 @@ func DefaultEmailHandler(data []byte) error {
 		return err
 	}
 
-	log.Printf("Email: to=%s subject=%s type=%s", msg.To, msg.Subject, msg.Type)
+	logger.Info("Email queued",
+		"to", logger.RedactEmail(msg.To),
+		"subject", msg.Subject,
+		"type", msg.Type)
 
 	return nil
 }
@@ -119,8 +128,11 @@ func DefaultOrderPaymentHandler(data []byte) error {
 		return err
 	}
 
-	log.Printf("Order payment: order_id=%d order_no=%s user_id=%d amount=%.2f",
-		msg.OrderID, msg.OrderNo, msg.UserID, msg.Amount)
+	logger.Info("Order payment processed",
+		"order_id", msg.OrderID,
+		"order_no", msg.OrderNo,
+		"user_id", msg.UserID,
+		"amount", msg.Amount)
 
 	return nil
 }
@@ -131,7 +143,9 @@ func DefaultVIPExpireHandler(data []byte) error {
 		return err
 	}
 
-	log.Printf("VIP expire: user_id=%d expired_at=%s", msg.UserID, msg.ExpiredAt.Format("2006-01-02 15:04:05"))
+	logger.Info("VIP expired",
+		"user_id", msg.UserID,
+		"expired_at", msg.ExpiredAt.Format("2006-01-02 15:04:05"))
 
 	return nil
 }

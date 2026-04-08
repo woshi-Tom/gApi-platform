@@ -476,7 +476,6 @@ const load = async () => {
       pagination.total = res.data.data.pagination?.total || channels.value.length
     }
   } catch (e: any) {
-    console.error('Failed to load channels:', e)
     ElMessage.error('加载失败: ' + (e.response?.data?.error?.message || e.message))
   } finally {
     ld.value = false

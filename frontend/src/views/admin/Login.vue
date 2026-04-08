@@ -51,7 +51,6 @@ async function handleLogin() {
       username: form.username,
       password: form.password
     }
-    console.log('Admin login request:', payload)
     const { data } = await adminAPI.post('/login', payload)
     
     if (data.success) {
