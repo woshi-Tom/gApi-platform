@@ -35,7 +35,11 @@ type Channel struct {
 	PricePer1KOutput float64 `json:"price_per_1k_output" gorm:"default:0.03"`
 
 	// Group
-	GroupName string `json:"group_name" gorm:"size:50;default:'default'"`
+	GroupName string `json:"group_name" gorm:"size:50;default:'default'`
+
+	ProxyEnabled bool   `json:"proxy_enabled" gorm:"default:false"`
+	ProxyType    string `json:"proxy_type" gorm:"size:20;default:'none'"`
+	ProxyURL     string `json:"proxy_url" gorm:"size:500"`
 
 	// Status
 	Status          int        `json:"status" gorm:"default:1"` // 0:disabled, 1:enabled, 2:maintenance
