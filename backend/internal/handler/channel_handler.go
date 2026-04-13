@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
 	"gapi-platform/internal/model"
 	"gapi-platform/internal/pkg/crypto"
+	"gapi-platform/internal/pkg/logger"
 	"gapi-platform/internal/pkg/response"
 	"gapi-platform/internal/repository"
 	"gapi-platform/internal/service"
@@ -19,15 +21,17 @@ import (
 
 // ChannelHandler handles channel-related endpoints
 type ChannelHandler struct {
-	channelService *service.ChannelService
-	auditRepo      *repository.AuditRepository
+	channelService  *service.ChannelService
+	auditRepo       *repository.AuditRepository
+	testHistoryRepo *repository.ChannelTestHistoryRepository
 }
 
 // NewChannelHandler creates a new channel handler
-func NewChannelHandler(channelService *service.ChannelService, auditRepo *repository.AuditRepository) *ChannelHandler {
+func NewChannelHandler(channelService *service.ChannelService, auditRepo *repository.AuditRepository, testHistoryRepo *repository.ChannelTestHistoryRepository) *ChannelHandler {
 	return &ChannelHandler{
-		channelService: channelService,
-		auditRepo:      auditRepo,
+		channelService:  channelService,
+		auditRepo:       auditRepo,
+		testHistoryRepo: testHistoryRepo,
 	}
 }
 
@@ -52,14 +56,17 @@ func (h *ChannelHandler) List(c *gin.Context) {
 // Create creates a new channel
 func (h *ChannelHandler) Create(c *gin.Context) {
 	var req struct {
-		Name     string   `json:"name" binding:"required"`
-		Type     string   `json:"type" binding:"required"`
-		BaseURL  string   `json:"base_url" binding:"required"`
-		APIKey   string   `json:"api_key" binding:"required"`
-		Models   []string `json:"models"`
-		Weight   int      `json:"weight"`
-		Priority int      `json:"priority"`
-		Group    string   `json:"group_name"`
+		Name         string   `json:"name" binding:"required"`
+		Type         string   `json:"type" binding:"required"`
+		BaseURL      string   `json:"base_url" binding:"required"`
+		APIKey       string   `json:"api_key" binding:"required"`
+		Models       []string `json:"models"`
+		Weight       int      `json:"weight"`
+		Priority     int      `json:"priority"`
+		Group        string   `json:"group_name"`
+		ProxyEnabled bool     `json:"proxy_enabled"`
+		ProxyType    string   `json:"proxy_type"`
+		ProxyURL     string   `json:"proxy_url"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -82,6 +89,9 @@ func (h *ChannelHandler) Create(c *gin.Context) {
 		Weight:          req.Weight,
 		Priority:        req.Priority,
 		GroupName:       req.Group,
+		ProxyEnabled:    req.ProxyEnabled,
+		ProxyType:       req.ProxyType,
+		ProxyURL:        req.ProxyURL,
 		Status:          1,
 		IsHealthy:       true,
 	}
@@ -115,14 +125,17 @@ func (h *ChannelHandler) Update(c *gin.Context) {
 	}
 
 	var req struct {
-		Name     string   `json:"name"`
-		BaseURL  string   `json:"base_url"`
-		APIKey   string   `json:"api_key"`
-		Models   []string `json:"models"`
-		Weight   int      `json:"weight"`
-		Priority int      `json:"priority"`
-		Group    string   `json:"group_name"`
-		Status   int      `json:"status"`
+		Name         string   `json:"name"`
+		BaseURL      string   `json:"base_url"`
+		APIKey       string   `json:"api_key"`
+		Models       []string `json:"models"`
+		Weight       int      `json:"weight"`
+		Priority     int      `json:"priority"`
+		Group        string   `json:"group_name"`
+		Status       int      `json:"status"`
+		ProxyEnabled *bool    `json:"proxy_enabled"`
+		ProxyType    string   `json:"proxy_type"`
+		ProxyURL     string   `json:"proxy_url"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -154,6 +167,15 @@ func (h *ChannelHandler) Update(c *gin.Context) {
 	if req.Group != "" {
 		channel.GroupName = req.Group
 	}
+	if req.ProxyEnabled != nil {
+		channel.ProxyEnabled = *req.ProxyEnabled
+	}
+	if req.ProxyType != "" {
+		channel.ProxyType = req.ProxyType
+	}
+	if req.ProxyURL != "" {
+		channel.ProxyURL = req.ProxyURL
+	}
 	channel.Priority = req.Priority
 	channel.Status = req.Status
 
@@ -163,6 +185,22 @@ func (h *ChannelHandler) Update(c *gin.Context) {
 	}
 
 	response.SuccessWithMessage(c, channel, "channel updated")
+}
+
+// newProxyClient creates an HTTP client with optional proxy support
+func newProxyClient(timeout time.Duration, proxyEnabled bool, proxyType, proxyURL string) *http.Client {
+	client := &http.Client{Timeout: timeout}
+
+	if proxyEnabled && proxyURL != "" {
+		proxyURI, err := url.Parse(proxyURL)
+		if err == nil {
+			client.Transport = &http.Transport{
+				Proxy: http.ProxyURL(proxyURI),
+			}
+		}
+	}
+
+	return client
 }
 
 // Delete deletes a channel
@@ -215,11 +253,11 @@ func (h *ChannelHandler) Test(c *gin.Context) {
 
 	switch req.TestType {
 	case "models":
-		result = testModels(channel.BaseURL, apiKey)
+		result = testModels(channel.BaseURL, apiKey, channel.ProxyEnabled, channel.ProxyType, channel.ProxyURL)
 	case "chat":
-		result = testChat(channel.BaseURL, apiKey, &req)
+		result = testChat(channel.BaseURL, apiKey, &req, channel.ProxyEnabled, channel.ProxyType, channel.ProxyURL)
 	case "embeddings":
-		result = testEmbeddings(channel.BaseURL, apiKey, &req)
+		result = testEmbeddings(channel.BaseURL, apiKey, &req, channel.ProxyEnabled, channel.ProxyType, channel.ProxyURL)
 	default:
 		response.Fail(c, "INVALID_PARAMETER", "unsupported test type")
 		return
@@ -233,8 +271,8 @@ func (h *ChannelHandler) Test(c *gin.Context) {
 	response.Success(c, result)
 }
 
-func testModels(baseURL, apiKey string) model.ChannelTestResponse {
-	client := &http.Client{Timeout: 10 * time.Second}
+func testModels(baseURL, apiKey string, proxyEnabled bool, proxyType, proxyURL string) model.ChannelTestResponse {
+	client := newProxyClient(10*time.Second, proxyEnabled, proxyType, proxyURL)
 	baseURL = strings.TrimSuffix(baseURL, "/v1")
 	req, err := http.NewRequest("GET", baseURL+"/v1/models", nil)
 	if err != nil {
@@ -269,9 +307,17 @@ func testModels(baseURL, apiKey string) model.ChannelTestResponse {
 		} `json:"data"`
 	}
 	body, _ := io.ReadAll(resp.Body)
-	json.Unmarshal(body, &result)
 
 	models := make([]string, 0, len(result.Data))
+	if err := json.Unmarshal(body, &result); err != nil {
+		return model.ChannelTestResponse{
+			Success:    true,
+			StatusCode: 200,
+			Models:     nil,
+			Error:      "JSON解析失败: " + string(body),
+		}
+	}
+
 	for _, m := range result.Data {
 		models = append(models, m.ID)
 	}
@@ -283,7 +329,7 @@ func testModels(baseURL, apiKey string) model.ChannelTestResponse {
 	}
 }
 
-func testChat(baseURL, apiKey string, testReq *model.ChannelTestRequest) model.ChannelTestResponse {
+func testChat(baseURL, apiKey string, testReq *model.ChannelTestRequest, proxyEnabled bool, proxyType, proxyURL string) model.ChannelTestResponse {
 	baseURL = strings.TrimSuffix(baseURL, "/v1")
 	body := map[string]interface{}{
 		"model":    testReq.Model,
@@ -297,7 +343,7 @@ func testChat(baseURL, apiKey string, testReq *model.ChannelTestRequest) model.C
 	}
 
 	bodyBytes, _ := json.Marshal(body)
-	client := &http.Client{Timeout: 30 * time.Second}
+	client := newProxyClient(30*time.Second, proxyEnabled, proxyType, proxyURL)
 	req, err := http.NewRequest("POST", baseURL+"/v1/chat/completions", bytes.NewReader(bodyBytes))
 	if err != nil {
 		return model.ChannelTestResponse{
@@ -349,7 +395,7 @@ func testChat(baseURL, apiKey string, testReq *model.ChannelTestRequest) model.C
 	}
 }
 
-func testEmbeddings(baseURL, apiKey string, testReq *model.ChannelTestRequest) model.ChannelTestResponse {
+func testEmbeddings(baseURL, apiKey string, testReq *model.ChannelTestRequest, proxyEnabled bool, proxyType, proxyURL string) model.ChannelTestResponse {
 	baseURL = strings.TrimSuffix(baseURL, "/v1")
 	body := map[string]interface{}{
 		"model": testReq.Model,
@@ -357,7 +403,7 @@ func testEmbeddings(baseURL, apiKey string, testReq *model.ChannelTestRequest) m
 	}
 
 	bodyBytes, _ := json.Marshal(body)
-	client := &http.Client{Timeout: 30 * time.Second}
+	client := newProxyClient(30*time.Second, proxyEnabled, proxyType, proxyURL)
 	req, err := http.NewRequest("POST", baseURL+"/v1/embeddings", bytes.NewReader(bodyBytes))
 	if err != nil {
 		return model.ChannelTestResponse{
@@ -422,9 +468,11 @@ func (h *ChannelHandler) saveTestHistory(channelID, userID uint, req *model.Chan
 		ErrorMessage:   result.Error,
 	}
 
-	// Use audit repo for now (in real impl, need test history repo)
-	_ = history
-	_ = io.EOF
+	if h.testHistoryRepo != nil {
+		if err := h.testHistoryRepo.Create(history); err != nil {
+			logger.Errorf("Failed to save channel test history: %v", err)
+		}
+	}
 }
 
 func encryptAPIKey(key string) (string, error) {

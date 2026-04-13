@@ -18,6 +18,9 @@ export type Channel = {
   last_error?: string
   response_time_avg: number
   timeout?: number
+  proxy_enabled?: boolean
+  proxy_type?: string
+  proxy_url?: string
   created_at: string
   updated_at: string
 }

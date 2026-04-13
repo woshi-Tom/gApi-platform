@@ -88,6 +88,12 @@
         <el-table-column label="响应时间" width="90">
           <template #default="{ row }">{{ row.response_time_avg > 0 ? row.response_time_avg + 'ms' : '-' }}</template>
         </el-table-column>
+        <el-table-column label="代理" width="70">
+          <template #default="{ row }">
+            <el-tag v-if="row.proxy_enabled" type="warning" size="small">{{ row.proxy_type || 'proxy' }}</el-tag>
+            <span v-else style="color:#c0c4cc">-</span>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
             <el-dropdown trigger="click" @command="(cmd: string) => handleAction(cmd, row)">
@@ -173,8 +179,23 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="超时时间">
-              <el-input-number v-model="form.timeout" :min="5" :max="300" :step="5" style="width:100%" /> ms
+            <el-form-item label="代理设置">
+              <el-switch v-model="form.proxy_enabled" active-text="启用" inactive-text="关闭" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="16" v-if="form.proxy_enabled">
+          <el-col :span="8">
+            <el-form-item label="代理类型">
+              <el-select v-model="form.proxy_type" style="width:100%">
+                <el-option label="SOCKS5" value="socks5" />
+                <el-option label="HTTP" value="http" />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="16">
+            <el-form-item label="代理地址">
+              <el-input v-model="form.proxy_url" placeholder="socks5://user:pass@host:port" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -194,8 +215,8 @@
           </el-radio-group>
         </el-form-item>
         <el-form-item label="模型" v-if="testForm.test_type==='chat'">
-          <el-select v-model="testForm.model" style="width:100%">
-            <el-option v-for="m in testChannel?.models" :key="m" :label="m" :value="m" />
+          <el-select v-model="testForm.model" style="width:100%" placeholder="请先获取模型列表">
+            <el-option v-for="m in (Array.isArray(testChannel?.models) ? testChannel.models : [])" :key="m" :label="m" :value="m" />
           </el-select>
         </el-form-item>
         <el-form-item label="测试消息" v-if="testForm.test_type==='chat'">
@@ -208,6 +229,12 @@
             <div>响应时间: {{ testResult.response_time_ms }}ms</div>
             <div v-if="testResult.error">错误: {{ testResult.error }}</div>
             <div v-if="testResult.content">响应: {{ testResult.content }}</div>
+            <div v-if="testResult.models && testResult.models.length > 0" style="margin-top:8px">
+              <div style="font-weight:500;margin-bottom:4px">模型列表 ({{ testResult.models.length }}个):</div>
+              <div style="max-height:200px;overflow-y:auto;font-size:12px;">
+                <el-tag v-for="m in testResult.models" :key="m" size="small" style="margin:2px">{{ m }}</el-tag>
+              </div>
+            </div>
           </template>
         </el-alert>
       </div>
@@ -308,6 +335,9 @@ const form = reactive({
   status: 1,
   group_name: '',
   timeout: 60000,
+  proxy_enabled: false,
+  proxy_type: 'socks5',
+  proxy_url: '',
 })
 
 const testForm = reactive({
@@ -359,6 +389,7 @@ const showAdd = () => {
   Object.assign(form, {
     id: 0, name: '', type: 'openai', base_url: '', api_key: '',
     models: [], model_mapping: '', weight: 100, priority: 0, status: 1, group_name: '', timeout: 60000,
+    proxy_enabled: false, proxy_type: 'socks5', proxy_url: '',
   })
   dlgVisible.value = true
 }
@@ -401,10 +432,10 @@ const save = async () => {
 }
 
 const test = (c: Channel) => {
-  testChannel.value = c
+  testChannel.value = { ...c }
   testResult.value = null
   testForm.test_type = 'models'
-  testForm.model = c.models?.[0] || 'gpt-3.5-turbo'
+  testForm.model = ''
   testVisible.value = true
 }
 
@@ -419,6 +450,12 @@ const runTest = async () => {
     }
     const res = await api.test(testChannel.value.id, data)
     testResult.value = res.data.data
+    if (testResult.value?.models && testResult.value.models.length > 0) {
+      testChannel.value.models = testResult.value.models
+      if (!testForm.model) {
+        testForm.model = testResult.value.models[0]
+      }
+    }
   } catch (e: any) {
     testResult.value = {
       success: false,

@@ -36,6 +36,8 @@ func SetupUserRoutes(
 	tokenService := service.NewTokenService(tokenRepo)
 	tokenService.SetUserRepo(userRepo, vipRepo)
 	channelService := service.NewChannelService(channelRepo)
+	testHistoryRepo := repository.NewChannelTestHistoryRepository(db.GetDB())
+	channelHandler := handler.NewChannelHandler(channelService, auditRepo, testHistoryRepo)
 	emailVerificationService := service.NewEmailVerificationService(db.GetDB(), redisClient, &cfg.Email, settingsService, cfg.Server.Frontend)
 	captchaService := service.NewSliderCaptchaService(redisClient.Client)
 
@@ -183,11 +185,11 @@ func SetupUserRoutes(
 
 			channels := internal.Group("/channels")
 			{
-				channels.GET("", handler.NewChannelHandler(channelService, auditRepo).List)
-				channels.POST("", handler.NewChannelHandler(channelService, auditRepo).Create)
-				channels.PUT("/:id", handler.NewChannelHandler(channelService, auditRepo).Update)
-				channels.DELETE("/:id", handler.NewChannelHandler(channelService, auditRepo).Delete)
-				channels.POST("/:id/test", handler.NewChannelHandler(channelService, auditRepo).Test)
+				channels.GET("", channelHandler.List)
+				channels.POST("", channelHandler.Create)
+				channels.PUT("/:id", channelHandler.Update)
+				channels.DELETE("/:id", channelHandler.Delete)
+				channels.POST("/:id/test", channelHandler.Test)
 			}
 		}
 	}
@@ -198,6 +200,7 @@ func SetupAdminRoutes(
 	cfg *config.Config,
 	db *repository.Database,
 	redisClient *repository.RedisClient,
+	healthCheckService *service.HealthCheckService,
 ) {
 	userRepo := repository.NewUserRepository(db.GetDB())
 	tokenRepo := repository.NewTokenRepository(db.GetDB())
@@ -213,7 +216,6 @@ func SetupAdminRoutes(
 	settingsService := service.NewSettingsService(db.GetDB())
 	authService := service.NewAuthService(userRepo, tokenRepo, &cfg.JWT)
 	channelService := service.NewChannelService(channelRepo)
-	healthCheckService := service.NewHealthCheckService(channelRepo)
 	alipayService := service.NewAlipayService(
 		settingsService,
 		orderRepo,
