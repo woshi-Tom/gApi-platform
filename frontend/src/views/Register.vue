@@ -79,6 +79,7 @@ const showCaptcha = ref(false)
 const captchaVerified = ref(false)
 const sendingCode = ref(false)
 const countdown = ref(0)
+const countdownTimer = ref<number | null>(null)
 const captchaRef = ref()
 const isValidEmail = ref(false)
 
@@ -122,10 +123,16 @@ async function sendCode() {
     })
     ElMessage.success('验证码已发送到您的邮箱')
     countdown.value = 60
-    const timer = setInterval(() => {
+    if (countdownTimer.value) {
+      clearInterval(countdownTimer.value)
+    }
+    countdownTimer.value = setInterval(() => {
       countdown.value--
       if (countdown.value <= 0) {
-        clearInterval(timer)
+        if (countdownTimer.value) {
+          clearInterval(countdownTimer.value)
+          countdownTimer.value = null
+        }
       }
     }, 1000)
   } catch (e: any) {

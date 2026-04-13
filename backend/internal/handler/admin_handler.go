@@ -76,7 +76,10 @@ func (h *AdminHandler) Login(c *gin.Context) {
 	}
 
 	for _, admin := range h.adminUsers {
-		if admin.Username == req.Username && admin.Password == req.Password {
+		if admin.Username == req.Username {
+			if err := bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(req.Password)); err != nil {
+				continue
+			}
 			token, _, err := h.authService.GenerateAdminToken(admin.Username, admin.Role)
 			if err != nil {
 				response.InternalError(c, "failed to generate token")

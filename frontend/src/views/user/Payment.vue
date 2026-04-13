@@ -239,6 +239,7 @@ function startPolling() {
       }
     } catch (err) {
       ElMessage.error('查询支付状态失败')
+      stopAllTimers()
     }
   }, 3000)
 }

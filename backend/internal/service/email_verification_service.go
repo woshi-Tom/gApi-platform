@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"gapi-platform/internal/config"
-	"gapi-platform/internal/logger"
 	"gapi-platform/internal/model"
+	"gapi-platform/internal/pkg/logger"
 	"gapi-platform/internal/repository"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -32,15 +32,17 @@ type EmailVerificationService struct {
 	cfg         *config.EmailConfig
 	settingsSvc *SettingsService
 	mailer      *DynamicEmailMailer
+	frontendURL string
 }
 
-func NewEmailVerificationService(db *gorm.DB, redisRepo *repository.RedisClient, cfg *config.EmailConfig, settingsSvc *SettingsService) *EmailVerificationService {
+func NewEmailVerificationService(db *gorm.DB, redisRepo *repository.RedisClient, cfg *config.EmailConfig, settingsSvc *SettingsService, frontendURL string) *EmailVerificationService {
 	return &EmailVerificationService{
 		db:          db,
 		redisRepo:   redisRepo,
 		cfg:         cfg,
 		settingsSvc: settingsSvc,
 		mailer:      NewDynamicEmailMailer(settingsSvc),
+		frontendURL: frontendURL,
 	}
 }
 
@@ -203,7 +205,10 @@ func (s *EmailVerificationService) SendPasswordResetEmail(email, ip, userAgent, 
 		return fmt.Errorf("failed to create password reset: %w", err)
 	}
 
-	frontendURL := "http://localhost:5173"
+	frontendURL := s.frontendURL
+	if frontendURL == "" {
+		frontendURL = "http://localhost:5173"
+	}
 	resetLink := fmt.Sprintf("%s/reset-password?token=%s", frontendURL, token)
 
 	if err := s.mailer.SendPasswordResetEmail(email, resetLink); err != nil {

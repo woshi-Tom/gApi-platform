@@ -71,7 +71,16 @@ func (h *PaymentHandler) CreateAlipay(c *gin.Context) {
 		return
 	}
 
-	userID := c.MustGet("user_id").(uint)
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		response.Fail(c, "UNAUTHORIZED", "user not authenticated")
+		return
+	}
+	userID, ok := userIDVal.(uint)
+	if !ok {
+		response.Fail(c, "UNAUTHORIZED", "invalid user id")
+		return
+	}
 
 	var order *model.Order
 	var err error
@@ -171,44 +180,53 @@ func (h *PaymentHandler) CreateAlipay(c *gin.Context) {
 	order.AlipayQRURL = qrCode
 	qrExpireTime := time.Now().Add(15 * time.Minute)
 	order.QRExpireAt = &qrExpireTime
-	if err := h.orderRepo.Save(order); err != nil {
-		log.Error().Err(err).Str("order_no", order.OrderNo).Msg("failed to save order QR URL")
-		response.Fail(c, "UPDATE_ORDER_FAILED", err.Error())
-		return
-	}
 
-	payment := &model.Payment{
-		OrderID:       order.ID,
-		UserID:        userID,
-		PaymentNo:     fmt.Sprintf("PAY%s%s", time.Now().Format("20060102"), uuid.New().String()[:8]),
-		PaymentMethod: "alipay",
-		Amount:        order.PayAmount,
-		Status:        "pending",
-		PaymentURL:    qrCode,
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
-	}
-	if err := h.paymentRepo.Create(payment); err != nil {
-		log.Error().Err(err).Str("order_no", order.OrderNo).Msg("failed to create payment record")
-		response.Fail(c, "CREATE_PAYMENT_RECORD_FAILED", err.Error())
-		return
-	}
+	var payment *model.Payment
+	err = h.orderRepo.GetDB().Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(order).Error; err != nil {
+			return fmt.Errorf("failed to save order QR URL: %w", err)
+		}
 
-	if h.auditRepo != nil {
-		success := true
-		h.auditRepo.Create(&model.AuditLog{
-			UserID:        &userID,
-			Action:        "payment.init",
-			ActionGroup:   "payment",
-			ResourceType:  "payment",
-			ResourceID:    &payment.ID,
-			RequestMethod: "POST",
-			RequestPath:   "/api/v1/payment/alipay",
-			RequestBody:   fmt.Sprintf(`{"order_no":"%s","payment_no":"%s","amount":"%.2f"}`, order.OrderNo, payment.PaymentNo, order.PayAmount),
-			Success:       true,
+		payment = &model.Payment{
+			OrderID:       order.ID,
+			UserID:        userID,
+			PaymentNo:     fmt.Sprintf("PAY%s%s", time.Now().Format("20060102"), uuid.New().String()[:8]),
+			PaymentMethod: "alipay",
+			Amount:        order.PayAmount,
+			Status:        "pending",
+			PaymentURL:    qrCode,
 			CreatedAt:     time.Now(),
-		})
-		_ = success
+			UpdatedAt:     time.Now(),
+		}
+		if err := tx.Create(payment).Error; err != nil {
+			return fmt.Errorf("failed to create payment record: %w", err)
+		}
+
+		if h.auditRepo != nil {
+			auditLog := &model.AuditLog{
+				UserID:        &userID,
+				Action:        "payment.init",
+				ActionGroup:   "payment",
+				ResourceType:  "payment",
+				ResourceID:    &payment.ID,
+				RequestMethod: "POST",
+				RequestPath:   "/api/v1/payment/alipay",
+				RequestBody:   fmt.Sprintf(`{"order_no":"%s","payment_no":"%s","amount":"%.2f"}`, order.OrderNo, payment.PaymentNo, order.PayAmount),
+				Success:       true,
+				CreatedAt:     time.Now(),
+			}
+			if err := tx.Create(auditLog).Error; err != nil {
+				log.Warn().Err(err).Str("order_no", order.OrderNo).Msg("failed to create audit log")
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		log.Error().Err(err).Str("order_no", order.OrderNo).Msg("failed to process payment in transaction")
+		response.Fail(c, "PROCESS_PAYMENT_FAILED", err.Error())
+		return
 	}
 
 	log.Info().

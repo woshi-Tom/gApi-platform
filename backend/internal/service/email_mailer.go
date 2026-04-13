@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"gapi-platform/internal/config"
-	"gapi-platform/internal/logger"
+	"gapi-platform/internal/pkg/logger"
 )
 
 type EmailMailer struct {
