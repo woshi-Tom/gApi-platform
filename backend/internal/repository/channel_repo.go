@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"encoding/json"
+
 	"gapi-platform/internal/model"
 	"gorm.io/gorm"
 )
@@ -61,6 +63,16 @@ func (r *ChannelRepository) List(page, pageSize int, channelType, status, group,
 		return nil, 0, err
 	}
 
+	for i := range channels {
+		models := []string{}
+		if channels[i].Models != "" && channels[i].Models != "[]" {
+			if err := json.Unmarshal([]byte(channels[i].Models), &models); err != nil {
+				_ = err
+			}
+		}
+		channels[i].SetModels(models)
+	}
+
 	return channels, total, nil
 }
 
@@ -102,8 +114,8 @@ func (r *ChannelRepository) IncrementFailureCount(id uint) error {
 func (r *ChannelRepository) ResetFailureCount(id uint) error {
 	return r.db.Model(&model.Channel{}).Where("id = ?", id).
 		Updates(map[string]interface{}{
-			"failure_count":  0,
-			"is_healthy":     true,
+			"failure_count":   0,
+			"is_healthy":      true,
 			"last_success_at": gorm.Expr("NOW()"),
 		}).Error
 }
