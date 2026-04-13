@@ -102,9 +102,12 @@ jobs:
       - name: Set lowercase image name
         id: vars
         run: |
-          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]' | cut -d'/' -f2)
-          echo "name=$REPO_NAME" >> $GITHUB_OUTPUT
-          echo "repo=${{ github.repository_owner }}" >> $GITHUB_OUTPUT
+          FULL_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          OWNER=$(echo "$FULL_NAME" | cut -d'/' -f1)
+          REPO=$(echo "$FULL_NAME" | cut -d'/' -f2)
+          echo "full=$FULL_NAME" >> $GITHUB_OUTPUT
+          echo "owner=$OWNER" >> $GITHUB_OUTPUT
+          echo "repo=$REPO" >> $GITHUB_OUTPUT
 
       - name: Download Artifacts
         uses: actions/download-artifact@v4
@@ -136,18 +139,18 @@ jobs:
       - name: Build Backend Docker Image
         run: |
           cd backend
-          docker build -t ghcr.io/${{ github.repository_owner }}/${{ steps.vars.outputs.name }}/backend:latest .
-          docker push ghcr.io/${{ github.repository_owner }}/${{ steps.vars.outputs.name }}/backend:latest
+          docker build -t ghcr.io/${{ steps.vars.outputs.full }}/backend:latest .
+          docker push ghcr.io/${{ steps.vars.outputs.full }}/backend:latest
 
       - name: Build Frontend Docker Image
         run: |
-          docker build -f frontend/Dockerfile -t ghcr.io/${{ github.repository_owner }}/${{ steps.vars.outputs.name }}/frontend:latest ./frontend
-          docker push ghcr.io/${{ github.repository_owner }}/${{ steps.vars.outputs.name }}/frontend:latest
+          docker build -f frontend/Dockerfile -t ghcr.io/${{ steps.vars.outputs.full }}/frontend:latest ./frontend
+          docker push ghcr.io/${{ steps.vars.outputs.full }}/frontend:latest
 
       - name: Build Admin Docker Image
         run: |
-          docker build -f frontend/Dockerfile.admin -t ghcr.io/${{ github.repository_owner }}/${{ steps.vars.outputs.name }}/admin:latest ./frontend
-          docker push ghcr.io/${{ github.repository_owner }}/${{ steps.vars.outputs.name }}/admin:latest
+          docker build -f frontend/Dockerfile.admin -t ghcr.io/${{ steps.vars.outputs.full }}/admin:latest ./frontend
+          docker push ghcr.io/${{ steps.vars.outputs.full }}/admin:latest
 
   release:
     runs-on: ubuntu-latest
@@ -168,8 +171,8 @@ jobs:
       - name: Set lowercase name
         id: vars
         run: |
-          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]' | cut -d'/' -f2)
-          echo "name=$REPO_NAME" >> $GITHUB_OUTPUT
+          FULL_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "full=$FULL_NAME" >> $GITHUB_OUTPUT
 
       - name: Prepare Package
         run: |
