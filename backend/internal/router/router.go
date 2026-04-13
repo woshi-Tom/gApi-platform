@@ -246,6 +246,9 @@ func SetupAdminRoutes(
 			adminAuth.PUT("/channels/:id", adminHandler.UpdateChannel)
 			adminAuth.POST("/channels/:id/test", adminHandler.TestChannel)
 			adminAuth.POST("/channels/:id/health", adminHandler.TriggerHealthCheck)
+			adminAuth.DELETE("/channels/:id", adminHandler.DeleteChannel)
+			adminAuth.POST("/channels/:id/enable", adminHandler.EnableChannel)
+			adminAuth.POST("/channels/:id/disable", adminHandler.DisableChannel)
 
 			adminAuth.GET("/orders", adminHandler.ListOrders)
 

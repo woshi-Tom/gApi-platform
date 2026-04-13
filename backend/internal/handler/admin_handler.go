@@ -306,6 +306,71 @@ func (h *AdminHandler) UpdateChannel(c *gin.Context) {
 	response.SuccessWithMessage(c, channel, "channel updated")
 }
 
+// DeleteChannel deletes a channel
+func (h *AdminHandler) DeleteChannel(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		response.Fail(c, "INVALID_PARAMETER", "invalid channel id")
+		return
+	}
+
+	if err := h.channelSvc.Delete(uint(id)); err != nil {
+		response.InternalError(c, "failed to delete channel")
+		return
+	}
+
+	response.SuccessWithMessage(c, nil, "channel deleted")
+}
+
+// EnableChannel enables a channel
+func (h *AdminHandler) EnableChannel(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		response.Fail(c, "INVALID_PARAMETER", "invalid channel id")
+		return
+	}
+
+	channel, err := h.channelSvc.GetByID(uint(id))
+	if err != nil {
+		response.NotFound(c, "channel not found")
+		return
+	}
+
+	channel.Status = 1
+	if err := h.channelSvc.Update(channel); err != nil {
+		response.InternalError(c, "failed to enable channel")
+		return
+	}
+
+	response.SuccessWithMessage(c, channel, "channel enabled")
+}
+
+// DisableChannel disables a channel
+func (h *AdminHandler) DisableChannel(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		response.Fail(c, "INVALID_PARAMETER", "invalid channel id")
+		return
+	}
+
+	channel, err := h.channelSvc.GetByID(uint(id))
+	if err != nil {
+		response.NotFound(c, "channel not found")
+		return
+	}
+
+	channel.Status = 0
+	if err := h.channelSvc.Update(channel); err != nil {
+		response.InternalError(c, "failed to disable channel")
+		return
+	}
+
+	response.SuccessWithMessage(c, channel, "channel disabled")
+}
+
 // TestChannel tests a channel
 func (h *AdminHandler) TestChannel(c *gin.Context) {
 	// Delegate to channel handler

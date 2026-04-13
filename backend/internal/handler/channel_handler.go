@@ -265,6 +265,15 @@ func (h *ChannelHandler) Test(c *gin.Context) {
 
 	result.ResponseTimeMs = time.Since(startTime).Milliseconds()
 
+	// Auto-save models after successful test
+	if req.TestType == "models" && result.Success && len(result.Models) > 0 {
+		modelsJSON, _ := json.Marshal(result.Models)
+		channel.Models = string(modelsJSON)
+		if err := h.channelService.Update(channel); err != nil {
+			logger.Errorf("Failed to auto-save models: %v", err)
+		}
+	}
+
 	// Save test history
 	go h.saveTestHistory(channel.ID, c.GetUint("user_id"), &req, &result)
 
