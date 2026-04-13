@@ -203,6 +203,10 @@ jobs:
           cp .env.example release/
           cp README.md release/ 2>/dev/null || true
           cp CHANGELOG.md release/ 2>/dev/null || true
+          
+          # Create release README with version
+          VERSION=${{ github.ref_name }}
+          sed "s/\$VERSION/$VERSION/g" release-readme.txt > release/README.md
 
       - name: Create Release Package
         run: |
