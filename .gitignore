@@ -56,6 +56,9 @@ coverage/
 *.bak
 *.orig
 *.png
+*.jpg
+*.jpeg
+*.gif
 *.sh
 !.sh
 
@@ -65,17 +68,20 @@ test-results/
 
 # OpenCode (project-specific config)
 .opencode/
+.sisyphus/
 
-# Local dev
+# Development documentation (internal only)
+docs/
+
+# Local dev screenshots and configs
 channel-form*.png
 admin-*-channel*.png
+channels-page.png
+dropdown-test.png
 
 # Local scripts and tools
 start_*.sh
 *.local
 deploy/local/
-
-# Development documentation (internal only)
-docs/
-!docs/README.md
+scripts/
 
