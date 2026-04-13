@@ -7,12 +7,7 @@ on:
     types: [ created ]
   workflow_dispatch:
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.event.repository.name }}
-
 jobs:
-  # Build Backend
   build-backend:
     runs-on: ubuntu-latest
     steps:
@@ -35,7 +30,6 @@ jobs:
           name: backend-binary
           path: backend/gapi-server
 
-  # Build Frontend User
   build-frontend:
     runs-on: ubuntu-latest
     steps:
@@ -65,7 +59,6 @@ jobs:
           name: frontend-dist
           path: frontend/dist
 
-  # Build Admin Frontend
   build-admin:
     runs-on: ubuntu-latest
     steps:
@@ -95,7 +88,6 @@ jobs:
           name: admin-dist
           path: frontend/dist-admin
 
-  # Build Docker Images
   docker:
     runs-on: ubuntu-latest
     needs: [build-backend, build-frontend, build-admin]
@@ -107,62 +99,62 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download Backend Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: backend-binary
-          path: backend
-
-      - name: Download Frontend Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-dist
-          path: frontend/dist
-
-      - name: Download Admin Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: admin-dist
-          path: frontend/dist-admin
-
-      - name: Prepare Admin Files
+      - name: Set lowercase image name
+        id: vars
         run: |
+          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]' | cut -d'/' -f2)
+          echo "name=$REPO_NAME" >> $GITHUB_OUTPUT
+          echo "repo=${{ github.repository_owner }}" >> $GITHUB_OUTPUT
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare Backend
+        run: |
+          mkdir -p backend
+          cp artifacts/backend-binary/gapi-server backend/
+
+      - name: Prepare Frontend
+        run: |
+          cp -r artifacts/frontend-dist/ frontend/dist
+          mkdir -p frontend/dist-admin
+          cp -r artifacts/admin-dist/. frontend/dist-admin/
           mv frontend/dist-admin/admin.html frontend/dist-admin/index.html
 
-      # Backend Docker Image
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build Backend Docker Image
         run: |
           cd backend
-          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:latest .
+          docker build -t ghcr.io/${{ github.repository_owner }}/${{ steps.vars.outputs.name }}/backend:latest .
+          docker push ghcr.io/${{ github.repository_owner }}/${{ steps.vars.outputs.name }}/backend:latest
 
-      - name: Push Backend Image
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:latest
-
-      # Frontend Docker Image
       - name: Build Frontend Docker Image
         run: |
-          docker build -f frontend/Dockerfile -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:latest .
+          docker build -f frontend/Dockerfile -t ghcr.io/${{ github.repository_owner }}/${{ steps.vars.outputs.name }}/frontend:latest ./frontend
+          docker push ghcr.io/${{ github.repository_owner }}/${{ steps.vars.outputs.name }}/frontend:latest
 
-      - name: Push Frontend Image
-        run: |
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:latest
-
-      # Admin Docker Image
       - name: Build Admin Docker Image
         run: |
-          docker build -f frontend/Dockerfile.admin -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/admin:latest .
+          docker build -f frontend/Dockerfile.admin -t ghcr.io/${{ github.repository_owner }}/${{ steps.vars.outputs.name }}/admin:latest ./frontend
+          docker push ghcr.io/${{ github.repository_owner }}/${{ steps.vars.outputs.name }}/admin:latest
 
-      - name: Push Admin Image
-        run: |
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/admin:latest
-
-  # Create Release Package
   release:
     runs-on: ubuntu-latest
     needs: [build-backend, build-frontend, build-admin]
     if: github.event_name == 'release'
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
@@ -173,19 +165,21 @@ jobs:
         with:
           path: artifacts
 
+      - name: Set lowercase name
+        id: vars
+        run: |
+          REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]' | cut -d'/' -f2)
+          echo "name=$REPO_NAME" >> $GITHUB_OUTPUT
+
       - name: Prepare Package
         run: |
           mkdir -p release
-          cp -r artifacts/backend-binary release/
-          cp -r artifacts/frontend-dist release/
-          cp -r artifacts/admin-dist release/
+          cp -r artifacts/backend-binary/gapi-server release/
+          cp -r artifacts/frontend-dist release/gapi-frontend
+          cp -r artifacts/admin-dist release/gapi-admin
           cp -r deploy/docker/docker-compose.yml release/
           cp -r deploy/docker/.env.example release/
           cp .env.example release/
-          cd release
-          mv frontend-dist gapi-frontend
-          mv admin-dist gapi-admin
-          mv backend-binary gapi-server
 
       - name: Create Release Package
         run: |
