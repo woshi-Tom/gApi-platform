@@ -181,16 +181,33 @@ jobs:
       - name: Prepare Package
         run: |
           mkdir -p release
-          cp -r artifacts/backend-binary/gapi-server release/
-          cp -r artifacts/frontend-dist release/gapi-frontend
-          cp -r artifacts/admin-dist release/gapi-admin
+          
+          # Backend binary
+          cp -r artifacts/backend-binary/gapi-server release/ 2>/dev/null || \
+            cp -r artifacts/backend-binary/*/gapi-server release/ 2>/dev/null || \
+            find artifacts/backend-binary -name 'gapi-server' -exec cp {} release/ \;
+          
+          # Frontend
+          cp -r artifacts/frontend-dist release/gapi-frontend 2>/dev/null || \
+            cp -r artifacts/frontend-dist/* release/gapi-frontend 2>/dev/null || \
+            cp -r artifacts/frontend-dist/. release/gapi-frontend/
+          
+          # Admin
+          cp -r artifacts/admin-dist release/gapi-admin 2>/dev/null || \
+            cp -r artifacts/admin-dist/* release/gapi-admin 2>/dev/null || \
+            cp -r artifacts/admin-dist/. release/gapi-admin/
+          
+          # Config files
           cp -r deploy/docker/docker-compose.yml release/
           cp -r deploy/docker/.env.example release/
           cp .env.example release/
+          cp README.md release/ 2>/dev/null || true
+          cp CHANGELOG.md release/ 2>/dev/null || true
 
       - name: Create Release Package
         run: |
           cd release
+          echo "gAPI Platform ${{ github.ref_name }}" > VERSION.txt
           tar -czvf ../gapi-platform-${{ github.ref_name }}.tar.gz .
 
       - name: Upload Release Asset
