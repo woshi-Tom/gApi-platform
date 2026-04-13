@@ -4,7 +4,6 @@ WORKDIR /app
 
 RUN apk add --no-cache git
 
-# Use Chinese Go module mirror for faster downloads in China
 ENV GOPROXY=https://goproxy.cn,direct
 ENV GOSUMDB=off
 
@@ -23,9 +22,10 @@ WORKDIR /app
 
 COPY --from=builder /app/gapi-server .
 COPY --from=builder /app/docs ./docs
-COPY --from=builder /app/config ./config
 
-RUN mkdir -p /app/logs
+RUN mkdir -p /app/config /app/logs
+
+RUN echo 'database:\n  host: ${DB_HOST:-localhost}\n  port: ${DB_PORT:-5432}\n  user: ${DB_USER:-gapi}\n  password: ${DB_PASSWORD:-}\n  name: ${DB_NAME:-gapi}\n\nredis:\n  host: ${REDIS_HOST:-localhost}\n  port: ${REDIS_PORT:-6379}\n  password: ${REDIS_PASSWORD:-}\n\nrabbitmq:\n  host: ${RABBITMQ_HOST:-localhost}\n  port: ${RABBITMQ_PORT:-5672}\n  user: ${RABBITMQ_USER:-guest}\n  password: ${RABBITMQ_PASSWORD:-guest}\n\nserver:\n  port: ${SERVER_PORT:-8080}\n  frontend: ${FRONTEND_URL:-http://localhost:5173}\n  admin_frontend: ${ADMIN_FRONTEND_URL:-http://localhost:5174}' > /app/config/config.yaml
 
 EXPOSE 8080
 
@@ -34,4 +34,4 @@ ENV TZ=Asia/Shanghai
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 
-ENTRYPOINT ["./gapi-server", "-config", "/app/config/config.yaml"]
+ENTRYPOINT ["./gapi-server"]
