@@ -16,6 +16,7 @@ import (
 	"gapi-platform/internal/pkg/crypto"
 	"gapi-platform/internal/repository"
 	"gapi-platform/internal/router"
+	"gapi-platform/internal/service"
 	"gapi-platform/internal/worker"
 
 	_ "gapi-platform/docs"
@@ -93,10 +94,14 @@ func main() {
 	go vipWorker.Start()
 	defer vipWorker.Stop()
 
+	healthCheckService := service.NewHealthCheckService(repository.NewChannelRepository(db.GetDB()))
+	healthCheckService.Start()
+	defer healthCheckService.Stop()
+
 	r := gin.Default()
 
 	router.SetupUserRoutes(r, cfg, db, redisClient)
-	router.SetupAdminRoutes(r, cfg, db, redisClient)
+	router.SetupAdminRoutes(r, cfg, db, redisClient, healthCheckService)
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
