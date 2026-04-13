@@ -1,10 +1,10 @@
 package worker
 
 import (
-	"log"
 	"time"
 
 	"gapi-platform/internal/model"
+	"gapi-platform/internal/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -26,14 +26,14 @@ func (w *VIPExpiryWorker) Start() {
 	ticker := time.NewTicker(w.period)
 	defer ticker.Stop()
 
-	log.Println("[VIPWorker] Started, running every", w.period)
+	logger.Info("VIP worker started", "period", w.period.String())
 
 	for {
 		select {
 		case <-ticker.C:
 			w.processExpiredVIPs()
 		case <-w.stopCh:
-			log.Println("[VIPWorker] Stopped")
+			logger.Info("VIP worker stopped")
 			return
 		}
 	}
@@ -50,7 +50,7 @@ func (w *VIPExpiryWorker) processExpiredVIPs() {
 	err := w.db.Where("level IN ? AND v_ip_expired_at IS NOT NULL AND v_ip_expired_at < ?",
 		[]string{"vip_bronze", "vip_silver", "vip_gold"}, now).Find(&users).Error
 	if err != nil {
-		log.Printf("[VIPWorker] Error querying expired VIPs: %v\n", err)
+		logger.Errorf("VIP worker error querying expired VIPs: %v", err)
 		return
 	}
 
@@ -69,16 +69,16 @@ func (w *VIPExpiryWorker) processExpiredVIPs() {
 			})
 
 		if result.Error != nil {
-			log.Printf("[VIPWorker] Error updating user %d: %v\n", user.ID, result.Error)
+			logger.Errorf("VIP worker error updating user %d: %v", user.ID, result.Error)
 			continue
 		}
 
 		if result.RowsAffected > 0 {
-			log.Printf("[VIPWorker] VIP expired for user %d (%s), downgraded to free tier\n", user.ID, user.Email)
+			logger.Infof("VIP expired for user %d (%s), downgraded to free tier", user.ID, user.Email)
 		}
 	}
 
-	log.Printf("[VIPWorker] Processed %d expired VIP users\n", len(users))
+	logger.Infof("VIP worker processed %d expired VIP users", len(users))
 }
 
 func (w *VIPExpiryWorker) ProcessOnce() {
