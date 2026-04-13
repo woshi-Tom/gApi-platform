@@ -22,6 +22,7 @@ server.log
 *.swp
 *.swo
 .DS_Store
+*.iml
 
 # Environment
 .env
@@ -36,6 +37,7 @@ config/config.yaml
 tmp/
 temp/
 *.tmp
+*.temp
 
 # Backend
 backend/tmp/
@@ -54,6 +56,8 @@ coverage/
 *.bak
 *.orig
 *.png
+*.sh
+!.sh
 
 # Testing
 test-results/
@@ -65,3 +69,13 @@ test-results/
 # Local dev
 channel-form*.png
 admin-*-channel*.png
+
+# Local scripts and tools
+start_*.sh
+*.local
+deploy/local/
+
+# Development documentation (internal only)
+docs/
+!docs/README.md
+
