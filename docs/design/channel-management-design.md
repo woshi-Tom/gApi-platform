@@ -1,8 +1,8 @@
 # 渠道管理功能设计方案
 
-> 版本: v1.0
-> 日期: 2026-04-01
-> 状态: 待审核
+> 版本: v2.0
+> 日期: 2026-04-13
+> 状态: ✅ 已实现
 
 ---
 
@@ -48,6 +48,9 @@ ALTER TABLE channels ADD COLUMN IF NOT EXISTS health_check_url VARCHAR(500);
 ALTER TABLE channels ADD COLUMN IF NOT EXISTS health_check_interval INTEGER DEFAULT 60;
 ALTER TABLE channels ADD COLUMN IF NOT EXISTS consecutive_failures INTEGER DEFAULT 0;
 ALTER TABLE channels ADD COLUMN IF NOT EXISTS auto_disable_threshold INTEGER DEFAULT 5;
+ALTER TABLE channels ADD COLUMN IF NOT EXISTS proxy_enabled BOOLEAN DEFAULT false;
+ALTER TABLE channels ADD COLUMN IF NOT EXISTS proxy_type VARCHAR(20) DEFAULT 'none';
+ALTER TABLE channels ADD COLUMN IF NOT EXISTS proxy_url VARCHAR(500);
 ```
 
 ### 3.2 渠道模型
@@ -69,6 +72,12 @@ type Channel struct {
     RPMLimit        int              // 每分钟请求限制
     TPMLimit        int              // 每分钟Token限制
     CostFactor      float64          // 成本系数
+    
+    // 代理支持 (v2.0)
+    ProxyEnabled    bool             // 是否启用代理
+    ProxyType       string           // socks5/http/none
+    ProxyURL        string           // 代理地址
+    
     CreatedAt      time.Time
     UpdatedAt      time.Time
 }
@@ -121,10 +130,18 @@ type Channel struct {
 | 成本系数 | 数字输入 | 否 | 默认1.0，用于成本计算 |
 | 健康检查URL | 输入框 | 否 | 自定义健康检查地址 |
 
+**代理设置 (v2.0)**：
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| 启用代理 | 开关 | 否 | 是否通过代理访问 |
+| 代理类型 | 下拉框 | 否 | socks5/http |
+| 代理地址 | 输入框 | 否 | 如 `socks5://user:pass@host:port` |
+
 **验证规则**：
 - Base URL 必须以 `https://` 开头
 - API Key 不能为空
 - 至少选择一个模型
+- 如果启用代理，代理地址不能为空
 
 ### 4.3 渠道测试
 
@@ -145,14 +162,15 @@ type Channel struct {
 ### 4.4 健康检测
 
 **定时任务**：
-- 每60秒检测所有启用渠道
+- 每5分钟检测所有启用渠道
 - 连续失败3次标记为 `unhealthy`
-- 自动禁用不健康渠道
+- 失败时自动增加失败计数
+- 成功时重置失败计数
 
 **检测逻辑**：
-1. 发送健康检查请求
-2. 检查响应状态码
-3. 验证响应时间 < 5秒
+1. 调用渠道的 ListModels 接口
+2. 检查响应状态码是否为 200
+3. 验证响应时间和内容
 4. 记录失败次数
 
 ## 5. API设计
