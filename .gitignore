@@ -13,7 +13,6 @@ gapi-server-*
 
 # Logs
 *.log
-logs/
 server.log
 
 # IDE
