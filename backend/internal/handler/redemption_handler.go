@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"gapi-platform/internal/model"
+	"gapi-platform/internal/pkg/logger"
 	"gapi-platform/internal/pkg/response"
 	"gapi-platform/internal/repository"
 	"gapi-platform/internal/service"
@@ -210,7 +211,10 @@ func (h *RedemptionHandler) Redeem(c *gin.Context) {
 	ctx := context.Background()
 
 	if h.cache != nil {
-		redeemed, _ := h.cache.IsRedeemed(ctx, redemptionCode.ID, userID)
+		redeemed, err := h.cache.IsRedeemed(ctx, redemptionCode.ID, userID)
+		if err != nil {
+			logger.Warnf("Failed to check redemption status: %v", err)
+		}
 		if redeemed {
 			response.Fail(c, "ALREADY_REDEEMED", "you have already used this code")
 			return
@@ -233,7 +237,10 @@ func (h *RedemptionHandler) Redeem(c *gin.Context) {
 		defer h.cache.ReleaseLock(ctx, codeID, userID, lockToken)
 	}
 
-	redeemed, _ := h.cache.IsRedeemed(ctx, codeID, userID)
+	redeemed, err := h.cache.IsRedeemed(ctx, codeID, userID)
+	if err != nil {
+		logger.Warnf("Failed to check redemption status: %v", err)
+	}
 	if redeemed {
 		response.Fail(c, "ALREADY_REDEEMED", "you have already used this code")
 		return
@@ -244,7 +251,7 @@ func (h *RedemptionHandler) Redeem(c *gin.Context) {
 	var vipDays int
 	var user model.User
 
-	err := h.db.Transaction(func(tx *gorm.DB) error {
+	err = h.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Set("gorm:query", "FOR UPDATE").First(&user, userID).Error; err != nil {
 			return err
 		}

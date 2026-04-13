@@ -42,7 +42,8 @@ export const useAuthStore = defineStore('auth', () => {
       user.account_status = getAccountStatus(user)
       userData.value = JSON.stringify(user)
       localStorage.setItem('user', userData.value)
-    } catch {
+    } catch (e) {
+      console.error('Failed to fetch profile:', e)
     }
   }
 

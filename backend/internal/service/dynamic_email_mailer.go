@@ -6,7 +6,7 @@ import (
 	"net/smtp"
 	"strings"
 
-	"gapi-platform/internal/logger"
+	"gapi-platform/internal/pkg/logger"
 )
 
 type DynamicEmailMailer struct {

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"gapi-platform/internal/config"
-	"gapi-platform/internal/logger"
+	"gapi-platform/internal/pkg/logger"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )

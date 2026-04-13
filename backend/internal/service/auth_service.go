@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"gapi-platform/internal/config"
@@ -31,13 +32,19 @@ func NewAuthService(userRepo *repository.UserRepository, tokenRepo *repository.T
 // Register creates a new user
 func (s *AuthService) Register(username, email, password string) (*model.RegisterResponse, error) {
 	// Check if email already exists
-	existing, _ := s.userRepo.GetByEmail(email)
+	existing, err := s.userRepo.GetByEmail(email)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check email: %w", err)
+	}
 	if existing != nil {
 		return nil, errors.New("email already registered")
 	}
 
 	// Check if username already exists
-	existing, _ = s.userRepo.GetByUsername(username)
+	existing, err = s.userRepo.GetByUsername(username)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check username: %w", err)
+	}
 	if existing != nil {
 		return nil, errors.New("username already taken")
 	}

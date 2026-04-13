@@ -29,6 +29,7 @@ type SecurityConfig struct {
 }
 
 // AdminAccount represents an admin user account
+// Password must be bcrypt hashed (e.g., $2a$10$...)
 type AdminAccount struct {
 	Username string `yaml:"username" json:"username"`
 	Password string `yaml:"password" json:"password"`
@@ -311,6 +312,9 @@ func (c *Config) setDefaults() {
 	}
 	if c.Server.Mode == "" {
 		c.Server.Mode = "debug"
+	}
+	if c.Server.Frontend == "" {
+		c.Server.Frontend = "http://localhost:5173"
 	}
 	if c.Server.Timeout == 0 {
 		c.Server.Timeout = 60

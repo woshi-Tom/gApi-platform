@@ -5,10 +5,10 @@ import (
 	"sync"
 	"time"
 
-	"gapi-platform/internal/logger"
 	"gapi-platform/internal/model"
 	"gapi-platform/internal/pkg/adapter"
 	"gapi-platform/internal/pkg/crypto"
+	"gapi-platform/internal/pkg/logger"
 	"gapi-platform/internal/repository"
 )
 

@@ -36,7 +36,7 @@ func SetupUserRoutes(
 	tokenService := service.NewTokenService(tokenRepo)
 	tokenService.SetUserRepo(userRepo, vipRepo)
 	channelService := service.NewChannelService(channelRepo)
-	emailVerificationService := service.NewEmailVerificationService(db.GetDB(), redisClient, &cfg.Email, settingsService)
+	emailVerificationService := service.NewEmailVerificationService(db.GetDB(), redisClient, &cfg.Email, settingsService, cfg.Server.Frontend)
 	captchaService := service.NewSliderCaptchaService(redisClient.Client)
 
 	alipayService := service.NewAlipayService(

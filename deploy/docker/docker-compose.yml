@@ -88,6 +88,7 @@ services:
       GAPI_FRONTEND_URL: http://localhost:5173
       GAPI_ADMIN_FRONTEND_URL: http://localhost:5174
       GAPI_JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_change_in_production_min_32chars}
+      GAPI_ENCRYPT_KEY: ${ENCRYPT_KEY:-dev_encrypt_key_change_in_production_min_32chars}
       GAPI_ALIPAY_ENABLED: ${GAPI_ALIPAY_ENABLED:-false}
       GAPI_ALIPAY_SANDBOX: ${GAPI_ALIPAY_SANDBOX:-true}
       GAPI_ALIPAY_APP_ID: ${GAPI_ALIPAY_APP_ID:-}
