@@ -88,21 +88,26 @@
         <el-table-column label="响应时间" width="90">
           <template #default="{ row }">{{ row.response_time_avg > 0 ? row.response_time_avg + 'ms' : '-' }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
-            <div class="action-buttons">
-              <el-button size="small" link type="primary" @click="edit(row)">编辑</el-button>
-              <el-button size="small" link type="warning" @click="test(row)">测试</el-button>
-              <el-button size="small" link :type="healthChecking[row.id] ? 'info' : 'success'" :loading="healthChecking[row.id]" @click="checkHealth(row)">检测</el-button>
-              <el-button size="small" link :type="row.status===1?'warning':'success'" @click="toggleStatus(row)">
-                {{ row.status===1?'禁用':'启用' }}
+            <el-dropdown trigger="click" @command="(cmd: string) => handleAction(cmd, row)">
+              <el-button size="small" link type="primary">
+                操作<el-icon class="el-icon--right"><arrow-down /></el-icon>
               </el-button>
-              <el-popconfirm title="确定删除？" @confirm="del(row.id)">
-                <template #reference>
-                  <el-button size="small" link type="danger">删除</el-button>
-                </template>
-              </el-popconfirm>
-            </div>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="edit">编辑</el-dropdown-item>
+                  <el-dropdown-item command="test">测试</el-dropdown-item>
+                  <el-dropdown-item command="health" :disabled="healthChecking[row.id]">
+                    {{ healthChecking[row.id] ? '检测中...' : '检测' }}
+                  </el-dropdown-item>
+                  <el-dropdown-item command="toggle">
+                    {{ row.status===1?'禁用':'启用' }}
+                  </el-dropdown-item>
+                  <el-dropdown-item command="delete" divided style="color: var(--el-color-danger)">删除</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </template>
         </el-table-column>
       </el-table>
@@ -139,6 +144,10 @@
           <el-select v-model="form.models" multiple filterable allow-create default-first-option style="width:100%" placeholder="输入或选择模型">
             <el-option v-for="m in commonModels" :key="m" :label="m" :value="m" />
           </el-select>
+        </el-form-item>
+        <el-form-item label="模型映射">
+          <el-input v-model="form.model_mapping" type="textarea" :rows="2" placeholder='{"gpt-4": "gpt-4-0613"}' />
+          <div style="color:#909399;font-size:12px;margin-top:4px">JSON格式，将请求模型映射到渠道支持的模型</div>
         </el-form-item>
         <el-row :gutter="16">
           <el-col :span="8">
@@ -213,7 +222,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
-import { Plus, Refresh } from '@element-plus/icons-vue'
+import { Plus, Refresh, ArrowDown } from '@element-plus/icons-vue'
 import { channelApi, CHANNEL_TYPES, CHANNEL_STATUS } from '@/api/channel'
 import type { Channel, ChannelTestResult } from '@/api/channel'
 
@@ -293,6 +302,7 @@ const form = reactive({
   base_url: '',
   api_key: '',
   models: [] as string[],
+  model_mapping: '',
   weight: 100,
   priority: 0,
   status: 1,
@@ -348,7 +358,7 @@ const showAdd = () => {
   isEdit.value = false
   Object.assign(form, {
     id: 0, name: '', type: 'openai', base_url: '', api_key: '',
-    models: [], weight: 100, priority: 0, status: 1, group_name: '', timeout: 60000,
+    models: [], model_mapping: '', weight: 100, priority: 0, status: 1, group_name: '', timeout: 60000,
   })
   dlgVisible.value = true
 }
@@ -357,6 +367,11 @@ const edit = (c: Channel) => {
   isEdit.value = true
   Object.assign(form, c)
   form.api_key = ''
+  if (typeof form.model_mapping === 'object') {
+    form.model_mapping = JSON.stringify(form.model_mapping, null, 2)
+  } else if (!form.model_mapping) {
+    form.model_mapping = ''
+  }
   dlgVisible.value = true
 }
 
@@ -455,6 +470,26 @@ const del = async (id: number) => {
     load()
   } catch (e: any) {
     ElMessage.error(e.response?.data?.error?.message || '删除失败')
+  }
+}
+
+const handleAction = (cmd: string, row: Channel) => {
+  switch (cmd) {
+    case 'edit':
+      edit(row)
+      break
+    case 'test':
+      test(row)
+      break
+    case 'health':
+      checkHealth(row)
+      break
+    case 'toggle':
+      toggleStatus(row)
+      break
+    case 'delete':
+      del(row.id)
+      break
   }
 }
 
