@@ -4,6 +4,22 @@
 **日期**: 2026-04-13  
 **状态**: 开发中
 
+> ⚠️ **免责声明**: 本项目仅供学习交流使用，禁止用于任何非法用途。使用者需自行承担一切风险和责任。
+
+---
+
+## 项目概述
+
+gAPI Platform 是一个类似 OneAPI/NewAPI 的 API 代理平台，专为学习和研究 AI API 集成技术而设计。
+
+**主要功能**：
+- 🤖 多渠道管理 - 支持 OpenAI、Claude、DeepSeek、NVIDIA 等多种 AI API
+- 🔄 智能负载均衡 - 多渠道自动负载均衡和故障转移
+- 🌐 SOCKS5/HTTP 代理支持 - 突破网络限制访问海外 API
+- 💳 用户体系 - VIP 会员、积分充值、支付宝支付
+- 📊 管理后台 - 渠道监控、使用统计、审计日志
+- 🔒 安全设计 - API Key 加密存储、完整权限控制
+
 ---
 
 ## 更新日志
@@ -12,14 +28,47 @@
 
 ---
 
-## 项目概述
+## 技术栈
 
-类似 OneAPI/NewAPI 的 API 代理平台，支持：
-- 多租户架构
-- VIP 用户体系 (30天过期)
-- 商品购买 (支付宝/微信支付)
-- 渠道管理 + 健康检查
-- 完整审计日志
+| 组件 | 技术 |
+|------|------|
+| 后端 | Go + Gin |
+| 前端 | Vue 3 + Element Plus + TypeScript |
+| 数据库 | PostgreSQL |
+| 缓存 | Redis |
+| 消息队列 | RabbitMQ |
+
+---
+
+## 快速启动
+
+```bash
+# 克隆项目
+git clone https://github.com/woshi-Tom/gApi-platform.git
+cd gApi-platform
+
+# 复制环境变量配置
+cp .env.example .env
+# 编辑 .env 填写你的配置
+
+# 启动服务
+cd deploy/docker
+docker-compose up -d
+```
+
+访问地址：
+- 用户前端: http://localhost:5173
+- 管理后台: http://localhost:5174
+- API: http://localhost:8080
+
+---
+
+## ⚠️ 重要说明
+
+1. **环境变量**: 部署前请务必修改 `.env` 中的敏感信息（密码、密钥等）
+2. **API Key 安全**: 所有渠道的 API Key 都会加密存储
+3. **网络环境**: 某些 API 可能需要代理才能访问，项目支持 SOCKS5/HTTP 代理配置
+4. **学习目的**: 本项目旨在学习 AI API 集成、负载均衡、多租户架构等技术
 
 ---
 
