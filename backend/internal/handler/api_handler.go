@@ -14,6 +14,7 @@ import (
 	"gapi-platform/internal/model"
 	"gapi-platform/internal/pkg/adapter"
 	"gapi-platform/internal/pkg/crypto"
+	"gapi-platform/internal/pkg/logger"
 	"gapi-platform/internal/repository"
 	"gapi-platform/internal/service"
 	"github.com/gin-gonic/gin"
@@ -448,11 +449,13 @@ func (h *APIHandler) logUsage(c *gin.Context, modelName string, channelID uint, 
 	}
 
 	body, _ := io.ReadAll(resp.Body)
-	json.Unmarshal(body, &usage)
+	if err := json.Unmarshal(body, &usage); err != nil {
+		logger.Warnf("Failed to parse usage from response: %v", err)
+		return
+	}
 
-	_ = modelName
-	_ = channelID
-	_ = usage
+	logger.Infof("API usage logged: model=%s channel_id=%d prompt_tokens=%d completion_tokens=%d total_tokens=%d",
+		modelName, channelID, usage.Usage.PromptTokens, usage.Usage.CompletionTokens, usage.Usage.TotalTokens)
 }
 
 func parseSSEStream(body io.Reader, handler func(string)) error {
