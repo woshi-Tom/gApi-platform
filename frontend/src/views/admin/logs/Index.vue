@@ -34,45 +34,45 @@
         <el-button @click="resetFilters">重置</el-button>
       </div>
 
-      <el-table :data="logs" v-loading="ld" stripe class="logs-table" table-layout="fixed">
-        <el-table-column prop="id" label="ID" width="70" />
-        <el-table-column label="操作" min-width="150">
+      <el-table :data="logs" v-loading="ld" stripe class="logs-table">
+        <el-table-column prop="id" label="ID" width="50" />
+        <el-table-column label="操作" width="120">
           <template #default="{ row }">
             <el-tag size="small">{{ row.action }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="类型" width="90">
+        <el-table-column label="类型" width="60">
           <template #default="{ row }">
             <el-tag :type="row.log_type === 'operation' ? 'success' : 'info'" size="small">
               {{ row.log_type === 'operation' ? '操作' : '访问' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="分组" width="90">
+        <el-table-column label="分组" width="70">
           <template #default="{ row }">
             <el-tag size="small" type="info">{{ row.action_group }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="username" label="用户" width="100">
+        <el-table-column prop="username" label="用户" width="80">
           <template #default="{ row }">
             <span v-if="row.username">{{ row.username }}</span>
             <span v-else class="text-muted">系统</span>
           </template>
         </el-table-column>
-        <el-table-column prop="request_ip" label="IP" width="120" />
-        <el-table-column label="状态" width="70">
+        <el-table-column prop="request_ip" label="IP" width="100" />
+        <el-table-column label="状态" width="55">
           <template #default="{ row }">
             <el-tag :type="row.success ? 'success' : 'danger'" size="small">
               {{ row.success ? '成功' : '失败' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="时间" width="160">
+        <el-table-column label="时间" width="140">
           <template #default="{ row }">
             {{ formatDate(row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="详情" width="70" fixed="right">
+        <el-table-column label="详情" width="50" fixed="right">
           <template #default="{ row }">
             <el-button size="small" text @click="handleShowDetail(row)">详情</el-button>
           </template>
@@ -321,7 +321,28 @@ onMounted(load)
 
 .logs-table {
   margin-top: 16px;
-  width: 100%;
+  width: 100% !important;
+}
+
+.logs-table :deep(.el-table__inner-wrapper) {
+  width: 100% !important;
+}
+
+.logs-table :deep(.el-table__header-wrapper),
+.logs-table :deep(.el-table__body-wrapper) {
+  width: 100% !important;
+}
+
+.logs-table :deep(table) {
+  width: 100% !important;
+}
+
+.logs-table :deep(.el-table__header) {
+  width: 100% !important;
+}
+
+.logs-table :deep(.el-table__body) {
+  width: 100% !important;
 }
 
 .logs-table :deep(.el-table__header) th {
