@@ -4,7 +4,28 @@
 
 ---
 
-## [Unreleased]
+## [v1.1.1] - 2026-05-05
+
+### Added
+- **注册配置增强**: 支持邮箱域名限制、IP注册限制（24小时内）、密码最小长度配置
+- **注册奖励**: 支持 quota（免费配额）和 vip（VIP配额）两种奖励类型
+- **用户IP追踪**: 记录用户注册时的IP地址，用于安全审计
+- **渠道BaseURL自动填充**: 选择渠道类型时自动填充默认API地址
+- **渠道健康状态**: 列表页显示健康状态指示灯、最后检测时间、响应时间
+- **API密钥删除防抖**: 防止快速点击导致误删其他密钥
+
+### Fixed
+- **GORM语法修复**: FOR UPDATE 使用正确的 `gorm:"query_option"` 标签
+- **兑换码审计日志**: 修复类型错误，补全 Create/Redeem 操作审计记录
+- **注册错误处理**: 添加错误码映射，前端正确显示注册关闭提示
+- **配置文件安全**: admin密码改用bcrypt哈希存储
+
+### Changed
+- **数据库迁移**: signup_configs 表新增字段（allowed_domains, min_password_length, signup_reward_type, signup_reward_amount）
+
+---
+
+## [v1.1.0] - 2026-04-13
 
 ### Added
 - **渠道SOCKS代理支持**: 渠道配置支持通过SOCKS5/HTTP代理访问API
