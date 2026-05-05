@@ -3,11 +3,14 @@ package service
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"gapi-platform/internal/config"
 	"gapi-platform/internal/model"
 	"gapi-platform/internal/repository"
+
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -29,8 +32,56 @@ func NewAuthService(userRepo *repository.UserRepository, tokenRepo *repository.T
 	}
 }
 
+// Register errors
+var (
+	ErrRegistrationClosed    = errors.New("REGISTRATION_CLOSED")
+	ErrPasswordTooWeak        = errors.New("PASSWORD_TOO_WEAK")
+	ErrEmailDomainNotAllowed = errors.New("EMAIL_DOMAIN_NOT_ALLOWED")
+	ErrIPRegistrationLimit   = errors.New("IP_REGISTRATION_LIMIT_EXCEEDED")
+)
+
 // Register creates a new user
-func (s *AuthService) Register(username, email, password string) (*model.RegisterResponse, error) {
+func (s *AuthService) Register(c *gin.Context, username, email, password string) (*model.RegisterResponse, error) {
+	settingsService := NewSettingsService(s.userRepo.GetDB())
+	registerSettings, err := settingsService.GetRegisterSettings()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get register settings: %w", err)
+	}
+
+	if !registerSettings.AllowRegister {
+		return nil, ErrRegistrationClosed
+	}
+
+	if len(password) < registerSettings.MinPasswordLength {
+		return nil, ErrPasswordTooWeak
+	}
+
+	if registerSettings.AllowedDomains != "" {
+		allowedDomains := strings.Split(registerSettings.AllowedDomains, ",")
+		userDomain := email[strings.Index(email, "@"):]
+		domainAllowed := false
+		for _, d := range allowedDomains {
+			if strings.TrimSpace(d) == userDomain {
+				domainAllowed = true
+				break
+			}
+		}
+		if !domainAllowed {
+			return nil, ErrEmailDomainNotAllowed
+		}
+	}
+
+	clientIP := c.ClientIP()
+	if clientIP != "" {
+		ipRegCount, err := s.userRepo.CountByIPLast24Hours(clientIP)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check IP: %w", err)
+		}
+		if ipRegCount >= int64(registerSettings.MaxAccountsPerIP) {
+			return nil, ErrIPRegistrationLimit
+		}
+	}
+
 	// Check if email already exists
 	existing, err := s.userRepo.GetByEmail(email)
 	if err != nil {
@@ -55,30 +106,56 @@ func (s *AuthService) Register(username, email, password string) (*model.Registe
 		return nil, err
 	}
 
-	// Create user
+	// Create user with signup reward
 	user := &model.User{
-		Username:     username,
-		Email:        email,
-		PasswordHash: string(hash),
-		Level:        "free",
-		Status:       "active",
-		FreeQuota:    50000, // Default signup bonus (50K tokens)
-		FreeExpiredAt: func() *time.Time {
-			t := time.Now().AddDate(0, 0, 7) // 7 days validity
-			return &t
-		}(),
+		Username:          username,
+		Email:             email,
+		PasswordHash:     string(hash),
+		Status:            "active",
+		IPRegisteredFrom: clientIP,
+	}
+
+	rewardType := registerSettings.SignupRewardType
+	rewardAmount := registerSettings.SignupRewardAmount
+
+	switch rewardType {
+	case "quota":
+		user.Level = "free"
+		user.FreeQuota = rewardAmount
+		if rewardAmount > 0 {
+			t := time.Now().AddDate(0, 0, 7)
+			user.FreeExpiredAt = &t
+		}
+	case "vip":
+		user.Level = "vip"
+		user.VIPQuota = rewardAmount
+		t := time.Now().AddDate(0, 1, 0)
+		user.VIPExpiredAt = &t
+	default:
+		user.Level = "free"
+		user.FreeQuota = 0
 	}
 
 	if err := s.userRepo.Create(user); err != nil {
 		return nil, err
 	}
 
+	var quota int64
+	var quotaType string
+	if user.Level == "vip" {
+		quota = user.VIPQuota
+		quotaType = "vip"
+	} else {
+		quota = user.FreeQuota
+		quotaType = "free"
+	}
+
 	return &model.RegisterResponse{
 		UserID:       user.ID,
 		Username:     user.Username,
 		Email:        user.Email,
-		Quota:        user.FreeQuota,
-		QuotaType:    "free",
+		Quota:        quota,
+		QuotaType:    quotaType,
 		TrialVIPDays: 0,
 		NeedVerify:   false,
 	}, nil

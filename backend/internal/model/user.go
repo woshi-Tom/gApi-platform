@@ -32,7 +32,8 @@ type User struct {
 	Status         string     `json:"status" gorm:"size:20;default:'active'"` // active|disabled|suspended
 	DisabledReason string     `json:"disabled_reason" gorm:"size:200"`
 	LastLoginAt    *time.Time `json:"last_login_at"`
-	LastLoginIP    string     `json:"last_login_ip" gorm:"size:50"`
+	LastLoginIP      string     `json:"last_login_ip" gorm:"size:50"`
+	IPRegisteredFrom string   `json:"ip_registered_from" gorm:"size:50"`
 
 	// Timestamps
 	CreatedAt time.Time  `json:"created_at"`

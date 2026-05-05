@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"gapi-platform/internal/model"
@@ -64,9 +66,25 @@ func (h *UserHandler) Register(c *gin.Context) {
 		return
 	}
 
-	result, err := h.authService.Register(req.Username, req.Email, req.Password)
+	result, err := h.authService.Register(c, req.Username, req.Email, req.Password)
 	if err != nil {
-		response.Fail(c, "REGISTER_FAILED", err.Error())
+		errMsg := err.Error()
+		switch {
+		case err == service.ErrRegistrationClosed:
+			response.Fail(c, "REGISTRATION_CLOSED", "registration is currently closed")
+		case err == service.ErrPasswordTooWeak:
+			response.Fail(c, "PASSWORD_TOO_WEAK", fmt.Sprintf("password must be at least %d characters", 8))
+		case err == service.ErrEmailDomainNotAllowed:
+			response.Fail(c, "EMAIL_DOMAIN_NOT_ALLOWED", "email domain not allowed")
+		case err == service.ErrIPRegistrationLimit:
+			response.Fail(c, "IP_REGISTRATION_LIMIT_EXCEEDED", "too many registrations from this IP, please try again tomorrow")
+		case strings.Contains(errMsg, "email already registered"):
+			response.Fail(c, "EMAIL_EXISTS", "email already registered")
+		case strings.Contains(errMsg, "username already taken"):
+			response.Fail(c, "USERNAME_TAKEN", "username already taken")
+		default:
+			response.Fail(c, "REGISTER_FAILED", err.Error())
+		}
 		return
 	}
 

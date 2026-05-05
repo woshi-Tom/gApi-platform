@@ -172,8 +172,17 @@ async function handleRegister() {
     await authStore.register(form.username, form.email, form.password)
     ElMessage.success('注册成功，请登录')
     router.push('/login')
-  } catch (e: any) { 
-    ElMessage.error(e.response?.data?.error?.message || '注册失败')
+  } catch (e: any) {
+    const errorData = e.response?.data?.error
+    const errorCode = errorData?.code
+    const errorMsg = errorData?.message || '注册失败'
+    
+    if (errorCode === 'REGISTRATION_CLOSED') {
+      router.push('/register-closed')
+      return
+    }
+    
+    ElMessage.error(errorMsg)
     captchaVerified.value = false
     captchaRef.value?.reset()
   } finally { loading.value = false }

@@ -247,7 +247,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { Plus, Refresh, ArrowDown } from '@element-plus/icons-vue'
 import { channelApi, CHANNEL_TYPES, CHANNEL_STATUS } from '@/api/channel'
@@ -308,6 +308,22 @@ const commonModels = [
   'gemini-pro', 'gemini-1.5-pro', 'deepseek-chat', 'deepseek-coder',
   'nvidia/llama-3.1-nemotron-70b-instruct', 'nvidia/llama-3.3-70b-instruct',
 ]
+
+const DEFAULT_BASE_URLS: Record<string, string> = {
+  openai: 'https://api.openai.com/v1',
+  nvidia: 'https://integrate.api.nvidia.com/v1',
+  azure: 'https://{your-resource}.openai.azure.com',
+  claude: 'https://api.anthropic.com',
+  gemini: 'https://generativelanguage.googleapis.com/v1beta',
+  deepseek: 'https://api.deepseek.com/v1',
+  zhipu: 'https://open.bigmodel.cn/api/paas/v4',
+  baidu: 'https://qianfan.baidubce.com/v2',
+  yi: 'https://api.01.ai/v1',
+  groq: 'https://api.groq.com/openai/v1',
+  ollama: 'http://localhost:11434/v1',
+  localai: 'http://localhost:8080/v1',
+  custom: '',
+}
 
 const filters = reactive({
   type: '',
@@ -391,7 +407,14 @@ const showAdd = () => {
     models: [], model_mapping: '', weight: 100, priority: 0, status: 1, group_name: '', timeout: 60000,
     proxy_enabled: false, proxy_type: 'socks5', proxy_url: '',
   })
+  autoFillBaseURL()
   dlgVisible.value = true
+}
+
+const autoFillBaseURL = () => {
+  if (!isEdit.value && form.type && DEFAULT_BASE_URLS[form.type]) {
+    form.base_url = DEFAULT_BASE_URLS[form.type]
+  }
 }
 
 const edit = (c: Channel) => {
@@ -555,6 +578,12 @@ const load = async () => {
 }
 
 onMounted(load)
+
+watch(() => form.type, () => {
+  if (!isEdit.value) {
+    autoFillBaseURL()
+  }
+})
 </script>
 
 <style scoped>

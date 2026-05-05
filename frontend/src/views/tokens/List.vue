@@ -65,18 +65,28 @@
             {{ formatDate(row.created_at) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="100" fixed="right">
+        <el-table-column label="操作" width="120" fixed="right">
           <template #default="{ row }">
-            <el-popconfirm 
-              title="确定删除此密钥？删除后不可恢复。" 
-              @confirm="del(row.id)"
-              confirm-button-text="删除"
-              cancel-button-text="取消"
-            >
-              <template #reference>
-                <el-button type="danger" link size="small">删除</el-button>
-              </template>
-            </el-popconfirm>
+            <div class="action-buttons">
+              <el-popconfirm 
+                :key="'popconfirm-' + row.id"
+                title="确定删除此密钥？删除后不可恢复。" 
+                @confirm="del(row.id)"
+                confirm-button-text="删除"
+                cancel-button-text="取消"
+                :ref="'popconfirm-' + row.id"
+              >
+                <template #reference>
+                  <el-button 
+                    type="danger" 
+                    link 
+                    size="small" 
+                    :loading="deleting === row.id"
+                    @click.stop
+                  >删除</el-button>
+                </template>
+              </el-popconfirm>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -137,6 +147,7 @@ interface UserStatus {
 const list = ref<Token[]>([])
 const ld = ref(false)
 const crt = ref(false)
+const deleting = ref<number | null>(null)
 const dlg = ref(false)
 const showKeys = ref<Record<number, boolean>>({})
 const userStatus = ref<UserStatus | null>(null)
@@ -282,12 +293,15 @@ async function create() {
 }
 
 async function del(id: number) { 
+  deleting.value = id
   try {
     await request.delete(`/tokens/${id}`)
     ElMessage.success('已删除')
     load()
   } catch (e: any) {
     ElMessage.error(e.response?.data?.error?.message || '删除失败')
+  } finally {
+    deleting.value = null
   }
 }
 
@@ -346,6 +360,12 @@ onMounted(load)
 
 .disabled-text {
   color: var(--el-text-color-placeholder);
+}
+
+.action-buttons {
+  display: inline-flex;
+  position: relative;
+  z-index: 1;
 }
 
 .create-form {

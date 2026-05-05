@@ -27,6 +27,11 @@ const (
 	ConfigKeyEnableCaptcha      = "enable_captcha"
 	ConfigKeyNewUserQuota       = "new_user_quota"
 	ConfigKeyTrialVIPDays       = "trial_vip_days"
+	ConfigKeyAllowedDomains     = "allowed_domains"
+	ConfigKeyMaxAccountsPerIP   = "max_accounts_per_ip"
+	ConfigKeyMinPasswordLength = "min_password_length"
+	ConfigKeySignupRewardType   = "signup_reward_type"
+	ConfigKeySignupRewardAmount = "signup_reward_amount"
 	ConfigGroupRegister         = "register"
 )
 
@@ -278,11 +283,16 @@ func getConfigDescription(key string) string {
 }
 
 type RegisterSettings struct {
-	AllowRegister      bool  `json:"allow_register"`
-	RequireEmailVerify *bool `json:"require_email_verify,omitempty"`
-	EnableCaptcha      bool  `json:"enable_captcha"`
-	NewUserQuota       int   `json:"new_user_quota"`
-	TrialVIPDays       int   `json:"trial_vip_days"`
+	AllowRegister            bool   `json:"allow_register"`
+	RequireEmailVerify       *bool `json:"require_email_verify,omitempty"`
+	EnableCaptcha            bool  `json:"enable_captcha"`
+	NewUserQuota            int   `json:"new_user_quota"`
+	TrialVIPDays             int   `json:"trial_vip_days"`
+	AllowedDomains           string `json:"allowed_domains"`
+	MaxAccountsPerIP         int    `json:"max_accounts_per_ip"`
+	MinPasswordLength        int    `json:"min_password_length"`
+	SignupRewardType         string `json:"signup_reward_type"`
+	SignupRewardAmount       int64  `json:"signup_reward_amount"`
 }
 
 type AlipayConfig struct {
@@ -296,11 +306,16 @@ type AlipayConfig struct {
 
 func (s *SettingsService) GetRegisterSettings() (*RegisterSettings, error) {
 	settings := &RegisterSettings{
-		AllowRegister:      true,
-		RequireEmailVerify: boolPtr(true),
-		EnableCaptcha:      true,
-		NewUserQuota:       100000,
-		TrialVIPDays:       0,
+		AllowRegister:        true,
+		RequireEmailVerify:  boolPtr(true),
+		EnableCaptcha:        true,
+		NewUserQuota:         100000,
+		TrialVIPDays:         0,
+		AllowedDomains:       "",
+		MaxAccountsPerIP:     5,
+		MinPasswordLength:    8,
+		SignupRewardType:    "quota",
+		SignupRewardAmount:  100000,
 	}
 
 	configs, err := s.getConfigsByGroup(ConfigGroupRegister)
@@ -321,6 +336,16 @@ func (s *SettingsService) GetRegisterSettings() (*RegisterSettings, error) {
 			fmt.Sscanf(c.ConfigValue, "%d", &settings.NewUserQuota)
 		case ConfigKeyTrialVIPDays:
 			fmt.Sscanf(c.ConfigValue, "%d", &settings.TrialVIPDays)
+		case ConfigKeyAllowedDomains:
+			settings.AllowedDomains = c.ConfigValue
+		case ConfigKeyMaxAccountsPerIP:
+			fmt.Sscanf(c.ConfigValue, "%d", &settings.MaxAccountsPerIP)
+		case ConfigKeyMinPasswordLength:
+			fmt.Sscanf(c.ConfigValue, "%d", &settings.MinPasswordLength)
+		case ConfigKeySignupRewardType:
+			settings.SignupRewardType = c.ConfigValue
+		case ConfigKeySignupRewardAmount:
+			fmt.Sscanf(c.ConfigValue, "%d", &settings.SignupRewardAmount)
 		}
 	}
 
@@ -329,10 +354,15 @@ func (s *SettingsService) GetRegisterSettings() (*RegisterSettings, error) {
 
 func (s *SettingsService) UpdateRegisterSettings(settings *RegisterSettings) error {
 	configs := map[string]string{
-		ConfigKeyAllowRegister: boolToString(settings.AllowRegister),
-		ConfigKeyEnableCaptcha: boolToString(settings.EnableCaptcha),
-		ConfigKeyNewUserQuota:  fmt.Sprintf("%d", settings.NewUserQuota),
-		ConfigKeyTrialVIPDays:  fmt.Sprintf("%d", settings.TrialVIPDays),
+		ConfigKeyAllowRegister:       boolToString(settings.AllowRegister),
+		ConfigKeyEnableCaptcha:       boolToString(settings.EnableCaptcha),
+		ConfigKeyNewUserQuota:        fmt.Sprintf("%d", settings.NewUserQuota),
+		ConfigKeyTrialVIPDays:        fmt.Sprintf("%d", settings.TrialVIPDays),
+		ConfigKeyAllowedDomains:       settings.AllowedDomains,
+		ConfigKeyMaxAccountsPerIP:     fmt.Sprintf("%d", settings.MaxAccountsPerIP),
+		ConfigKeyMinPasswordLength:   fmt.Sprintf("%d", settings.MinPasswordLength),
+		ConfigKeySignupRewardType:    settings.SignupRewardType,
+		ConfigKeySignupRewardAmount:   fmt.Sprintf("%d", settings.SignupRewardAmount),
 	}
 
 	if settings.RequireEmailVerify != nil {

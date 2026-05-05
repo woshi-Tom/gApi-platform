@@ -71,7 +71,7 @@ services:
       rabbitmq:
         condition: service_healthy
     volumes:
-      - ./config.yaml:/app/config/config.yaml:ro
+      - ../../backend/config/config.yaml:/app/config/config.yaml:ro
     environment:
       GAPI_DB_HOST: postgres
       GAPI_DB_PORT: 5432

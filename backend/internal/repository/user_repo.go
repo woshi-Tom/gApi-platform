@@ -113,6 +113,15 @@ func (r *UserRepository) UpdateQuota(userID uint, quotaType string, amount int64
 	return r.Update(user)
 }
 
+// CountByIPLast24Hours counts users registered from an IP in the last 24 hours
+func (r *UserRepository) CountByIPLast24Hours(ip string) (int64, error) {
+	var count int64
+	err := r.db.Model(&model.User{}).
+		Where("ip_registered_from = ? AND created_at > ?", ip, time.Now().Add(-24*time.Hour)).
+		Count(&count).Error
+	return count, err
+}
+
 // TokenRepository handles token database operations
 type TokenRepository struct {
 	db *gorm.DB

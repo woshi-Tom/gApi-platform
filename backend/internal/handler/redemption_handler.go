@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strconv"
 	"time"
@@ -141,6 +142,33 @@ func (h *RedemptionHandler) Create(c *gin.Context) {
 		return
 	}
 
+	// 记录审计日志
+	if h.auditRepo != nil {
+		adminID := getAdminIDFromContext(c)
+		if adminID != nil {
+			adminUser, _ := h.userRepo.GetByID(*adminID)
+			username := ""
+			if adminUser != nil {
+				username = adminUser.Username
+			}
+			newValueJSON, _ := json.Marshal(map[string]interface{}{
+					"batch_id":  batchID,
+					"count":     len(codes),
+					"code_type": req.CodeType,
+				})
+			h.auditRepo.Create(&model.AuditLog{
+				UserID:       adminID,
+				Username:     username,
+				Action:       "redemption.create",
+				ActionGroup:  "redemption",
+				ResourceType: "redemption_code",
+				RequestIP:    c.ClientIP(),
+				Success:      true,
+				NewValue:     string(newValueJSON),
+			})
+		}
+	}
+
 	response.Created(c, gin.H{
 		"batch_id": batchID,
 		"codes":    codes,
@@ -252,7 +280,7 @@ func (h *RedemptionHandler) Redeem(c *gin.Context) {
 	var user model.User
 
 	err = h.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Set("gorm:query", "FOR UPDATE").First(&user, userID).Error; err != nil {
+		if err := tx.Set("gorm:query_option", "FOR UPDATE").First(&user, userID).Error; err != nil {
 			return err
 		}
 
@@ -334,6 +362,28 @@ func (h *RedemptionHandler) Redeem(c *gin.Context) {
 
 	if h.cache != nil {
 		h.cache.MarkRedeemed(ctx, codeID, userID)
+	}
+
+	if h.auditRepo != nil {
+		userIDPtr := userID
+		codeIDPtr := redemptionCode.ID
+		newValueJSON, _ := json.Marshal(map[string]interface{}{
+			"code":           redemptionCode.Code,
+			"quota_granted":  quotaGranted,
+			"vip_granted":    vipGranted,
+			"vip_days":       vipDays,
+		})
+		h.auditRepo.Create(&model.AuditLog{
+			UserID:       &userIDPtr,
+			Username:     user.Username,
+			Action:       "redemption.use",
+			ActionGroup:  "redemption",
+			ResourceType: "redemption_code",
+			ResourceID:   &codeIDPtr,
+			RequestIP:    c.ClientIP(),
+			Success:      true,
+			NewValue:     string(newValueJSON),
+		})
 	}
 
 	response.Success(c, gin.H{
