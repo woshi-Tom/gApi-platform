@@ -92,7 +92,8 @@
       </div>
     </el-card>
 
-    <el-dialog v-model="detailVisible" title="日志详情" width="700px" v-loading="detailLoading">
+    <el-dialog v-model="detailVisible" title="日志详情" width="800px" class="log-detail-dialog" v-loading="detailLoading">
+      <div class="detail-scroll">
       <el-descriptions :column="2" border v-if="currentLog">
         <el-descriptions-item label="ID">{{ currentLog.id }}</el-descriptions-item>
         <el-descriptions-item label="类型">
@@ -121,24 +122,28 @@
         <el-descriptions-item label="响应时间">{{ currentLog.response_time_ms }}ms</el-descriptions-item>
         <el-descriptions-item label="时间">{{ formatDate(currentLog.created_at) }}</el-descriptions-item>
         <el-descriptions-item label="User-Agent" :span="2">
-          <span class="text-truncate">{{ currentLog.user_agent }}</span>
+          <div class="text-scroll">{{ currentLog.user_agent }}</div>
         </el-descriptions-item>
         <el-descriptions-item label="错误信息" :span="2" v-if="currentLog.error_message">
           <span class="text-danger">{{ currentLog.error_message }}</span>
         </el-descriptions-item>
         <el-descriptions-item label="请求内容" :span="2" v-if="currentLog.request_body">
-          <pre class="json-view">{{ formatJson(currentLog.request_body) }}</pre>
+          <div class="json-wrapper">{{ formatJson(currentLog.request_body) }}</div>
         </el-descriptions-item>
         <el-descriptions-item label="响应内容" :span="2" v-if="currentLog.response_body">
-          <pre class="json-view">{{ formatJson(currentLog.response_body) }}</pre>
+          <div class="json-wrapper">{{ formatJson(currentLog.response_body) }}</div>
         </el-descriptions-item>
         <el-descriptions-item label="变更前" :span="2" v-if="currentLog.old_value">
-          <pre class="json-view">{{ formatJson(currentLog.old_value) }}</pre>
+          <div class="json-wrapper">{{ formatJson(currentLog.old_value) }}</div>
         </el-descriptions-item>
         <el-descriptions-item label="变更后" :span="2" v-if="currentLog.new_value">
-          <pre class="json-view">{{ formatJson(currentLog.new_value) }}</pre>
+          <div class="json-wrapper">{{ formatJson(currentLog.new_value) }}</div>
         </el-descriptions-item>
       </el-descriptions>
+      </div>
+      <template #footer>
+        <el-button @click="detailVisible = false">关闭</el-button>
+      </template>
     </el-dialog>
   </div>
 </template>
@@ -183,9 +188,27 @@ function formatDate(dateStr: string): string {
 }
 
 function formatJson(str: string): string {
+  if (!str) return ''
   try {
-    const obj = JSON.parse(str)
-    return JSON.stringify(obj, null, 2)
+    // 递归解析嵌套转义的JSON直到解析成功或无法继续
+    let current = str
+    let maxDepth = 3
+    for (let i = 0; i < maxDepth; i++) {
+      try {
+        const obj = JSON.parse(current)
+        return JSON.stringify(obj, null, 2)
+      } catch {
+        // 尝试解开一层转义
+        if (current.includes('\\"')) {
+          current = current.replace(/\\"/g, '"')
+        } else if (current.includes('\\\\')) {
+          current = current.replace(/\\\\/g, '\\')
+        } else {
+          break
+        }
+      }
+    }
+    return current
   } catch {
     return str
   }
@@ -372,6 +395,16 @@ onMounted(load)
   white-space: nowrap;
 }
 
+.text-scroll {
+  display: inline-block;
+  white-space: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  font-size: 12px;
+  max-width: 100%;
+  scrollbar-width: thin;
+}
+
 .json-view {
   background: var(--el-fill-color-light);
   padding: 12px;
@@ -388,5 +421,51 @@ onMounted(load)
   border-radius: 4px;
   font-size: 12px;
   word-break: break-all;
+}
+
+/* 对话框整体样式 - 固定宽度，禁止横向溢出 */
+.log-detail-dialog :deep(.el-dialog) {
+  width: 800px;
+  max-width: 90vw;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 对话框主体 - 唯一滚动区域 */
+.log-detail-dialog :deep(.el-dialog__body) {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0;
+}
+
+.detail-scroll {
+  padding: 20px;
+  max-height: 70vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+/* 单元格固定宽度 */
+.log-detail-dialog :deep(.el-descriptions__cell) {
+  max-width: 150px;
+  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* JSON内容显示 - 跟随父容器滚动 */
+.json-wrapper {
+  background: var(--el-fill-color-light);
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
 }
 </style>
