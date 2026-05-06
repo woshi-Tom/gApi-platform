@@ -13,6 +13,7 @@ const adminRouter = createRouter({
     { path: '/dashboard', name: 'AdminDashboard', component: () => import('@/views/admin/Dashboard.vue') },
     { path: '/users', name: 'AdminUsers', component: () => import('@/views/admin/users/List.vue') },
     { path: '/products', name: 'AdminProducts', component: () => import('@/views/admin/products/List.vue') },
+    { path: '/models', name: 'AdminModels', component: () => import('@/views/admin/models/Index.vue') },
     { path: '/channels', name: 'AdminChannels', component: () => import('@/views/admin/channels/List.vue') },
     { path: '/orders', name: 'AdminOrders', component: () => import('@/views/admin/orders/List.vue') },
     { path: '/redemption', name: 'AdminRedemption', component: () => import('@/views/admin/redemption/List.vue') },

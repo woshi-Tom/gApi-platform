@@ -83,6 +83,10 @@ func (s *ChannelService) GetActiveChannels() ([]model.Channel, error) {
 	return s.repo.GetActiveChannels()
 }
 
+func (s *ChannelService) GetActiveChannelsByIDs(ids []uint) ([]model.Channel, error) {
+	return s.repo.GetActiveChannelsByIDs(ids)
+}
+
 func (s *ChannelService) GetByModel(modelName string) ([]model.Channel, error) {
 	return s.repo.GetByModel(modelName)
 }

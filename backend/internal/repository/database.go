@@ -91,6 +91,10 @@ func (d *Database) AutoMigrate() error {
 		&model.SignupConfig{},
 		&model.EmailVerification{},
 		&model.PasswordReset{},
+		// &model.ModelGroup{},
+		// &model.ChannelGroupRelation{},
+		// &model.UserGroupRelation{},
+		// &model.ModelPricing{},
 	)
 }
 

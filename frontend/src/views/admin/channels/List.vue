@@ -216,7 +216,7 @@
         </el-form-item>
         <el-form-item label="模型" v-if="testForm.test_type==='chat'">
           <el-select v-model="testForm.model" style="width:100%" placeholder="请先获取模型列表">
-            <el-option v-for="m in (Array.isArray(testChannel?.models) ? testChannel.models : [])" :key="m" :label="m" :value="m" />
+            <el-option v-for="m in testChannelModels" :key="m" :label="m" :value="m" />
           </el-select>
         </el-form-item>
         <el-form-item label="测试消息" v-if="testForm.test_type==='chat'">
@@ -247,7 +247,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { Plus, Refresh, ArrowDown } from '@element-plus/icons-vue'
 import { channelApi, CHANNEL_TYPES, CHANNEL_STATUS } from '@/api/channel'
@@ -362,6 +362,41 @@ const testForm = reactive({
   messages: 'Hello, world!',
 })
 
+const testChannelModels = computed(() => {
+  // 首先从 testResult 获取（测试刚获取的）
+  if (testResult.value?.models && testResult.value.models.length > 0) {
+    console.log('Using testResult models:', testResult.value.models.length)
+    return testResult.value.models
+  }
+  // 其次从 testChannel 获取（可能是数组或 JSON 字符串）
+  const m = testChannel.value?.models
+  console.log('testChannel.models:', m, typeof m)
+  if (!m) return []
+  if (Array.isArray(m)) {
+    console.log('Using testChannel as array, length:', m.length)
+    return m
+  }
+  if (typeof m === 'string') {
+    try {
+      const parsed = JSON.parse(m)
+      if (Array.isArray(parsed)) {
+        console.log('Using parsed string, length:', parsed.length)
+        return parsed
+      }
+    } catch (e) {
+      console.log('Parse failed')
+    }
+  }
+  return []
+})
+
+// 当测试结果更新时，同步到 testChannel.models 以便持久化
+watch(() => testResult.value?.models, (newModels) => {
+  if (newModels && newModels.length > 0 && testChannel.value) {
+    testChannel.value.models = newModels
+  }
+})
+
 const rules: FormRules = {
   name: [{ required: true, message: '请输入渠道名称', trigger: 'blur' }],
   type: [{ required: true, message: '请选择渠道类型', trigger: 'change' }],
@@ -454,12 +489,62 @@ const save = async () => {
   })
 }
 
-const test = (c: Channel) => {
-  testChannel.value = { ...c }
-  testResult.value = null
-  testForm.test_type = 'models'
-  testForm.model = ''
+const test = async (c: Channel) => {
+  // 如果是打开不同渠道，才重置所有数据
+  if (!testChannel.value || testChannel.value.id !== c.id) {
+    testChannel.value = { ...c }
+    testResult.value = null
+    testForm.test_type = 'models'
+    testForm.model = ''
+  }
   testVisible.value = true
+
+  // 如果 testChannel 没有模型，从 c 复制（但保持不覆盖已获取的模型）
+  if (!testChannel.value.models && c.models) {
+    testChannel.value.models = c.models
+  }
+
+  // 解析模型列表（可能是 JSON 字符串）
+  const parseModels = (m: any): string[] => {
+    if (!m) return []
+    if (Array.isArray(m)) return m
+    if (typeof m === 'string') {
+      try {
+        const parsed = JSON.parse(m)
+        return Array.isArray(parsed) ? parsed : []
+      } catch {
+        return []
+      }
+    }
+    return []
+  }
+
+  // 自动获取模型列表（如果表格数据中没有）
+  let existingModels = parseModels(testChannel.value?.models)
+  
+  if (existingModels.length === 0) {
+    // 从表格数据获取并解析
+    existingModels = parseModels(c.models)
+    if (existingModels.length > 0) {
+      // 存回 testChannel 以便后续使用
+      testChannel.value!.models = existingModels
+    }
+  }
+  
+  if (existingModels.length > 0) {
+    testForm.model = existingModels[0]
+  } else {
+    try {
+      const res = await api.test(c.id, { test_type: 'models' })
+      const models = res.data.data?.models || []
+      if (models.length > 0) {
+        testChannel.value!.models = models
+        testForm.model = models[0]
+      }
+    } catch {
+      // 静默失败，用户可手动点击运行测试
+    }
+  }
 }
 
 const runTest = async () => {

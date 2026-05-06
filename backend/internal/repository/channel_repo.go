@@ -84,6 +84,14 @@ func (r *ChannelRepository) GetActiveChannels() ([]model.Channel, error) {
 	return channels, err
 }
 
+func (r *ChannelRepository) GetActiveChannelsByIDs(ids []uint) ([]model.Channel, error) {
+	var channels []model.Channel
+	err := r.db.Where("id IN ? AND status = ? AND is_healthy = ?", ids, 1, true).
+		Order("priority DESC, weight DESC").
+		Find(&channels).Error
+	return channels, err
+}
+
 func (r *ChannelRepository) GetByModel(modelName string) ([]model.Channel, error) {
 	var channels []model.Channel
 	err := r.db.Where("status = ? AND is_healthy = ?", 1, true).

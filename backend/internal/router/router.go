@@ -55,7 +55,14 @@ func SetupUserRoutes(
 	orderHandler := handler.NewOrderHandler(orderRepo, userRepo, paymentRepo, vipRepo, rechargeRepo, idempRepo)
 	paymentHandler := handler.NewPaymentHandler(orderRepo, paymentRepo, userRepo, vipRepo, auditRepo, alipayService, redisClient)
 	productHandler := handler.NewProductHandler(vipRepo, rechargeRepo)
-	apiHandler := handler.NewAPIHandler(tokenService, channelService, userRepo)
+
+	modelGroupRepo := repository.NewModelGroupRepository(db.GetDB())
+	channelGroupRelRepo := repository.NewChannelGroupRelationRepository(db.GetDB())
+	userGroupRelRepo := repository.NewUserGroupRelationRepository(db.GetDB())
+	modelPricingRepo := repository.NewModelPricingRepository(db.GetDB())
+	modelGroupService := service.NewModelGroupService(modelGroupRepo, channelGroupRelRepo, userGroupRelRepo, modelPricingRepo)
+
+	apiHandler := handler.NewAPIHandler(tokenService, channelService, userRepo, modelGroupService)
 	emailHandler := handler.NewEmailVerificationHandler(emailVerificationService)
 	captchaHandler := handler.NewCaptchaHandler(captchaService)
 	apiAccessLogHandler := handler.NewAPIAccessLogHandler(apiAccessLogRepo)
@@ -229,6 +236,15 @@ func SetupAdminRoutes(
 	productHandler := handler.NewProductHandler(vipRepo, rechargeRepo)
 	settingsHandler := handler.NewSettingsHandler(settingsService, alipayService)
 
+	mgRepo := repository.NewModelGroupRepository(db.GetDB())
+	cgrRepo := repository.NewChannelGroupRelationRepository(db.GetDB())
+	ugrRepo := repository.NewUserGroupRelationRepository(db.GetDB())
+	mpRepo := repository.NewModelPricingRepository(db.GetDB())
+	mgService := service.NewModelGroupService(mgRepo, cgrRepo, ugrRepo, mpRepo)
+	modelGroupHandler := handler.NewModelGroupHandler(mgService)
+	modelPricingHandler := handler.NewModelPricingHandler(mgService)
+	userGroupHandler := handler.NewUserGroupHandler(mgService)
+
 	r.Use(corsMiddleware([]string{cfg.Server.Frontend, cfg.Server.AdminFrontend}))
 
 	v1 := r.Group("/api/v1/admin")
@@ -287,6 +303,25 @@ func SetupAdminRoutes(
 			adminAuth.POST("/redemption/codes", redemptionHandler.Create)
 			adminAuth.POST("/redemption/codes/:id/disable", redemptionHandler.Disable)
 			adminAuth.GET("/redemption/codes/:id/usage", redemptionHandler.GetUsage)
+
+			adminAuth.GET("/model-groups", modelGroupHandler.List)
+			adminAuth.GET("/model-groups/all", modelGroupHandler.ListAll)
+			adminAuth.POST("/model-groups", modelGroupHandler.Create)
+			adminAuth.PUT("/model-groups/:id", modelGroupHandler.Update)
+			adminAuth.DELETE("/model-groups/:id", modelGroupHandler.Delete)
+			adminAuth.GET("/model-groups/:id/channels", modelGroupHandler.GetChannels)
+			adminAuth.POST("/model-groups/:id/channels", modelGroupHandler.AddChannel)
+			adminAuth.DELETE("/model-groups/:id/channels/:cid", modelGroupHandler.RemoveChannel)
+
+			adminAuth.GET("/model-pricing", modelPricingHandler.List)
+			adminAuth.GET("/model-pricing/all", modelPricingHandler.ListAll)
+			adminAuth.GET("/model-pricing/model/:model", modelPricingHandler.GetByModel)
+			adminAuth.POST("/model-pricing", modelPricingHandler.Create)
+			adminAuth.PUT("/model-pricing/:id", modelPricingHandler.Update)
+			adminAuth.DELETE("/model-pricing/:id", modelPricingHandler.Delete)
+
+			adminAuth.GET("/users/:id/groups", userGroupHandler.GetUserGroups)
+			adminAuth.PUT("/users/:id/groups", userGroupHandler.SetUserGroups)
 		}
 	}
 }

@@ -21,16 +21,18 @@ import (
 )
 
 type APIHandler struct {
-	tokenService   *service.TokenService
-	channelService *service.ChannelService
-	userRepo       *repository.UserRepository
+	tokenService    *service.TokenService
+	channelService  *service.ChannelService
+	userRepo        *repository.UserRepository
+	modelGroupSvc   *service.ModelGroupService
 }
 
-func NewAPIHandler(tokenService *service.TokenService, channelService *service.ChannelService, userRepo *repository.UserRepository) *APIHandler {
+func NewAPIHandler(tokenService *service.TokenService, channelService *service.ChannelService, userRepo *repository.UserRepository, modelGroupSvc *service.ModelGroupService) *APIHandler {
 	return &APIHandler{
-		tokenService:   tokenService,
-		channelService: channelService,
-		userRepo:       userRepo,
+		tokenService:    tokenService,
+		channelService:  channelService,
+		userRepo:        userRepo,
+		modelGroupSvc:   modelGroupSvc,
 	}
 }
 
@@ -239,32 +241,28 @@ func (h *APIHandler) handleStream(ctx context.Context, c *gin.Context, chatAdapt
 }
 
 func (h *APIHandler) ListModels(c *gin.Context) {
-	channels, err := h.channelService.GetActiveChannels()
-	if err != nil || len(channels) == 0 {
-		c.JSON(http.StatusOK, adapter.ModelsResponse{
-			Object: "list",
-			Data: []struct {
-				ID         string `json:"id"`
-				Object     string `json:"object"`
-				Created    int    `json:"created"`
-				OwnedBy    string `json:"owned_by"`
-				Permission []struct {
-					ID                 string      `json:"id"`
-					Object             string      `json:"object"`
-					Created            int         `json:"created"`
-					AllowCreateEngine  bool        `json:"allow_create_engine"`
-					AllowSampling      bool        `json:"allow_sampling"`
-					AllowLogprobs      bool        `json:"allow_logprobs"`
-					AllowSearchIndices bool        `json:"allow_search_indices"`
-					AllowView          bool        `json:"allow_view"`
-					AllowFineTuning    bool        `json:"allow_fine_tuning"`
-					Organization       string      `json:"organization"`
-					Group              interface{} `json:"group"`
-					IsBlocking         bool        `json:"is_blocking"`
-				} `json:"permission,omitempty"`
-			}{},
-		})
-		return
+	userID, _ := c.Get("user_id")
+	var channels []model.Channel
+	var err error
+
+	if h.modelGroupSvc != nil && userID != nil {
+		uid := userID.(uint)
+		channelIDs, err := h.modelGroupSvc.GetAvailableChannelIDsForUser(uid)
+		if err != nil || len(channelIDs) == 0 {
+			c.JSON(http.StatusOK, gin.H{"object": "list", "data": []interface{}{}})
+			return
+		}
+		channels, err = h.channelService.GetActiveChannelsByIDs(channelIDs)
+		if err != nil || len(channels) == 0 {
+			c.JSON(http.StatusOK, gin.H{"object": "list", "data": []interface{}{}})
+			return
+		}
+	} else {
+		channels, err = h.channelService.GetActiveChannels()
+		if err != nil || len(channels) == 0 {
+			c.JSON(http.StatusOK, gin.H{"object": "list", "data": []interface{}{}})
+			return
+		}
 	}
 
 	modelMap := make(map[string]struct {

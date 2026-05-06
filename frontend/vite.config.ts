@@ -30,7 +30,10 @@ export default defineConfig({
     outDir: 'dist',
     chunkSizeWarningLimit: 600,
     rollupOptions: {
-      input: resolve(__dirname, 'index.html')
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        admin: resolve(__dirname, 'admin.html')
+      }
     }
   },
   define: {
