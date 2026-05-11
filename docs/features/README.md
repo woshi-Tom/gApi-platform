@@ -58,6 +58,6 @@
 
 | 功能 | 文档 | 后端 | 前端 | 说明 |
 |------|------|------|------|------|
-| 审计日志 | [audit-log-optimization-design.md](audit-log-optimization-design.md) | ⚠️ | ⚠️ | 轻量列表已做，GET过滤已加，数据清理/分表未做 |
+| 审计日志 | [audit-log-optimization-design.md](audit-log-optimization-design.md) | ✅ | ✅ | 基础功能完成（列表、详情、GET过滤），数据清理/分表策略待后续版本 |
 | CI/CD 构建 | — | ✅ | — | GitHub Actions 自动构建 + Release |
 | 跨平台发布 | — | ✅ | — | Linux tgz + Windows zip |

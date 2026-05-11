@@ -1,7 +1,9 @@
 # gAPI Platform - Development Notes & Implementation Checklist
 
-> Last Updated: 2026-03-28
+> Last Updated: 2026-05-12
 > Purpose: Capture all detail issues and pending items for development session
+>
+> ⚠️ 距上次更新已超过 1 个月。v1.2.0 涉及注册配置、审计日志、设置页等变更，建议通读全文确认环境变量、接口清单等内容是否仍与当前代码一致。
 
 ---
 
