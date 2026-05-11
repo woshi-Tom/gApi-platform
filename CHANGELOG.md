@@ -4,6 +4,17 @@
 
 ---
 
+## [v1.2.0] - 2026-05-12
+
+### CI/CD
+- **GitHub Actions 升级**: 修复因Node.js 20弃用导致的release打包失败
+- **Release 包名优化**: 添加平台后缀（`*-linux-amd64.tar.gz` / `*-windows-amd64.zip`）
+- **Release Notes 优化**: 改为内联说明，展示文件适用平台和快速部署指引
+- **修复非tag触发时的VERSION提取**: 支持branch push时安全获取版本号
+- **Git 协作规范**: 新增Release发布流程与Tag管理规范
+
+---
+
 ## [v1.1.1] - 2026-05-05
 
 ### Added
