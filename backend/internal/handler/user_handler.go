@@ -137,7 +137,6 @@ func (h *UserHandler) Login(c *gin.Context) {
 			IP:        c.ClientIP(),
 			UserAgent: c.Request.UserAgent(),
 			Success:   true,
-			Token:     result.Token,
 			CreatedAt: time.Now(),
 		})
 	}

@@ -10,6 +10,7 @@ import (
 	"gapi-platform/internal/model"
 	"gapi-platform/internal/pkg/crypto"
 	"gapi-platform/internal/pkg/response"
+	"gapi-platform/internal/pkg/validator"
 	"gapi-platform/internal/repository"
 	"gapi-platform/internal/service"
 	"github.com/gin-gonic/gin"
@@ -871,6 +872,10 @@ func (h *AdminHandler) StatsUserList(c *gin.Context) {
 	var total int64
 	countQuery := "SELECT COUNT(*) FROM (" + baseQuery + ") as t"
 	db.Raw(countQuery, args...).Scan(&total)
+
+	if !validator.ValidateSortColumn("", sortBy) {
+		sortBy = "id"
+	}
 
 	if order == "asc" {
 		baseQuery += " ORDER BY " + sortBy + " ASC"

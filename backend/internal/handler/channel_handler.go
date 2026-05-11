@@ -14,6 +14,7 @@ import (
 	"gapi-platform/internal/pkg/crypto"
 	"gapi-platform/internal/pkg/logger"
 	"gapi-platform/internal/pkg/response"
+	"gapi-platform/internal/pkg/validator"
 	"gapi-platform/internal/repository"
 	"gapi-platform/internal/service"
 	"github.com/gin-gonic/gin"
@@ -238,6 +239,11 @@ func (h *ChannelHandler) Test(c *gin.Context) {
 	var req model.ChannelTestRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, "INVALID_PARAMETER", err.Error())
+		return
+	}
+
+	if err := validator.ValidateURLForSSRF(channel.BaseURL); err != nil {
+		response.Fail(c, "SSRF_DETECTED", err.Error())
 		return
 	}
 

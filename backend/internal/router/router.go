@@ -75,6 +75,7 @@ func SetupUserRoutes(
 	})
 
 	r.Use(middleware.SecurityHeaders())
+	r.Use(middleware.MaxBodyBytes(10 << 20))
 	r.Use(corsMiddleware([]string{cfg.Server.Frontend, cfg.Server.AdminFrontend}))
 
 	// 审计日志中间件
@@ -89,6 +90,7 @@ func SetupUserRoutes(
 		}
 
 		init := v1.Group("/init")
+		init.Use(middleware.InitProtection(db.GetDB()))
 		{
 			init.GET("/status", initHandler.GetStatus)
 			init.POST("/test-db", initHandler.TestDatabase)
@@ -185,6 +187,7 @@ func SetupUserRoutes(
 		v1.POST("/embeddings", middleware.TokenAuth(tokenService), middleware.TokenRateLimit(), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.Embeddings)
 
 		internal := v1.Group("/internal")
+		internal.Use(middleware.AdminAuth(cfg.Server.AdminSecret))
 		{
 			internal.GET("/health", func(c *gin.Context) {
 				c.JSON(200, gin.H{"status": "ok"})

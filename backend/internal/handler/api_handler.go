@@ -109,7 +109,8 @@ func (h *APIHandler) chatWithFailover(ctx context.Context, chatReq *adapter.Chat
 
 		apiKey, err := crypto.Decrypt(selectedChannel.APIKeyEncrypted)
 		if err != nil {
-			apiKey = selectedChannel.APIKeyEncrypted
+			logger.Error("failed to decrypt API key for channel %d: %v", selectedChannel.ID, err)
+			continue
 		}
 
 		channel := &adapter.Channel{
@@ -160,7 +161,14 @@ func (h *APIHandler) handleStreamWithFailover(ctx context.Context, c *gin.Contex
 
 	apiKey, err := crypto.Decrypt(selectedChannel.APIKeyEncrypted)
 	if err != nil {
-		apiKey = selectedChannel.APIKeyEncrypted
+		logger.Error("failed to decrypt API key for channel %d: %v", selectedChannel.ID, err)
+		c.JSON(http.StatusInternalServerError, model.APIErrorResponse{
+			Error: &model.APIError{
+				Code:    "DECRYPT_FAILED",
+				Message: "failed to decrypt API key",
+			},
+		})
+		return
 	}
 
 	channel := &adapter.Channel{
@@ -403,7 +411,8 @@ func (h *APIHandler) embeddingsWithFailover(ctx context.Context, embedReq *adapt
 
 		apiKey, err := crypto.Decrypt(selectedChannel.APIKeyEncrypted)
 		if err != nil {
-			apiKey = selectedChannel.APIKeyEncrypted
+			logger.Error("failed to decrypt API key for channel %d: %v", selectedChannel.ID, err)
+			continue
 		}
 
 		channel := &adapter.Channel{

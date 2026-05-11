@@ -93,10 +93,6 @@ type LoginLog struct {
 	Success    bool   `json:"success" gorm:"default:false"`
 	FailReason string `json:"fail_reason" gorm:"size:100"`
 
-	// Token info
-	Token          string     `json:"token" gorm:"size:500"`
-	TokenExpiredAt *time.Time `json:"token_expired_at"`
-
 	// Timestamp
 	CreatedAt time.Time `json:"created_at" gorm:"index"`
 }

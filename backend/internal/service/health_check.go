@@ -103,7 +103,9 @@ func (s *HealthCheckService) checkChannel(channelID uint) {
 
 	apiKey, err := crypto.Decrypt(channel.APIKeyEncrypted)
 	if err != nil {
-		apiKey = channel.APIKeyEncrypted
+		logger.Errorf("Failed to decrypt API key for channel %d: %v", channelID, err)
+		s.markUnhealthy(channel, "failed to decrypt API key")
+		return
 	}
 
 	chatAdapter, err := adapter.GetAdapter(channel.Type)
@@ -246,7 +248,7 @@ func (s *HealthCheckService) CheckChannelManually(channelID uint) *TestResult {
 
 	apiKey, err := crypto.Decrypt(channel.APIKeyEncrypted)
 	if err != nil {
-		apiKey = channel.APIKeyEncrypted
+		return &TestResult{Success: false, Error: "failed to decrypt API key: " + err.Error()}
 	}
 
 	chatAdapter, err := adapter.GetAdapter(channel.Type)

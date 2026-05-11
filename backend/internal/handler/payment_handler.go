@@ -433,10 +433,18 @@ func (h *PaymentHandler) RefundOrder(c *gin.Context) {
 
 		if order.OrderType == "vip" {
 			originalQuota := user.VIPQuota
-			user.Level = "free"
-			user.VIPQuota = 0
-			user.VIPExpiredAt = nil
-			user.VIPPackageID = 0
+			originalLevel := user.Level
+
+			if user.Level == "free" || user.VIPQuota == 0 {
+				user.Level = "free"
+				user.VIPQuota = 0
+				user.VIPExpiredAt = nil
+				user.VIPPackageID = 0
+			} else {
+				user.VIPQuota = 0
+				user.VIPPackageID = 0
+			}
+
 			if err := tx.Save(&user).Error; err != nil {
 				return fmt.Errorf("failed to revoke VIP: %w", err)
 			}
@@ -444,7 +452,8 @@ func (h *PaymentHandler) RefundOrder(c *gin.Context) {
 				Str("order_no", orderNo).
 				Uint("user_id", userID).
 				Int64("revoked_quota", originalQuota).
-				Msg("VIP revoked due to refund")
+				Str("original_level", originalLevel).
+				Msg("VIP refunded - quota cleared, original status preserved if existed")
 		} else if order.OrderType == "recharge" {
 			if user.VIPQuota > 0 {
 				user.VIPQuota = 0

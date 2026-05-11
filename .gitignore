@@ -70,7 +70,6 @@ test-results/
 .sisyphus/
 
 # Development documentation (internal only)
-docs/
 
 # Local dev screenshots and configs
 channel-form*.png

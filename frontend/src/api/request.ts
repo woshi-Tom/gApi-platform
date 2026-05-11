@@ -2,8 +2,6 @@ import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
 
-const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET || 'CHANGE_ME_admin_secret_not_set'
-
 const createRequest = (baseURL: string) => {
   const instance = axios.create({
     baseURL,
@@ -14,9 +12,6 @@ const createRequest = (baseURL: string) => {
     const token = localStorage.getItem('token') || localStorage.getItem('admin_token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
-    }
-    if (baseURL.includes('/admin/')) {
-      config.headers['X-Admin-Secret'] = ADMIN_SECRET
     }
     return config
   })
