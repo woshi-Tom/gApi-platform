@@ -1,8 +1,8 @@
 # gAPI Platform - 文档索引
 
-> 版本: v4.0
+> 版本: v5.0
 > 日期: 2026-05-12
-> 更新说明: 重构目录结构，去掉编号前缀，合并 features/ 统一管理
+> 更新说明: 按生命周期分层（规范/设计/评审/计划/待办/归档）
 
 ---
 
@@ -10,24 +10,38 @@
 
 ```
 docs/
-├── development/        # ⚠️ 开发必读 / 审查报告
+├── development/        # ⚠️ 开发规范（几乎不改的静态文档）
 ├── architecture/       # 架构设计
 ├── api/                # API 接口
-├── features/           # 功能文档（含实现状态）
-├── deployment/         # 部署运维
-└── issues/             # 问题追踪
+├── features/           # 功能设计文档（含实现状态 ✅⚠️❌）
+├── reviews/            # 🔄 评审专区（审查→整改→闭环，按版本组织）
+├── plans/              # 📋 计划追踪（当前在做什么）
+├── backlog/            # 📥 待办池（已知但未排期）
+└── issues/             # ✅ 已归档问题
 ```
+
+### 生命周期说明
+
+| 目录 | 变更频率 | 用途 | 智能体怎么用 |
+|------|---------|------|-------------|
+| `development/` | 极少 | 静态规范（环境变量、git 流程） | 看一次就记住 |
+| `architecture/` `/api/` | 按需 | 设计参考 | 需要时查阅 |
+| `features/` | 随功能迭代 | 功能设计 + 实现状态 | 查功能是否已完成 |
+| `reviews/` | 每次发布一次 | 审查报告 + 整改跟踪 | 查看当前版本审查结论 |
+| `plans/` | 持续更新 | **当前活跃计划** | ⭐ 进门第一站：读 `current-sprint.md` |
+| `backlog/` | 持续更新 | 已知问题 + 待决策 | 看还有哪些事没排期 |
+| `issues/` | 偶尔追加 | 已关闭问题归档 | 排查历史 |
 
 ---
 
 ## 开发指南
 
+> 静态规范，不常变更。
+
 | 文档 | 说明 |
 |------|------|
 | [development-notes.md](development/development-notes.md) | ⚠️ **开发前必读** - 环境变量、接口清单、检查项 |
 | [git-workflow.md](development/git-workflow.md) | Git 协作规范 + Release 发布流程 |
-| [fix-plan-2026.md](development/fix-plan-2026.md) | 2026 修复计划与技术债追踪 |
-| [release-review-v1.2.0.md](development/release-review-v1.2.0.md) | v1.2.0 发布审查报告与整改措施 |
 
 ---
 
@@ -65,6 +79,39 @@ docs/
 
 ---
 
+## 评审专区
+
+> 当前活跃评审：**v1.2.0** 🟡 整改中
+
+| 版本 | 结论 | 状态 | 报告 | 整改 |
+|------|------|------|------|------|
+| v1.2.0 | ❌ 不通过（4 P0） | 🟡 整改中 | [review-report.md](reviews/v1.2.0/review-report.md) | [remediation.md](reviews/v1.2.0/remediation.md) |
+
+---
+
+## 计划追踪
+
+> 当前活跃 sprint 和路线图。
+
+| 文档 | 说明 | 状态 |
+|------|------|------|
+| [current-sprint.md](plans/current-sprint.md) | 当前迭代工作项（4 个 P0） | 🟡 进行中 |
+| [fix-plan-2026.md](plans/fix-plan-2026.md) | 2026 修复计划与技术债追踪 | ⬜ 待审核 |
+| [roadmap.md](plans/roadmap.md) | 产品路线图与里程碑 | ⬜ 待完善 |
+
+---
+
+## 待办池
+
+> 已知但未排期的问题和待决策事项。
+
+| 文档 | 说明 |
+|------|------|
+| [known-issues.md](backlog/known-issues.md) | 已确认未修复的问题（10+ 项） |
+| [pending-decisions.md](backlog/pending-decisions.md) | 待决策事项（含已决策记录） |
+
+---
+
 ## 部署运维
 
 | 文档 | 说明 |
@@ -76,6 +123,8 @@ docs/
 ---
 
 ## 问题追踪
+
+> 仅包含已关闭的问题。进行中的问题见 `backlog/known-issues.md`。
 
 | 编号 | 问题 | 状态 |
 |------|------|------|
