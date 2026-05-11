@@ -1,7 +1,7 @@
 # gAPI Platform
 
-**版本**: 1.1.0  
-**日期**: 2026-04-13  
+**版本**: 1.2.0  
+**日期**: 2026-05-11  
 **状态**: 开发中
 
 > ⚠️ **免责声明**: 本项目仅供学习交流使用，禁止用于任何非法用途。使用者需自行承担一切风险和责任。
@@ -19,12 +19,6 @@ gAPI Platform 是一个类似 OneAPI/NewAPI 的 API 代理平台，专为学习�
 - 💳 用户体系 - VIP 会员、积分充值、支付宝支付
 - 📊 管理后台 - 渠道监控、使用统计、审计日志
 - 🔒 安全设计 - API Key 加密存储、完整权限控制
-
----
-
-## 更新日志
-
-> 详见 [CHANGELOG.md](./CHANGELOG.md)
 
 ---
 
@@ -60,6 +54,7 @@ docker-compose up -d
 - 用户前端: http://localhost:5173
 - 管理后台: http://localhost:5174
 - API: http://localhost:8080
+- Swagger: http://localhost:8080/swagger/index.html
 
 ---
 
@@ -69,32 +64,6 @@ docker-compose up -d
 2. **API Key 安全**: 所有渠道的 API Key 都会加密存储
 3. **网络环境**: 某些 API 可能需要代理才能访问，项目支持 SOCKS5/HTTP 代理配置
 4. **学习目的**: 本项目旨在学习 AI API 集成、负载均衡、多租户架构等技术
-
----
-
-## 技术栈
-
-| 组件 | 技术 |
-|------|------|
-| 后端 | Go + Gin |
-| 前端 | Vue 3 + Element Plus + TypeScript |
-| 数据库 | PostgreSQL |
-| 缓存 | Redis |
-| 消息队列 | RabbitMQ |
-
----
-
-## 快速启动
-
-```bash
-cd deploy/docker
-docker-compose up -d
-```
-
-访问地址：
-- 用户前端: http://localhost:5173
-- 管理后台: http://localhost:5174
-- API: http://localhost:8080
 
 ---
 
@@ -158,6 +127,12 @@ docker-compose up -d
 cd deploy/docker
 docker-compose -f docker-compose.prod.yml up -d
 ```
+
+---
+
+## 更新日志
+
+> 详见 [CHANGELOG.md](./CHANGELOG.md)
 
 ---
 
