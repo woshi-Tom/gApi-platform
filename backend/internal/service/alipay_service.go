@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"gapi-platform/internal/model"
 	"gapi-platform/internal/repository"
 
 	"github.com/smartwalle/alipay/v3"
