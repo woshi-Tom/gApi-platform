@@ -1,0 +1,66 @@
+# gAPI Platform Configuration
+# This file is used by the backend service.
+# Environment variables override these values: prefix with "GAPI_" (e.g. GAPI_DB_HOST, GAPI_SERVER_PORT)
+
+server:
+  port: "8080"
+  mode: "debug"                        # debug | production
+  frontend: "http://localhost:5173"    # Frontend URL for CORS
+  admin_frontend: "http://localhost:5174"  # Admin frontend URL for CORS
+
+database:
+  host: "postgres"
+  port: 5432
+  user: "gapi"
+  password: "CHANGE_ME"
+  database: "gapi"
+  max_open: 100
+  max_idle: 10
+
+redis:
+  host: "redis"
+  port: 6379
+  password: "CHANGE_ME"
+  db: 0
+
+rabbitmq:
+  host: "rabbitmq"
+  port: 5672
+  user: "gapi"
+  password: "CHANGE_ME"
+
+jwt:
+  secret: "CHANGE_ME_use_at_least_32_characters_long_secret_key"
+  expire_hour: 24
+
+security:
+  encrypt_key: "CHANGE_ME_use_at_least_32_characters_encrypt_key"
+
+# --- Optional Integrations ---
+
+# Alipay Payment
+payment:
+  alipay:
+    enabled: false
+    sandbox: true
+    app_id: ""
+    private_key: ""
+    alipay_public_key: ""
+    encrypt_key: ""
+
+# SMTP Email
+email:
+  smtp:
+    enabled: false
+    host: "smtp.example.com"
+    port: 587
+    username: ""
+    password: ""
+    from: "noreply@example.com"
+    from_name: "gAPI Platform"
+
+# Admin accounts (bcrypt hashed passwords)
+admin_users:
+  - username: "admin"
+    password: "$2a$10$..." # bcrypt hash
+    role: "super_admin"

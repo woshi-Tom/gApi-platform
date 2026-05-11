@@ -3,6 +3,7 @@ name: Build and Release
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
   NODE_VERSION: '22'
+  GO_VERSION: '1.24'
 
 on:
   push:
@@ -14,8 +15,23 @@ on:
   workflow_dispatch:
 
 jobs:
+  # =============================================
+  # Backend: cross-compile for Linux and Windows
+  # =============================================
   build-backend:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            binary_name: gapi-server
+          - goos: windows
+            goarch: amd64
+            binary_name: gapi-server.exe
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,21 +39,43 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: backend/go.sum
 
-      - name: Build Backend
+      - name: Build
         run: |
-          cd backend
-          CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o gapi-server ./cmd/server
+          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
+            go build -ldflags="-w -s" -o ${{ matrix.binary_name }} ./cmd/server
 
-      - name: Upload Backend Artifact
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: backend-binary
-          path: backend/gapi-server
+          name: backend-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: backend/${{ matrix.binary_name }}
 
+  # =============================================
+  # Backend docs (Swagger)
+  # =============================================
+  build-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Upload docs
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-docs
+          path: backend/docs/
+
+  # =============================================
+  # Frontend: user-facing
+  # =============================================
   build-frontend:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -45,28 +83,30 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install Dependencies
-        run: |
-          cd frontend
-          npm ci
+        run: npm ci
 
-      - name: Build Frontend
-        run: |
-          cd frontend
-          npm run build
+      - name: Build
+        run: npm run build
 
-      - name: Upload Frontend Artifact
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
-          path: frontend/dist
+          path: frontend/dist/
 
+  # =============================================
+  # Frontend: admin panel
+  # =============================================
   build-admin:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -74,81 +114,32 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install Dependencies
-        run: |
-          cd frontend
-          npm ci
+        run: npm ci
 
       - name: Build Admin
-        run: |
-          cd frontend
-          npm run build:admin
+        run: npm run build:admin
 
-      - name: Upload Admin Artifact
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: admin-dist
-          path: frontend/dist-admin
+          path: frontend/dist-admin/
 
-  docker:
-    runs-on: ubuntu-latest
-    needs: [build-backend, build-frontend, build-admin]
-    if: false
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Prepare Backend
-        run: |
-          mkdir -p backend
-          cp artifacts/backend-binary/gapi-server backend/
-
-      - name: Prepare Frontend
-        run: |
-          cp -r artifacts/frontend-dist/ frontend/dist
-          mkdir -p frontend/dist-admin
-          cp -r artifacts/admin-dist/. frontend/dist-admin/
-          mv frontend/dist-admin/admin.html frontend/dist-admin/index.html
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build Backend Docker Image
-        run: |
-          cd backend
-          docker build -t ghcr.io/${{ steps.vars.outputs.full }}/backend:latest .
-          docker push ghcr.io/${{ steps.vars.outputs.full }}/backend:latest
-
-      - name: Build Frontend Docker Image
-        run: |
-          docker build -f frontend/Dockerfile -t ghcr.io/${{ steps.vars.outputs.full }}/frontend:latest ./frontend
-          docker push ghcr.io/${{ steps.vars.outputs.full }}/frontend:latest
-
-      - name: Build Admin Docker Image
-        run: |
-          docker build -f frontend/Dockerfile.admin -t ghcr.io/${{ steps.vars.outputs.full }}/admin:latest ./frontend
-          docker push ghcr.io/${{ steps.vars.outputs.full }}/admin:latest
-
+  # =============================================
+  # Release: package everything for GitHub Release
+  # =============================================
   release:
     runs-on: ubuntu-latest
-    needs: [build-backend, build-frontend, build-admin]
+    needs:
+      - build-backend
+      - build-docs
+      - build-frontend
+      - build-admin
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
@@ -162,53 +153,81 @@ jobs:
         with:
           path: artifacts
 
-      - name: Prepare Package
+      - name: Prepare Release Directory
         run: |
-          mkdir -p release
-          ls -la artifacts/
-          
-          # Backend binary
-          if [ -f "artifacts/backend-binary/gapi-server" ]; then
-            cp artifacts/backend-binary/gapi-server release/
-          else
-            find artifacts -name 'gapi-server' -exec cp {} release/ \; 2>/dev/null || echo "Backend binary not found"
-          fi
-          
-          # Frontend
-          if [ -d "artifacts/frontend-dist" ]; then
-            cp -r artifacts/frontend-dist/* release/gapi-frontend/ 2>/dev/null || \
-            cp -r artifacts/frontend-dist/ release/gapi-frontend/ 2>/dev/null || \
-            mkdir -p release/gapi-frontend && cp -r artifacts/frontend-dist/. release/gapi-frontend/
-          fi
-          
-          # Admin
-          if [ -d "artifacts/admin-dist" ]; then
-            cp -r artifacts/admin-dist/* release/gapi-admin/ 2>/dev/null || \
-            cp -r artifacts/admin-dist/ release/gapi-admin/ 2>/dev/null || \
-            mkdir -p release/gapi-admin && cp -r artifacts/admin-dist/. release/gapi-admin/
-          fi
-          
-          # Config files
-          cp deploy/docker/docker-compose.yml release/ 2>/dev/null || true
-          cp deploy/docker/.env.example release/ 2>/dev/null || true
-          cp .env.example release/ 2>/dev/null || true
-          cp README.md release/ 2>/dev/null || true
-          cp CHANGELOG.md release/ 2>/dev/null || true
-          
-          # Create release README
-          VERSION=${GITHUB_REF#refs/tags/}
-          sed "s/\$VERSION/$VERSION/g" release-readme.txt > release/README.md
+          VERSION=${GITHUB_REF#refs/tags/v}
+          DIR="gapi-platform-${VERSION}"
+          mkdir -p "${DIR}"
 
-      - name: Create Release Package
+          # --- Backend binaries ---
+          mkdir -p "${DIR}/bin/linux/amd64"
+          mkdir -p "${DIR}/bin/windows/amd64"
+
+          cp artifacts/backend-linux-amd64/gapi-server "${DIR}/bin/linux/amd64/"
+          cp artifacts/backend-windows-amd64/gapi-server.exe "${DIR}/bin/windows/amd64/"
+
+          # --- Backend docs ---
+          mkdir -p "${DIR}/docs"
+          cp -r artifacts/backend-docs/* "${DIR}/docs/"
+
+          # --- Frontend builds ---
+          cp -r artifacts/frontend-dist/. "${DIR}/frontend/"
+
+          # Admin: rename admin.html → index.html for nginx SPA routing
+          cp -r artifacts/admin-dist/. "${DIR}/admin/"
+          if [ -f "${DIR}/admin/admin.html" ]; then
+            mv "${DIR}/admin/admin.html" "${DIR}/admin/index.html"
+            sed -i 's|/admin\.html|/index.html|g' "${DIR}/admin/index.html" 2>/dev/null || true
+            sed -i 's|admin\.html|index.html|g' "${DIR}/admin/index.html" 2>/dev/null || true
+          fi
+
+          # --- Release infrastructure ---
+          cp deploy/release/docker-compose.yml "${DIR}/"
+          cp deploy/release/Dockerfile.backend "${DIR}/"
+          cp deploy/release/nginx.conf "${DIR}/"
+          cp deploy/release/.env.example "${DIR}/"
+          cp deploy/release/config.yaml.example "${DIR}/"
+          cp deploy/release/start.sh "${DIR}/"
+          cp deploy/release/start.bat "${DIR}/"
+
+          # --- Documentation ---
+          cp README.md "${DIR}/" 2>/dev/null || true
+          cp CHANGELOG.md "${DIR}/" 2>/dev/null || true
+
+          # --- Generate package README ---
+          sed "s/{VERSION}/${VERSION}/g" release-readme.txt > "${DIR}/README.md"
+
+          # --- Version file ---
+          echo "gAPI Platform v${VERSION}" > "${DIR}/VERSION.txt"
+
+          # Make scripts executable
+          chmod +x "${DIR}/start.sh"
+
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+          echo "DIR=${DIR}" >> $GITHUB_ENV
+
+      - name: Create Release Archives
         run: |
-          VERSION=${GITHUB_REF#refs/tags/}
-          cd release
-          echo "gAPI Platform $VERSION" > VERSION.txt
-          tar -czvf ../gapi-platform-$VERSION.tar.gz .
+          VERSION=${{ env.VERSION }}
+          DIR=${{ env.DIR }}
+
+          # tar.gz (Linux/Mac)
+          tar -czvf "gapi-platform-${VERSION}.tar.gz" "${DIR}"
+
+          # zip (Windows)
+          if command -v zip &>/dev/null; then
+            zip -r "gapi-platform-${VERSION}.zip" "${DIR}"
+          else
+            apt-get update -qq && apt-get install -y -qq zip
+            zip -r "gapi-platform-${VERSION}.zip" "${DIR}"
+          fi
 
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: gapi-platform-*.tar.gz
+          files: |
+            gapi-platform-*.tar.gz
+            gapi-platform-*.zip
+          generate_release_notes: true
           draft: false
           prerelease: false
