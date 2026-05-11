@@ -139,7 +139,7 @@ jobs:
       - build-docs
       - build-frontend
       - build-admin
-    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/dev-tom'
+    if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
 
