@@ -16,7 +16,7 @@
 
 | 版本 | 日期 | 审查角色 | 结论 | 状态 | 报告 | 整改 |
 |------|------|---------|------|------|------|------|
-| v1.2.0 | 2026-05-12 | 安全/产品/PM/开发/QA/前端 | ❌ 不通过（4 P0） | 🟡 整改中 | [review-report.md](v1.2.0/review-report.md) | [remediation.md](v1.2.0/remediation.md) |
+| v1.2.0 | 2026-05-12 | 安全/产品/PM/开发/QA/前端 | ❌ 不通过（5 P0） | 🟡 整改中 | [review-report.md](v1.2.0/review-report.md) | [remediation.md](v1.2.0/remediation.md) |
 
 ---
 

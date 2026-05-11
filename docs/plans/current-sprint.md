@@ -8,7 +8,7 @@
 
 ## 背景
 
-v1.2.0 通过 6 角色并行审查，发现 4 个 P0 阻塞问题。当前处于整改阶段。
+v1.2.0 通过 6 角色并行审查 + 1 轮外部评审，汇总发现 **5 个 P0 阻塞问题**（原始 4 个 + audit goroutine recover 从 P1 升级）。当前处于整改阶段。
 
 ---
 
@@ -16,12 +16,13 @@ v1.2.0 通过 6 角色并行审查，发现 4 个 P0 阻塞问题。当前处于
 
 ### P0 — 发布前必须完成
 
-| # | 任务 | 文件 | 负责人 | 状态 |
-|---|------|------|--------|------|
-| 1 | CI pipeline 添加测试/lint | `.github/workflows/build.yml` | 开发 | ⬜ |
-| 2 | settings 页面存根替换为真实 API | `settings/Index.vue` + router + handler | 开发+前端 | ⬜ |
-| 3 | 新增 handler/middleware/service 测试 | `*_test.go` | 开发 | ⬜ |
-| 4 | build 作业添加 `permissions: contents: read` | `.github/workflows/build.yml` | 开发 | ⬜ |
+| # | 任务 | 文件 | 负责人 | 预估 | 状态 |
+|---|------|------|--------|------|------|
+| 1 | CI pipeline 添加测试/lint | `.github/workflows/build.yml` | 开发 | 0.5d | ⬜ |
+| 2 | settings 页面存根替换为真实 API | `settings/Index.vue` + router + handler | 开发+前端 | 1d | ⬜ |
+| 3 | 新增 handler/middleware/service 测试 | `*_test.go` | 开发 | 1.5d | ⬜ |
+| 4 | build 作业添加 `permissions: contents: read` | `.github/workflows/build.yml` | 开发 | 0.1d | ⬜ |
+| 5 | Audit goroutine 添加 panic recover | `audit.go` | 开发 | 0.2d | ⬜ |
 
 ### 待决策
 
@@ -36,15 +37,15 @@ v1.2.0 通过 6 角色并行审查，发现 4 个 P0 阻塞问题。当前处于
 
 | 优先级 | 问题数 | 预估工时 | 建议策略 |
 |--------|--------|---------|---------|
-| P0 | 4 | ~2.3d | **本轮硬目标**，必须全部完成 |
+| P0 | 5 | ~2.5d | **本轮硬目标**，必须全部完成 |
 | P1 | 7 | ~1.8d | 随行就市，P0 完成后有余力再修 |
 | P2 | 12 | ~2.6d | 后续版本 |
 
-> 如单人开发，建议聚焦 P0，P1 按实际进度弹性调整。
+> 如单人开发，P0 ~2.5d 约 3 个工作日，P1 随行就市。
 
 ## 完成标准
 
-- [ ] 4 个 P0 问题全部修复
+- [ ] 5 个 P0 问题全部修复
 - [ ] P1 问题按实际进度尽可能修复
 - [ ] review-report.md 状态：🔴 → ✅
 - [ ] v1.2.0 正式发布

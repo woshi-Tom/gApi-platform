@@ -85,7 +85,7 @@ docs/
 
 | 版本 | 结论 | 状态 | 报告 | 整改 |
 |------|------|------|------|------|
-| v1.2.0 | ❌ 不通过（4 P0） | 🟡 整改中 | [review-report.md](reviews/v1.2.0/review-report.md) | [remediation.md](reviews/v1.2.0/remediation.md) |
+| v1.2.0 | ❌ 不通过（5 P0） | 🟡 整改中 | [review-report.md](reviews/v1.2.0/review-report.md) | [remediation.md](reviews/v1.2.0/remediation.md) |
 
 ---
 
@@ -95,7 +95,7 @@ docs/
 
 | 文档 | 说明 | 状态 |
 |------|------|------|
-| [current-sprint.md](plans/current-sprint.md) | 当前迭代工作项（4 个 P0） | 🟡 进行中 |
+| [current-sprint.md](plans/current-sprint.md) | 当前迭代工作项（5 个 P0） | 🟡 进行中 |
 | [fix-plan-2026.md](plans/fix-plan-2026.md) | 2026 修复计划与技术债追踪 | ⬜ 待审核 |
 | [roadmap.md](plans/roadmap.md) | 产品路线图与里程碑 | ⬜ 待完善 |
 

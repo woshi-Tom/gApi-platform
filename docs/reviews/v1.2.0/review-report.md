@@ -17,7 +17,7 @@
 | 🧪 QA/测试 | ❌ 不通过 | 2 阻塞 + 4 高 |
 | 🎨 UI/前端 | ⚠️ 条件通过 | 2 阻塞 + 2 重要（微信支付不接入，问题降级） |
 
-**综合决议**: ❌ **当前状态不建议发布**。需优先修复 4 个阻塞级问题后重新评估。
+**综合决议**: ❌ **当前状态不建议发布**。需优先修复 5 个阻塞级问题后重新评估（含 1 项从 P1 升级的 audit goroutine recover）。
 
 ---
 
@@ -590,7 +590,7 @@ USER appuser
 | 3 | 🟢 已关闭 | 前端 | Frontend | `settings/Index.vue` | 微信支付不接入 | 移除 UI 中微信支付字段 | 0.2d |
 | 4 | 🔴 阻塞 | 测试 | Backend | `settings_handler.go` | 核心文件零测试覆盖 | 新增 handler/middleware/service 测试 | 1.5d |
 | 5 | 🔴 严重 | 安全 | CI/CD | `build.yml` | GITHUB_TOKEN 权限过大 | 各 job 添加 `permissions: contents: read` | 0.1d |
-| 6 | 🟠 高 | 安全 | Backend | `audit.go` | Goroutine 无 recover | 添加 `defer recover()` | 0.2d |
+| 6 | 🔴 阻塞 | 安全 | Backend | `audit.go` | Goroutine 无 recover | 添加 `defer recover()` | 0.2d |
 | 7 | 🟠 高 | 安全 | CI/CD | `build.yml` | Action 版本未锁 SHA | 锁定到 commit SHA | 0.3d |
 | 8 | 🟠 高 | 安全 | CI/CD | `build.yml` | Release 无 checksum | 生成 SHA256SUMS | 0.2d |
 | 9 | 🟠 高 | 安全 | Backend | `settings_handler.go` | 输入验证缺失 | 添加 binding validation | 0.5d |
@@ -605,7 +605,7 @@ USER appuser
 | 18 | 🟡 中 | CI/CD | DevOps | `build.yml` | Release 命名与实际不符 | 改文件名或分平台打包 | 0.3d |
 | 19 | 🟡 中 | CI/CD | DevOps | `build.yml` | 无 Smoke Test | 增加冒烟测试步骤 | 0.3d |
 | 20 | 🟡 中 | 后端 | Backend | `audit.go:28` | skipPaths 精确匹配 | 改为前缀匹配 | 0.2d |
-| 21 | 🟡 中 | 后端 | Backend | `settings_handler.go:128` | 忽略 error 风险 | 处理 error | 0.2d |
+| 21 | 🟠 高 | 后端 | Backend | `settings_handler.go:128` | 忽略 error 风险 | 处理 error | 0.2d |
 | 22 | 🟡 中 | 文档 | Docs | `features/README.md` | 审计日志状态矛盾 | 统一标注 | 0.1d |
 | 23 | 🟡 中 | 文档 | Docs | `deployment/` | 无升级指南 | 创建 upgrade 文档 | 0.3d |
 | 24 | 🟡 中 | 文档 | Docs | `git-workflow.md` | 无发布检查清单 | 增加 checklist | 0.2d |
@@ -616,7 +616,7 @@ USER appuser
 
 | 优先级 | 问题数 | 预估总工时 |
 |--------|--------|-----------|
-| P0（发布前必须修） | 4 | ~2.3d |
+| P0（发布前必须修） | 5 | ~2.5d |
 | P1（建议发布前修） | 7 | ~1.8d |
 | P2（后续版本修） | 12 | ~2.6d |
 | P3（低优先级） | 1 | ~0.3d |
