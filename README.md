@@ -1,10 +1,12 @@
 # gAPI Platform
 
 **版本**: 1.2.0  
-**日期**: 2026-05-11  
-**状态**: 开发中
+**日期**: 2026-05-12  
+**状态**: 已发布
 
 > ⚠️ **免责声明**: 本项目仅供学习交流使用，禁止用于任何非法用途。使用者需自行承担一切风险和责任。
+
+[![Build and Release](https://github.com/woshi-Tom/gApi-platform/actions/workflows/build.yml/badge.svg)](https://github.com/woshi-Tom/gApi-platform/actions/workflows/build.yml)
 
 ---
 
@@ -16,7 +18,7 @@ gAPI Platform 是一个类似 OneAPI/NewAPI 的 API 代理平台，专为学习�
 - 🤖 多渠道管理 - 支持 OpenAI、Claude、DeepSeek、NVIDIA 等多种 AI API
 - 🔄 智能负载均衡 - 多渠道自动负载均衡和故障转移
 - 🌐 SOCKS5/HTTP 代理支持 - 突破网络限制访问海外 API
-- 💳 用户体系 - VIP 会员、积分充值、支付宝支付
+- 💳 用户体系 - VIP 会员、套餐充值、支付宝支付
 - 📊 管理后台 - 渠道监控、使用统计、审计日志
 - 🔒 安全设计 - API Key 加密存储、完整权限控制
 
@@ -58,15 +60,6 @@ docker-compose up -d
 
 ---
 
-## ⚠️ 重要说明
-
-1. **环境变量**: 部署前请务必修改 `.env` 中的敏感信息（密码、密钥等）
-2. **API Key 安全**: 所有渠道的 API Key 都会加密存储
-3. **网络环境**: 某些 API 可能需要代理才能访问，项目支持 SOCKS5/HTTP 代理配置
-4. **学习目的**: 本项目旨在学习 AI API 集成、负载均衡、多租户架构等技术
-
----
-
 ## 目录结构
 
 ```
@@ -75,16 +68,22 @@ gapi-platform/
 │   ├── cmd/                   # 入口
 │   └── internal/              # 内部包
 ├── frontend/                   # Vue 3 前端
-│   └── src/                  # 源码
-├── docs/                      # 设计文档
-│   ├── development-notes.md   # ⚠️ 开发前必读
-│   └── *.md                  # 其他设计文档
-└── deploy/
-    ├── docker/                # Docker 部署
-    │   ├── docker-compose.yml      # 开发环境
-    │   ├── docker-compose.prod.yml # 生产环境
-    │   └── docker-compose.test.yml  # 测试环境
-    └── nginx/                # Nginx 配置
+│   └── src/                   # 源码
+├── docs/                       # 设计文档
+│   ├── 01-architecture/       # 架构设计
+│   ├── 02-api/                # API设计
+│   ├── 03-features/           # 已实现功能
+│   ├── 04-deployment/         # 部署运维
+│   ├── 05-development/        # 开发指南 ⚠️ 开发前必读
+│   ├── design/                # 功能设计方案
+│   ├── planned/               # 开发计划
+│   └── issues/                # 问题追踪
+├── deploy/                     # 部署配置
+│   ├── docker/                # Docker Compose 环境
+│   ├── release/               # Release 打包模板
+│   └── nginx/                 # Nginx 反向代理
+├── .github/workflows/          # GitHub Actions CI/CD
+└── scripts/                    # 工具脚本
 ```
 
 ---
@@ -104,12 +103,40 @@ gapi-platform/
 
 | 文档 | 说明 |
 |------|------|
-| `development-notes.md` | ⚠️ **开发前必读** - 环境变量、接口清单、检查项 |
-| `system-design.md` | 系统设计概览 |
-| `database-design-v2.md` | 数据库完整DDL |
-| `interface-design-south-north.md` | 北向/南向/管理后台接口 |
-| `business-detail.md` | 业务细节：注册赠送、商品管理 |
-| `security-deployment.md` | 安全与部署 |
+| [`docs/05-development/development-notes.md`](docs/05-development/development-notes.md) | ⚠️ **开发前必读** - 环境变量、接口清单、检查项 |
+| [`docs/05-development/git-workflow.md`](docs/05-development/git-workflow.md) | Git 协作规范 + Release 发布流程 |
+| [`docs/01-architecture/system-design.md`](docs/01-architecture/system-design.md) | 系统设计概览 |
+| [`docs/01-architecture/database-design-v2.md`](docs/01-architecture/database-design-v2.md) | 数据库完整DDL |
+| [`docs/02-api/interface-design-south-north.md`](docs/02-api/interface-design-south-north.md) | 北向/南向/管理后台接口 |
+| [`docs/03-features/business-package-spec.md`](docs/03-features/business-package-spec.md) | 业务套餐规格（免费/充值/VIP） |
+| [`docs/04-deployment/deployment.md`](docs/04-deployment/deployment.md) | Docker 部署文档 |
+| [`docs/04-deployment/security-deployment.md`](docs/04-deployment/security-deployment.md) | 安全与部署指南 |
+
+> 完整文档索引见 [`docs/README.md`](docs/README.md)
+
+---
+
+## Release 发布
+
+项目使用 GitHub Actions 自动构建和发布 Release。
+
+### 发布流程
+
+```bash
+# 在 main 分支上打 tag 并推送
+git checkout main
+git tag v1.2.0
+git push origin v1.2.0
+```
+
+### 下载产物
+
+| 文件 | 适用平台 |
+|------|----------|
+| `gapi-platform-{VERSION}-linux-amd64.tar.gz` | Linux / macOS |
+| `gapi-platform-{VERSION}-windows-amd64.zip` | Windows |
+
+详细发布流程见 [`git-workflow.md`](docs/05-development/git-workflow.md#6-release-发布流程)。
 
 ---
 
@@ -138,4 +165,4 @@ docker-compose -f docker-compose.prod.yml up -d
 
 ## 开发前必读
 
-> 新开开发会话前，请先阅读 `docs/development-notes.md`
+> 新开开发会话前，请先阅读 [`docs/05-development/development-notes.md`](docs/05-development/development-notes.md)

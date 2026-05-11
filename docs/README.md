@@ -1,8 +1,8 @@
 # gAPI Platform - Documentation Index
 
-> 版本: v3.1
-> 日期: 2026-04-01
-> 更新说明: 更新文档状态以匹配实际实现
+> 版本: v3.2
+> 日期: 2026-05-12
+> 更新说明: 补充planned/目录、fix-plan、CI/CD release流程文档
 
 ---
 
@@ -16,6 +16,7 @@ docs/
 ├── 04-deployment/           # 部署运维
 ├── 05-development/           # 开发指南
 ├── design/                   # 功能设计方案（待实现）
+├── planned/                  # 开发计划
 └── issues/                   # 问题追踪
 ```
 
@@ -82,18 +83,23 @@ docs/
 | 文档 | 说明 | 状态 |
 |------|------|------|
 | [development-notes.md](./05-development/development-notes.md) | ⚠️ **开发前必读** | ✅ |
-| [git-workflow.md](./05-development/git-workflow.md) | ⚠️ **Git 协作规范** | ✅ |
+| [git-workflow.md](./05-development/git-workflow.md) | ⚠️ **Git 协作规范 + Release 发布流程** | ✅ |
+| [fix-plan-2026.md](./05-development/fix-plan-2026.md) | 2026修复计划与技术债追踪 | ✅ |
 
 ---
 
 ## 🎯 功能设计方案 (`design/`) - 待实现
 
-| 编号 | 功能模块 | 文档路径 | 状态 |
-|------|----------|----------|------|
-| 01 | 渠道管理 | [channel-management-design.md](./design/channel-management-design.md) | ✅ 部分 |
-| 02 | 兑换码 | [redemption-code-design.md](./design/redemption-code-design.md) | ⚠️ |
-| 03 | 注册配置 | [signup-config-design.md](./design/signup-config-design.md) | ⚠️ |
-| 04 | 渠道健康检测 | [channel-health-check-design.md](./design/channel-health-check-design.md) | ✅ 部分 |
+| 编号 | 功能模块 | 文档路径 | 后端状态 | 前端状态 |
+|------|----------|----------|----------|----------|
+| 01 | 渠道管理 | [channel-management-design.md](./design/channel-management-design.md) | ✅ | ⚠️ 列表页面 |
+| 02 | 渠道健康检测 | [channel-health-check-design.md](./design/channel-health-check-design.md) | ✅ | ❌ |
+| 03 | 注册配置 | [signup-config-design.md](./design/signup-config-design.md) | ⚠️ 配置存储 | ⚠️ 部分 |
+| 04 | 兑换码 | [redemption-code-design.md](./design/redemption-code-design.md) | ❌ | ❌ |
+| 05 | 审计日志优化 | [audit-log-optimization-design.md](./design/audit-log-optimization-design.md) | ✅ 已实现 | ✅ 已实现 |
+| 06 | 模型分组/定价/权限 | [model-group-pricing-permission-design.md](./design/model-group-pricing-permission-design.md) | ⚠️ 设计中 | ❌ |
+
+> 详细状态见 [`design/README.md`](./design/README.md)
 
 ### 已实现详情
 
@@ -117,6 +123,16 @@ docs/
 | 编号 | 问题 | 状态 |
 |------|------|------|
 | 001 | [支付成功后VIP激活失败](./issues/001-payment-vip-activation-failure.md) | ✅ 已修复 |
+| 002 | [管理后台Dashboard 502错误](./issues/002-admin-dashboard-502.md) | ✅ 已修复 |
+| 003 | [操作日志显示无数据/数据膨胀](./issues/003-operation-logs-empty.md) | ✅ 已修复 |
+
+---
+
+## 📋 开发计划 (`planned/`)
+
+| 文档 | 说明 | 状态 |
+|------|------|------|
+| [backend-health-check-api-plan.md](./planned/backend-health-check-api-plan.md) | 渠道手动健康检测API | ✅ 已完成 |
 
 ---
 
@@ -130,11 +146,11 @@ docs/
 | 用户 | 邮箱验证 | `email_verification_service.go` |
 | 管理 | 用户/商品/订单管理 | `admin_handler.go`, `product_handler.go` |
 | 管理 | 设置管理 | `settings_handler.go` |
-| 支付 | 支付宝支付 | `alipay_service.go` |
-| 支付 | VIP激活 | `billing_service.go` |
-| 渠道 | 渠道CRUD | `channel_handler.go` |
-| 渠道 | 健康检测 | `health_check.go` |
-| 监控 | API日志 | `api_access_log_handler.go` |
+| 支付 | 支付宝支付 + VIP激活 | `alipay_service.go`, `billing_service.go` |
+| 渠道 | 渠道CRUD + 健康检测 | `channel_handler.go`, `health_check.go` |
+| 监控 | API日志 / 操作日志 / 登录日志 | `api_access_log_handler.go` |
+| CI/CD | GitHub Actions 自动构建 + Release | `.github/workflows/build.yml` |
+| CI/CD | 跨平台发布 (Linux tgz + Windows zip) | `deploy/release/` |
 
 ### ⚠️ 待完善
 
@@ -165,6 +181,7 @@ docs/
 
 | 日期 | 版本 | 更新内容 |
 |------|------|----------|
+| 2026-05-12 | v3.2 | 补充planned/目录、fix-plan、CI/CD release、模型定价设计文档 |
 | 2026-04-01 | v3.1 | 更新文档状态匹配实际实现 |
 | 2026-04-01 | v3.0 | 重新组织文档结构 |
 | 2026-04-01 | v2.0 | 删除冗余文档 |
