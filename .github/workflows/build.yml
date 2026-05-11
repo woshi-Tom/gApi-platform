@@ -156,7 +156,12 @@ jobs:
 
       - name: Prepare Release Directory
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
+          # Extract version: tag (refs/tags/v1.0.0 -> 1.0.0) or branch name (refs/heads/dev-tom -> dev-tom)
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          else
+            VERSION=${GITHUB_REF#refs/heads/}
+          fi
           DIR="gapi-platform-${VERSION}"
           mkdir -p "${DIR}"
 
@@ -196,7 +201,7 @@ jobs:
           cp CHANGELOG.md "${DIR}/" 2>/dev/null || true
 
           # --- Generate package README ---
-          sed "s/{VERSION}/${VERSION}/g" release-readme.txt > "${DIR}/README.md"
+          sed "s|{VERSION}|${VERSION}|g" release-readme.txt > "${DIR}/README.md"
 
           # --- Version file ---
           echo "gAPI Platform v${VERSION}" > "${DIR}/VERSION.txt"
