@@ -229,23 +229,21 @@ jobs:
       - name: Generate Release Notes
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
-          cat > RELEASE_NOTES.md << 'EOF'
-## 📦 下载说明
-
-| 文件 | 适用平台 |
-|------|----------|
-| `*-linux-amd64.tar.gz` | Linux / macOS |
-| `*-windows-amd64.zip` | Windows |
-
-## 🚀 快速部署
-
-1. 解压对应平台的压缩包
-2. 复制 `.env.example` 为 `.env` 并编辑密码
-3. 执行 `./start.sh`（Linux/macOS）或 `start.bat`（Windows）
-4. 访问 http://localhost:5173（用户端） / http://localhost:5174（管理后台）
-
-详细变更日志见压缩包内的 `CHANGELOG.md`。
-EOF
+          echo "## 下载说明" > RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          echo "| 文件 | 适用平台 |" >> RELEASE_NOTES.md
+          echo "|------|----------|" >> RELEASE_NOTES.md
+          echo "| *-linux-amd64.tar.gz | Linux / macOS |" >> RELEASE_NOTES.md
+          echo "| *-windows-amd64.zip | Windows |" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          echo "## 快速部署" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          echo "1. 解压对应平台的压缩包" >> RELEASE_NOTES.md
+          echo "2. 复制 .env.example 为 .env 并编辑密码" >> RELEASE_NOTES.md
+          echo "3. 执行 ./start.sh (Linux/macOS) 或 start.bat (Windows)" >> RELEASE_NOTES.md
+          echo "4. 访问 http://localhost:5173 / http://localhost:5174" >> RELEASE_NOTES.md
+          echo "" >> RELEASE_NOTES.md
+          echo "详细变更日志见压缩包内的 CHANGELOG.md。" >> RELEASE_NOTES.md
 
       - name: Upload to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
