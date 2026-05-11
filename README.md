@@ -19,8 +19,9 @@ gAPI Platform 是一个类似 OneAPI/NewAPI 的 API 代理平台，专为学习�
 - 🔄 智能负载均衡 - 多渠道自动负载均衡和故障转移
 - 🌐 SOCKS5/HTTP 代理支持 - 突破网络限制访问海外 API
 - 💳 用户体系 - VIP 会员、套餐充值、支付宝支付
-- 📊 管理后台 - 渠道监控、使用统计、审计日志
-- 🔒 安全设计 - API Key 加密存储、完整权限控制
+- 🎁 兑换码系统 - 兑换码生成、兑换、禁用、批次管理
+- 📊 模型管理 - 模型分组、定价、用户组权限控制
+- 🔒 安全设计 - API Key 加密存储、滑块验证码、完整权限控制
 
 ---
 
@@ -70,14 +71,12 @@ gapi-platform/
 ├── frontend/                   # Vue 3 前端
 │   └── src/                   # 源码
 ├── docs/                       # 设计文档
-│   ├── 01-architecture/       # 架构设计
-│   ├── 02-api/                # API设计
-│   ├── 03-features/           # 已实现功能
-│   ├── 04-deployment/         # 部署运维
-│   ├── 05-development/        # 开发指南 ⚠️ 开发前必读
-│   ├── design/                # 功能设计方案
-│   ├── planned/               # 开发计划
-│   └── issues/                # 问题追踪
+│   ├── development/            # 开发指南 ⚠️ 开发前必读
+│   ├── architecture/           # 架构设计
+│   ├── api/                    # API设计
+│   ├── features/               # 功能文档（含实现状态）
+│   ├── deployment/             # 部署运维
+│   └── issues/                 # 问题追踪
 ├── deploy/                     # 部署配置
 │   ├── docker/                # Docker Compose 环境
 │   ├── release/               # Release 打包模板
@@ -103,16 +102,18 @@ gapi-platform/
 
 | 文档 | 说明 |
 |------|------|
-| [`docs/05-development/development-notes.md`](docs/05-development/development-notes.md) | ⚠️ **开发前必读** - 环境变量、接口清单、检查项 |
-| [`docs/05-development/git-workflow.md`](docs/05-development/git-workflow.md) | Git 协作规范 + Release 发布流程 |
-| [`docs/01-architecture/system-design.md`](docs/01-architecture/system-design.md) | 系统设计概览 |
-| [`docs/01-architecture/database-design-v2.md`](docs/01-architecture/database-design-v2.md) | 数据库完整DDL |
-| [`docs/02-api/interface-design-south-north.md`](docs/02-api/interface-design-south-north.md) | 北向/南向/管理后台接口 |
-| [`docs/03-features/business-package-spec.md`](docs/03-features/business-package-spec.md) | 业务套餐规格（免费/充值/VIP） |
-| [`docs/04-deployment/deployment.md`](docs/04-deployment/deployment.md) | Docker 部署文档 |
-| [`docs/04-deployment/security-deployment.md`](docs/04-deployment/security-deployment.md) | 安全与部署指南 |
+| [`docs/development/development-notes.md`](docs/development/development-notes.md) | ⚠️ **开发前必读** - 环境变量、接口清单、检查项 |
+| [`docs/development/git-workflow.md`](docs/development/git-workflow.md) | Git 协作规范 + Release 发布流程 |
+| [`docs/architecture/system-design.md`](docs/architecture/system-design.md) | 系统设计概览 |
+| [`docs/architecture/database-design-v2.md`](docs/architecture/database-design-v2.md) | 数据库完整DDL |
+| [`docs/api/interface-design-south-north.md`](docs/api/interface-design-south-north.md) | 北向/南向/管理后台接口 |
+| [`docs/features/business-package-spec.md`](docs/features/business-package-spec.md) | 业务套餐规格（免费/充值/VIP） |
+| [`docs/features/redemption-code-design.md`](docs/features/redemption-code-design.md) | 兑换码设计（已实现） |
+| [`docs/features/model-group-pricing-permission-design.md`](docs/features/model-group-pricing-permission-design.md) | 模型分组/定价/权限（已实现） |
+| [`docs/deployment/deployment.md`](docs/deployment/deployment.md) | Docker 部署文档 |
+| [`docs/deployment/security-deployment.md`](docs/deployment/security-deployment.md) | 安全与部署指南 |
 
-> 完整文档索引见 [`docs/README.md`](docs/README.md)
+> 完整文档索引及功能状态总览见 [`docs/README.md`](docs/README.md) | [`docs/features/README.md`](docs/features/README.md)
 
 ---
 
@@ -136,7 +137,7 @@ git push origin v1.2.0
 | `gapi-platform-{VERSION}-linux-amd64.tar.gz` | Linux / macOS |
 | `gapi-platform-{VERSION}-windows-amd64.zip` | Windows |
 
-详细发布流程见 [`git-workflow.md`](docs/05-development/git-workflow.md#6-release-发布流程)。
+详细发布流程见 [`git-workflow.md`](docs/development/git-workflow.md#6-release-发布流程)。
 
 ---
 
@@ -165,4 +166,4 @@ docker-compose -f docker-compose.prod.yml up -d
 
 ## 开发前必读
 
-> 新开开发会话前，请先阅读 [`docs/05-development/development-notes.md`](docs/05-development/development-notes.md)
+> 新开开发会话前，请先阅读 [`docs/development/development-notes.md`](docs/development/development-notes.md)

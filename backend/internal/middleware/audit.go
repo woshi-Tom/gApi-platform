@@ -33,6 +33,11 @@ var skipPaths = map[string]bool{
 	"/api/v1/admin/logs/login":     true,
 }
 
+// importantGetPrefixes contains GET path prefixes that should still be audited
+var importantGetPrefixes = []string{
+	"/api/v1/payment/", // 支付回调等重要操作
+}
+
 // AuditLog creates an audit logging middleware
 func AuditLog(auditRepo *repository.AuditRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -40,6 +45,21 @@ func AuditLog(auditRepo *repository.AuditRepository) gin.HandlerFunc {
 		if skipPaths[c.Request.URL.Path] {
 			c.Next()
 			return
+		}
+
+		// Skip GET requests to reduce data bloat (unless they are important operations)
+		if c.Request.Method == "GET" {
+			shouldAudit := false
+			for _, prefix := range importantGetPrefixes {
+				if strings.HasPrefix(c.Request.URL.Path, prefix) {
+					shouldAudit = true
+					break
+				}
+			}
+			if !shouldAudit {
+				c.Next()
+				return
+			}
 		}
 
 		// Read and restore request body

@@ -100,11 +100,16 @@ func (h *SettingsHandler) GetRegisterSettings(c *gin.Context) {
 
 func (h *SettingsHandler) UpdateRegisterSettings(c *gin.Context) {
 	var req struct {
-		AllowRegister      bool  `json:"allow_register"`
-		RequireEmailVerify *bool `json:"require_email_verify"`
-		EnableCaptcha      bool  `json:"enable_captcha"`
-		NewUserQuota       int   `json:"new_user_quota"`
-		TrialVIPDays       int   `json:"trial_vip_days"`
+		AllowRegister       bool    `json:"allow_register"`
+		RequireEmailVerify  *bool   `json:"require_email_verify"`
+		EnableCaptcha       bool    `json:"enable_captcha"`
+		NewUserQuota        int     `json:"new_user_quota"`
+		TrialVIPDays        int     `json:"trial_vip_days"`
+		AllowedDomains      *string `json:"allowed_domains"`
+		MaxAccountsPerIP    *int    `json:"max_accounts_per_ip"`
+		MinPasswordLength   *int    `json:"min_password_length"`
+		SignupRewardType    *string `json:"signup_reward_type"`
+		SignupRewardAmount  *int64  `json:"signup_reward_amount"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -119,12 +124,36 @@ func (h *SettingsHandler) UpdateRegisterSettings(c *gin.Context) {
 		}
 	}
 
+	// Load current settings first, then override with sent fields
+	current, _ := h.settingsSvc.GetRegisterSettings()
 	settings := &service.RegisterSettings{
 		AllowRegister:      req.AllowRegister,
 		RequireEmailVerify: req.RequireEmailVerify,
 		EnableCaptcha:      req.EnableCaptcha,
 		NewUserQuota:       req.NewUserQuota,
 		TrialVIPDays:       req.TrialVIPDays,
+	}
+	if current != nil {
+		settings.AllowedDomains = current.AllowedDomains
+		settings.MaxAccountsPerIP = current.MaxAccountsPerIP
+		settings.MinPasswordLength = current.MinPasswordLength
+		settings.SignupRewardType = current.SignupRewardType
+		settings.SignupRewardAmount = current.SignupRewardAmount
+	}
+	if req.AllowedDomains != nil {
+		settings.AllowedDomains = *req.AllowedDomains
+	}
+	if req.MaxAccountsPerIP != nil {
+		settings.MaxAccountsPerIP = *req.MaxAccountsPerIP
+	}
+	if req.MinPasswordLength != nil {
+		settings.MinPasswordLength = *req.MinPasswordLength
+	}
+	if req.SignupRewardType != nil {
+		settings.SignupRewardType = *req.SignupRewardType
+	}
+	if req.SignupRewardAmount != nil {
+		settings.SignupRewardAmount = *req.SignupRewardAmount
 	}
 
 	if err := h.settingsSvc.UpdateRegisterSettings(settings); err != nil {

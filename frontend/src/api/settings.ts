@@ -33,6 +33,11 @@ export interface RegisterSettings {
   enable_captcha: boolean
   new_user_quota: number
   trial_vip_days: number
+  allowed_domains: string
+  max_accounts_per_ip: number
+  min_password_length: number
+  signup_reward_type: string
+  signup_reward_amount: number
 }
 
 export interface PaymentConfig {

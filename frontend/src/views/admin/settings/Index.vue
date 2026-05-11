@@ -66,6 +66,27 @@
               <el-input-number v-model="registerForm.trial_vip_days" :min="0" :max="30" :step="1" />
               <span class="form-tip">新用户赠送的 VIP 试用天数，0 表示不赠送</span>
             </el-form-item>
+            <el-form-item label="允许的邮箱域名">
+              <el-input v-model="registerForm.allowed_domains" placeholder="留空表示允许所有域名" />
+              <span class="form-tip">多个域名用逗号分隔，例如: example.com,test.org</span>
+            </el-form-item>
+            <el-form-item label="单IP最大注册数">
+              <el-input-number v-model="registerForm.max_accounts_per_ip" :min="0" :max="100" :step="1" />
+              <span class="form-tip">0 表示不限制</span>
+            </el-form-item>
+            <el-form-item label="密码最小长度">
+              <el-input-number v-model="registerForm.min_password_length" :min="6" :max="32" :step="1" />
+            </el-form-item>
+            <el-form-item label="注册奖励类型">
+              <el-select v-model="registerForm.signup_reward_type" style="width: 200px">
+                <el-option label="免费额度 (quota)" value="quota" />
+                <el-option label="VIP 套餐 (vip)" value="vip" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="注册奖励数量">
+              <el-input-number v-model="registerForm.signup_reward_amount" :min="0" :step="1000" />
+              <span class="form-tip">quota 类型为 Token 数量，vip 类型为 VIP 天数</span>
+            </el-form-item>
             <el-form-item>
               <el-button type="primary" @click="saveRegister" :loading="saving">保存设置</el-button>
             </el-form-item>
@@ -270,6 +291,11 @@ const registerForm = reactive({
   enable_captcha: true,
   new_user_quota: 100000,
   trial_vip_days: 0,
+  allowed_domains: '',
+  max_accounts_per_ip: 5,
+  min_password_length: 8,
+  signup_reward_type: 'quota',
+  signup_reward_amount: 100000,
 })
 
 const emailForm = reactive({
@@ -339,6 +365,11 @@ async function loadRegisterSettings() {
       registerForm.enable_captcha = data.enable_captcha
       registerForm.new_user_quota = data.new_user_quota
       registerForm.trial_vip_days = data.trial_vip_days
+      registerForm.allowed_domains = data.allowed_domains || ''
+      registerForm.max_accounts_per_ip = data.max_accounts_per_ip ?? 5
+      registerForm.min_password_length = data.min_password_length ?? 8
+      registerForm.signup_reward_type = data.signup_reward_type || 'quota'
+      registerForm.signup_reward_amount = data.signup_reward_amount ?? 100000
     }
   } catch (e) {
     ElMessage.error('加载注册设置失败')
@@ -421,6 +452,11 @@ async function saveRegister() {
       enable_captcha: registerForm.enable_captcha,
       new_user_quota: registerForm.new_user_quota,
       trial_vip_days: registerForm.trial_vip_days,
+      allowed_domains: registerForm.allowed_domains,
+      max_accounts_per_ip: registerForm.max_accounts_per_ip,
+      min_password_length: registerForm.min_password_length,
+      signup_reward_type: registerForm.signup_reward_type,
+      signup_reward_amount: registerForm.signup_reward_amount,
     })
     ElMessage.success('注册设置已保存')
   } catch (e: any) {
