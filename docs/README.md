@@ -10,7 +10,7 @@
 
 ```
 docs/
-├── development/        # ⚠️ 开发必读
+├── development/        # ⚠️ 开发必读 / 审查报告
 ├── architecture/       # 架构设计
 ├── api/                # API 接口
 ├── features/           # 功能文档（含实现状态）
@@ -27,6 +27,7 @@ docs/
 | [development-notes.md](development/development-notes.md) | ⚠️ **开发前必读** - 环境变量、接口清单、检查项 |
 | [git-workflow.md](development/git-workflow.md) | Git 协作规范 + Release 发布流程 |
 | [fix-plan-2026.md](development/fix-plan-2026.md) | 2026 修复计划与技术债追踪 |
+| [release-review-v1.2.0.md](development/release-review-v1.2.0.md) | v1.2.0 发布审查报告与整改措施 |
 
 ---
 
