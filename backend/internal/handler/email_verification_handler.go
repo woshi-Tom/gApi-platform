@@ -10,11 +10,12 @@ import (
 )
 
 type EmailVerificationHandler struct {
-	emailService *service.EmailVerificationService
+	emailService   *service.EmailVerificationService
+	captchaService *service.SliderCaptchaService
 }
 
-func NewEmailVerificationHandler(emailService *service.EmailVerificationService) *EmailVerificationHandler {
-	return &EmailVerificationHandler{emailService: emailService}
+func NewEmailVerificationHandler(emailService *service.EmailVerificationService, captchaService *service.SliderCaptchaService) *EmailVerificationHandler {
+	return &EmailVerificationHandler{emailService: emailService, captchaService: captchaService}
 }
 
 func (h *EmailVerificationHandler) SendCode(c *gin.Context) {
@@ -35,6 +36,14 @@ func (h *EmailVerificationHandler) SendCode(c *gin.Context) {
 	if req.Purpose != "register" && req.Purpose != "reset" {
 		response.Fail(c, "INVALID_PARAMETER", "purpose must be 'register' or 'reset'")
 		return
+	}
+
+	// Validate captcha token
+	if h.captchaService != nil && req.CaptchaToken != "" {
+		if !h.captchaService.ValidateToken(req.CaptchaToken) {
+			response.Fail(c, "CAPTCHA_INVALID", "验证码无效或已过期")
+			return
+		}
 	}
 
 	ip := c.ClientIP()

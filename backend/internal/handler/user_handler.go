@@ -224,7 +224,12 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	if req.Username != "" {
+	if req.Username != "" && req.Username != user.Username {
+		existing, _ := h.userService.GetByUsername(req.Username)
+		if existing != nil && existing.ID != userID {
+			response.Fail(c, "USERNAME_EXISTS", "username already taken")
+			return
+		}
 		user.Username = req.Username
 	}
 	if req.Phone != "" {

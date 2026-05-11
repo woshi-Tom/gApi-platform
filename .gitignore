@@ -83,3 +83,5 @@ start_*.sh
 deploy/local/
 scripts/
 
+# review report
+CODE_REVIEW_REPORT.md

@@ -2,14 +2,14 @@ import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
 
-const createRequest = (baseURL: string) => {
+const createRequest = (baseURL: string, tokenKey: string, clearKeys: string[]) => {
   const instance = axios.create({
     baseURL,
     timeout: 30000
   })
 
   instance.interceptors.request.use(config => {
-    const token = localStorage.getItem('token') || localStorage.getItem('admin_token')
+    const token = localStorage.getItem(tokenKey)
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -20,9 +20,7 @@ const createRequest = (baseURL: string) => {
     response => response,
     error => {
       if (error.response?.status === 401) {
-        localStorage.removeItem('token')
-        localStorage.removeItem('admin_token')
-        localStorage.removeItem('admin_secret')
+        clearKeys.forEach(key => localStorage.removeItem(key))
         router.push('/login')
         ElMessage.error('登录已过期，请重新登录')
       } else if (error.response?.status === 403 && error.response?.data?.error?.message?.includes('admin')) {
@@ -39,7 +37,7 @@ const createRequest = (baseURL: string) => {
   return instance
 }
 
-export const userAPI = createRequest('/api/v1')
-export const adminAPI = createRequest('/api/v1/admin')
+export const userAPI = createRequest('/api/v1', 'token', ['token'])
+export const adminAPI = createRequest('/api/v1/admin', 'admin_token', ['admin_token', 'admin_secret'])
 
 export default userAPI

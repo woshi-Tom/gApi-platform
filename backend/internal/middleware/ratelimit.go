@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -96,7 +97,7 @@ func UserRateLimit(rps float64, burst int) gin.HandlerFunc {
 		// Get user ID from context (set by JWT middleware)
 		var key string
 		if userID, exists := c.Get("user_id"); exists {
-			key = string(rune(userID.(uint)))
+			key = strconv.FormatUint(uint64(userID.(uint)), 10)
 		} else {
 			key = c.ClientIP()
 		}
@@ -120,8 +121,23 @@ func UserRateLimit(rps float64, burst int) gin.HandlerFunc {
 // TokenRateLimit creates a per-token rate limiting middleware
 func TokenRateLimit() gin.HandlerFunc {
 	// Use a map of token ID to rate limiter
-	limiters := make(map[uint]*rate.Limiter)
+	limiters := make(map[uint]*tokenLimiterEntry)
 	mu := sync.RWMutex{}
+
+	// Cleanup goroutine: remove stale limiters every 10 minutes
+	go func() {
+		for {
+			time.Sleep(10 * time.Minute)
+			mu.Lock()
+			now := time.Now()
+			for tid, entry := range limiters {
+				if now.Sub(entry.lastUsed) > 30*time.Minute {
+					delete(limiters, tid)
+				}
+			}
+			mu.Unlock()
+		}
+	}()
 
 	return func(c *gin.Context) {
 		tokenID, exists := c.Get("token_id")
@@ -133,17 +149,27 @@ func TokenRateLimit() gin.HandlerFunc {
 		tid := tokenID.(uint)
 
 		mu.RLock()
-		limiter, ok := limiters[tid]
+		entry, ok := limiters[tid]
 		mu.RUnlock()
 
 		if !ok {
 			mu.Lock()
-			limiter = rate.NewLimiter(60, 60) // 60 requests per minute, burst 60
-			limiters[tid] = limiter
+			// Double-check after acquiring write lock
+			if entry, ok = limiters[tid]; !ok {
+				entry = &tokenLimiterEntry{
+					limiter:  rate.NewLimiter(10, 10), // 10 requests per second, burst 10
+					lastUsed: time.Now(),
+				}
+				limiters[tid] = entry
+			}
 			mu.Unlock()
 		}
 
-		if !limiter.Allow() {
+		mu.Lock()
+		entry.lastUsed = time.Now()
+		mu.Unlock()
+
+		if !entry.limiter.Allow() {
 			c.JSON(http.StatusTooManyRequests, model.APIResponse{
 				Success: false,
 				Error: &model.APIError{
@@ -157,4 +183,9 @@ func TokenRateLimit() gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+type tokenLimiterEntry struct {
+	limiter  *rate.Limiter
+	lastUsed time.Time
 }

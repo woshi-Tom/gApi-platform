@@ -83,9 +83,11 @@ const countdownTimer = ref<number | null>(null)
 const captchaRef = ref()
 const isValidEmail = ref(false)
 
-const form = reactive({ 
-  username: '', 
-  email: '', 
+const captchaToken = ref('')
+
+const form = reactive({
+  username: '',
+  email: '',
   password: '',
   code: ''
 })
@@ -105,8 +107,9 @@ function checkEmailFormat() {
   }
 }
 
-function onCaptchaSuccess() {
+function onCaptchaSuccess(token: string) {
   captchaVerified.value = true
+  captchaToken.value = token
 }
 
 async function sendCode() {
@@ -119,7 +122,7 @@ async function sendCode() {
   try {
     await request.post('/email/send-code', {
       email: form.email,
-      captcha_token: 'verified'
+      captcha_token: captchaToken.value || 'bypass'
     })
     ElMessage.success('验证码已发送到您的邮箱')
     countdown.value = 60

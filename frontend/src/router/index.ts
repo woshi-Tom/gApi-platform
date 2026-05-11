@@ -25,9 +25,12 @@ const router = createRouter({
 const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
 
 function getAdminUrl() {
+  const envUrl = import.meta.env.VITE_ADMIN_URL
+  if (envUrl) return envUrl
   const currentHost = window.location.host
-  const [hostname, port] = currentHost.split(':')
-  return `http://${hostname}:5174`
+  const [hostname] = currentHost.split(':')
+  const protocol = window.location.protocol
+  return `${protocol}//${hostname}:5174`
 }
 
 async function checkInitialization() {

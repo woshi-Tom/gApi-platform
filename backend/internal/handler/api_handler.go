@@ -25,14 +25,16 @@ type APIHandler struct {
 	channelService  *service.ChannelService
 	userRepo        *repository.UserRepository
 	modelGroupSvc   *service.ModelGroupService
+	billingService  *service.BillingService
 }
 
-func NewAPIHandler(tokenService *service.TokenService, channelService *service.ChannelService, userRepo *repository.UserRepository, modelGroupSvc *service.ModelGroupService) *APIHandler {
+func NewAPIHandler(tokenService *service.TokenService, channelService *service.ChannelService, userRepo *repository.UserRepository, modelGroupSvc *service.ModelGroupService, billingService *service.BillingService) *APIHandler {
 	return &APIHandler{
 		tokenService:    tokenService,
 		channelService:  channelService,
 		userRepo:        userRepo,
 		modelGroupSvc:   modelGroupSvc,
+		billingService:  billingService,
 	}
 }
 
@@ -58,6 +60,35 @@ func (h *APIHandler) ChatCompletions(c *gin.Context) {
 			},
 		})
 		return
+	}
+
+	// Pre-check quota
+	if h.billingService != nil {
+		userID := getUserID(c)
+		tokenID := getTokenID(c)
+		if userID > 0 && tokenID > 0 {
+			estimatedTokens := h.estimateChatTokens(req.Messages, req.MaxTokens)
+			if err := h.billingService.PreConsumeQuota(userID, tokenID, req.Model, estimatedTokens); err != nil {
+				if err == service.ErrQuotaInsufficient {
+					c.JSON(http.StatusPaymentRequired, model.APIErrorResponse{
+						Error: &model.APIError{
+							Code:    "QUOTA_INSUFFICIENT",
+							Message: "insufficient quota",
+						},
+					})
+					return
+				}
+				if err == service.ErrTokenDisabled || err == service.ErrTokenExpired {
+					c.JSON(http.StatusForbidden, model.APIErrorResponse{
+						Error: &model.APIError{
+							Code:    "TOKEN_INVALID",
+							Message: err.Error(),
+						},
+					})
+					return
+				}
+			}
+		}
 	}
 
 	chatReq := &adapter.ChatRequest{
@@ -148,52 +179,104 @@ func (h *APIHandler) chatWithFailover(ctx context.Context, chatReq *adapter.Chat
 }
 
 func (h *APIHandler) handleStreamWithFailover(ctx context.Context, c *gin.Context, chatReq *adapter.ChatRequest) {
-	selectedChannel, err := h.channelService.SelectChannel(chatReq.Model)
-	if err != nil {
-		c.JSON(http.StatusServiceUnavailable, model.APIErrorResponse{
-			Error: &model.APIError{
-				Code:    "NO_CHANNEL",
-				Message: "no available channel for model: " + chatReq.Model,
-			},
+	attemptedChannels := make(map[uint]bool)
+
+	for attempt := 0; attempt < maxChannelRetries; attempt++ {
+		selectedChannel, err := h.channelService.SelectChannel(chatReq.Model)
+		if err != nil {
+			c.JSON(http.StatusServiceUnavailable, model.APIErrorResponse{
+				Error: &model.APIError{
+					Code:    "NO_CHANNEL",
+					Message: "no available channel for model: " + chatReq.Model,
+				},
+			})
+			return
+		}
+
+		if attemptedChannels[selectedChannel.ID] {
+			continue
+		}
+		attemptedChannels[selectedChannel.ID] = true
+
+		apiKey, err := crypto.Decrypt(selectedChannel.APIKeyEncrypted)
+		if err != nil {
+			logger.Error("failed to decrypt API key for channel %d: %v", selectedChannel.ID, err)
+			continue
+		}
+
+		channel := &adapter.Channel{
+			ID:           selectedChannel.ID,
+			Type:         selectedChannel.Type,
+			Name:         selectedChannel.Name,
+			BaseURL:      selectedChannel.BaseURL,
+			APIKey:       apiKey,
+			Models:       selectedChannel.GetModels(),
+			ModelMapping: selectedChannel.GetModelMapping(),
+			Timeout:      120,
+		}
+
+		chatAdapter, err := adapter.GetAdapter(selectedChannel.Type)
+		if err != nil {
+			continue
+		}
+
+		// Test the channel connection before streaming
+		streamCh, err := chatAdapter.ChatStream(ctx, channel, chatReq)
+		if err != nil {
+			h.channelService.IncrementFailureCount(selectedChannel.ID)
+			continue
+		}
+
+		// Channel works, set headers and stream
+		c.Header("Content-Type", "text/event-stream")
+		c.Header("Cache-Control", "no-cache")
+		c.Header("Connection", "keep-alive")
+		c.Header("Transfer-Encoding", "chunked")
+
+		flusher, ok := c.Writer.(http.Flusher)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, model.APIErrorResponse{
+				Error: &model.APIError{
+					Code:    "STREAM_NOT_SUPPORTED",
+					Message: "streaming not supported",
+				},
+			})
+			return
+		}
+
+		c.Stream(func(w io.Writer) bool {
+			select {
+			case <-ctx.Done():
+				return false
+			case chunk, ok := <-streamCh:
+				if !ok {
+					return false
+				}
+				if chunk.Done {
+					return false
+				}
+				if chunk.Error != nil {
+					c.SSEvent("error", chunk.Error.Message)
+					flusher.Flush()
+					return false
+				}
+				data, _ := json.Marshal(chunk)
+				c.SSEvent("message", string(data))
+				flusher.Flush()
+				return true
+			}
 		})
+
+		h.channelService.ResetFailureCount(selectedChannel.ID)
 		return
 	}
 
-	apiKey, err := crypto.Decrypt(selectedChannel.APIKeyEncrypted)
-	if err != nil {
-		logger.Error("failed to decrypt API key for channel %d: %v", selectedChannel.ID, err)
-		c.JSON(http.StatusInternalServerError, model.APIErrorResponse{
-			Error: &model.APIError{
-				Code:    "DECRYPT_FAILED",
-				Message: "failed to decrypt API key",
-			},
-		})
-		return
-	}
-
-	channel := &adapter.Channel{
-		ID:           selectedChannel.ID,
-		Type:         selectedChannel.Type,
-		Name:         selectedChannel.Name,
-		BaseURL:      selectedChannel.BaseURL,
-		APIKey:       apiKey,
-		Models:       selectedChannel.GetModels(),
-		ModelMapping: selectedChannel.GetModelMapping(),
-		Timeout:      120,
-	}
-
-	chatAdapter, err := adapter.GetAdapter(selectedChannel.Type)
-	if err != nil {
-		c.JSON(http.StatusBadGateway, model.APIErrorResponse{
-			Error: &model.APIError{
-				Code:    "ADAPTER_ERROR",
-				Message: err.Error(),
-			},
-		})
-		return
-	}
-
-	h.handleStream(ctx, c, chatAdapter, channel, chatReq, selectedChannel.ID)
+	c.JSON(http.StatusBadGateway, model.APIErrorResponse{
+		Error: &model.APIError{
+			Code:    "UPSTREAM_ERROR",
+			Message: "all channels failed after retries",
+		},
+	})
 }
 
 func (h *APIHandler) handleStream(ctx context.Context, c *gin.Context, chatAdapter adapter.Adapter, channel *adapter.Channel, chatReq *adapter.ChatRequest, channelID uint) {
@@ -372,6 +455,35 @@ func (h *APIHandler) Embeddings(c *gin.Context) {
 		req.Model = "text-embedding-ada-002"
 	}
 
+	// Pre-check quota
+	if h.billingService != nil {
+		userID := getUserID(c)
+		tokenID := getTokenID(c)
+		if userID > 0 && tokenID > 0 {
+			estimatedTokens := h.estimateEmbeddingTokens(req.Input)
+			if err := h.billingService.PreConsumeQuota(userID, tokenID, req.Model, estimatedTokens); err != nil {
+				if err == service.ErrQuotaInsufficient {
+					c.JSON(http.StatusPaymentRequired, model.APIErrorResponse{
+						Error: &model.APIError{
+							Code:    "QUOTA_INSUFFICIENT",
+							Message: "insufficient quota",
+						},
+					})
+					return
+				}
+				if err == service.ErrTokenDisabled || err == service.ErrTokenExpired {
+					c.JSON(http.StatusForbidden, model.APIErrorResponse{
+						Error: &model.APIError{
+							Code:    "TOKEN_INVALID",
+							Message: err.Error(),
+						},
+					})
+					return
+				}
+			}
+		}
+	}
+
 	embedReq := &adapter.EmbeddingsRequest{
 		Model: req.Model,
 		Input: req.Input,
@@ -525,4 +637,39 @@ func parseIntParam(params map[string]string, key string, defaultVal int) int {
 		}
 	}
 	return defaultVal
+}
+
+func (h *APIHandler) estimateChatTokens(messages []map[string]string, maxTokens int) int {
+	totalChars := 0
+	for _, m := range messages {
+		totalChars += len(m["content"]) + len(m["role"]) + 10
+	}
+	estimated := totalChars / 4
+	if maxTokens > 0 {
+		estimated += maxTokens
+	}
+	if estimated < 100 {
+		estimated = 100
+	}
+	return estimated
+}
+
+func (h *APIHandler) estimateEmbeddingTokens(input interface{}) int {
+	switch v := input.(type) {
+	case string:
+		return len(v)/4 + 1
+	case []interface{}:
+		total := 0
+		for _, item := range v {
+			if s, ok := item.(string); ok {
+				total += len(s)/4 + 1
+			}
+		}
+		if total < 1 {
+			total = 1
+		}
+		return total
+	default:
+		return 100
+	}
 }

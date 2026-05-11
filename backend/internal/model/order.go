@@ -1,6 +1,7 @@
 package model
 
 import (
+	crypto_rand "crypto/rand"
 	"time"
 )
 
@@ -214,9 +215,16 @@ func GenerateCode(prefix string) string {
 
 func randomString(length int) string {
 	const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	result := make([]byte, length)
-	for i := range result {
-		result[i] = charset[time.Now().UnixNano()%int64(len(charset))]
+	b := make([]byte, length)
+	if _, err := crypto_rand.Read(b); err != nil {
+		// Fallback: use timestamp-based generation (should rarely happen)
+		for i := range b {
+			b[i] = charset[time.Now().UnixNano()%int64(len(charset))]
+		}
+		return string(b)
 	}
-	return string(result)
+	for i := range b {
+		b[i] = charset[int(b[i])%len(charset)]
+	}
+	return string(b)
 }

@@ -54,13 +54,17 @@ func AuditLog(auditRepo *repository.AuditRepository) gin.HandlerFunc {
 		writer := &responseWriter{ResponseWriter: c.Writer, body: bytes.NewBufferString("")}
 		c.Writer = writer
 
+		startTime := time.Now()
+
 		// Process request
 		c.Next()
 
+		// Snapshot response body after request is done
+		responseBodyRaw := make([]byte, writer.body.Len())
+		copy(responseBodyRaw, writer.body.Bytes())
+
 		// Record audit log asynchronously
 		go func() {
-			startTime := time.Now()
-
 			// Get user info from context
 			var userID *uint
 			var username string
@@ -93,7 +97,7 @@ func AuditLog(auditRepo *repository.AuditRepository) gin.HandlerFunc {
 
 			// Limit body size to prevent data bloat
 			maxBodySize := 50000
-			responseBody := maskSensitiveData(writer.body.String())
+			responseBody := maskSensitiveData(string(responseBodyRaw))
 			if len(responseBody) > maxBodySize {
 				responseBody = responseBody[:maxBodySize] + "...[truncated]"
 			}

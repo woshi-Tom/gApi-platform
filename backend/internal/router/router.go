@@ -62,8 +62,11 @@ func SetupUserRoutes(
 	modelPricingRepo := repository.NewModelPricingRepository(db.GetDB())
 	modelGroupService := service.NewModelGroupService(modelGroupRepo, channelGroupRelRepo, userGroupRelRepo, modelPricingRepo)
 
-	apiHandler := handler.NewAPIHandler(tokenService, channelService, userRepo, modelGroupService)
-	emailHandler := handler.NewEmailVerificationHandler(emailVerificationService)
+	usageLogRepo := repository.NewUsageLogRepository(db.GetDB())
+	quotaTxRepo := repository.NewQuotaTransactionRepository(db.GetDB())
+	billingService := service.NewBillingService(userRepo, tokenRepo, usageLogRepo, quotaTxRepo)
+	apiHandler := handler.NewAPIHandler(tokenService, channelService, userRepo, modelGroupService, billingService)
+	emailHandler := handler.NewEmailVerificationHandler(emailVerificationService, captchaService)
 	captchaHandler := handler.NewCaptchaHandler(captchaService)
 	apiAccessLogHandler := handler.NewAPIAccessLogHandler(apiAccessLogRepo)
 
@@ -252,7 +255,7 @@ func SetupAdminRoutes(
 
 	v1 := r.Group("/api/v1/admin")
 	{
-		v1.POST("/login", adminHandler.Login)
+		v1.POST("/login", middleware.RateLimit(5, 3), adminHandler.Login)
 
 		adminAuth := v1.Group("")
 		adminAuth.Use(middleware.JWTAuth(authService), middleware.AdminAuth(cfg.Server.AdminSecret))
@@ -335,18 +338,19 @@ func corsMiddleware(allowedOrigins []string) gin.HandlerFunc {
 
 		allowedOrigin := ""
 		for _, o := range allowedOrigins {
-			if o != "" && (o == origin || o == "*") {
+			if o != "" && o == origin {
 				allowedOrigin = o
 				break
 			}
 		}
 
-		if allowedOrigin == "" && len(allowedOrigins) > 0 && allowedOrigins[0] != "" {
-			allowedOrigin = allowedOrigins[0]
-		}
-
 		if allowedOrigin == "" {
-			allowedOrigin = "*"
+			if c.Request.Method == "OPTIONS" {
+				c.AbortWithStatus(204)
+			} else {
+				c.Next()
+			}
+			return
 		}
 
 		c.Header("Access-Control-Allow-Origin", allowedOrigin)

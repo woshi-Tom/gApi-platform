@@ -64,6 +64,7 @@ func (w *VIPExpiryWorker) processExpiredVIPs() {
 				user.ID, []string{"vip_bronze", "vip_silver", "vip_gold"}, now).
 			Updates(map[string]interface{}{
 				"level":           "free",
+				"v_ip_quota":      0,
 				"v_ip_expired_at": nil,
 				"v_ip_package_id": 0,
 			})

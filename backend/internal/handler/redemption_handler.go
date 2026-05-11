@@ -310,7 +310,7 @@ func (h *RedemptionHandler) Redeem(c *gin.Context) {
 				}
 			}
 			if user.Level == "free" {
-				user.Level = "vip"
+				user.Level = "vip_bronze"
 			}
 			if redemptionCode.Quota > 0 {
 				user.VIPQuota += redemptionCode.Quota

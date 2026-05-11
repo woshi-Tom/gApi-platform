@@ -6,13 +6,11 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 	"sync"
 	"time"
 
 	"gapi-platform/internal/model"
 	"gapi-platform/internal/repository"
-	"gorm.io/gorm"
 
 	"github.com/smartwalle/alipay/v3"
 )
@@ -236,45 +234,6 @@ type NotifyResult struct {
 	TradeStatus string
 	TotalAmount string
 	Success     bool
-}
-
-func (s *AlipayService) ProcessPaymentSuccess(order *model.Order, tradeNo string, amount string) error {
-	if order.Status == "paid" {
-		return nil
-	}
-
-	order.Status = "paid"
-	now := time.Now()
-	order.PaidAt = &now
-	order.AlipayTradeNo = tradeNo
-
-	if err := s.orderRepo.Save(order); err != nil {
-		return fmt.Errorf("failed to update order: %w", err)
-	}
-
-	var payment model.Payment
-	s.paymentRepo.GetDB().Where("order_id = ?", order.ID).First(&payment)
-	if payment.ID != 0 {
-		payment.Status = "success"
-		payment.ChannelOrderNo = tradeNo
-		payment.PaidAt = &now
-		s.paymentRepo.Update(&payment)
-	}
-
-	if order.OrderType == "recharge" || order.OrderType == "package" || order.OrderType == "vip" {
-		quota, _ := strconv.ParseFloat(amount, 64)
-		tokenAmount := int64(quota * 100000)
-		if err := s.addQuotaToUser(order.UserID, tokenAmount); err != nil {
-			return fmt.Errorf("failed to add quota: %w", err)
-		}
-	}
-
-	return nil
-}
-
-func (s *AlipayService) addQuotaToUser(userID uint, amount int64) error {
-	return s.userRepo.GetDB().Model(&model.User{}).Where("id = ?", userID).
-		UpdateColumn("remain_quota", gorm.Expr("remain_quota + ?", amount)).Error
 }
 
 func (s *AlipayService) GetNotifyURL() string {

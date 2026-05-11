@@ -127,7 +127,7 @@ func (s *AuthService) Register(c *gin.Context, username, email, password string)
 			user.FreeExpiredAt = &t
 		}
 	case "vip":
-		user.Level = "vip"
+		user.Level = "vip_bronze"
 		user.VIPQuota = rewardAmount
 		t := time.Now().AddDate(0, 1, 0)
 		user.VIPExpiredAt = &t
@@ -142,7 +142,7 @@ func (s *AuthService) Register(c *gin.Context, username, email, password string)
 
 	var quota int64
 	var quotaType string
-	if user.Level == "vip" {
+	if user.Level == "vip_bronze" {
 		quota = user.VIPQuota
 		quotaType = "vip"
 	} else {
@@ -290,6 +290,10 @@ func NewUserService(userRepo *repository.UserRepository) *UserService {
 // GetByID gets a user by ID
 func (s *UserService) GetByID(id uint) (*model.User, error) {
 	return s.userRepo.GetByID(id)
+}
+
+func (s *UserService) GetByUsername(username string) (*model.User, error) {
+	return s.userRepo.GetByUsername(username)
 }
 
 // Update updates a user

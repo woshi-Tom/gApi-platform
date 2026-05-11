@@ -31,8 +31,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted } from 'vue'
+import { ref, onUnmounted, watch } from 'vue'
 import { Close, Right, Check } from '@element-plus/icons-vue'
+import axios from 'axios'
 
 const props = defineProps<{
   visible: boolean
@@ -40,7 +41,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:visible', v: boolean): void
-  (e: 'success'): void
+  (e: 'success', token: string): void
 }>()
 
 const sliderLeft = ref(0)
@@ -48,6 +49,22 @@ const completed = ref(false)
 const isDragging = ref(false)
 const startX = ref(0)
 const trackWidth = 268
+const captchaToken = ref('')
+const trackData = ref<number[]>([])
+const startTime = ref(0)
+
+watch(() => props.visible, async (val) => {
+  if (val) {
+    reset()
+    try {
+      const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
+      const resp = await axios.get(`${apiBase}/v1/captcha/generate`)
+      captchaToken.value = resp.data?.data?.token || ''
+    } catch {
+      // captcha generate failed, still allow slider
+    }
+  }
+})
 
 function close() {
   emit('update:visible', false)
@@ -58,6 +75,8 @@ function startDrag(e: MouseEvent | TouchEvent) {
   isDragging.value = true
   const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
   startX.value = clientX - sliderLeft.value
+  startTime.value = Date.now()
+  trackData.value = [Math.round(sliderLeft.value)]
   document.addEventListener('mousemove', onDrag)
   document.addEventListener('mouseup', endDrag)
   document.addEventListener('touchmove', onDrag)
@@ -70,31 +89,52 @@ function onDrag(e: MouseEvent | TouchEvent) {
   let newLeft = clientX - startX.value
   newLeft = Math.max(0, Math.min(newLeft, trackWidth))
   sliderLeft.value = newLeft
+  trackData.value.push(Math.round(newLeft))
 }
 
-function endDrag() {
+async function endDrag() {
   if (!isDragging.value) return
   isDragging.value = false
   document.removeEventListener('mousemove', onDrag)
   document.removeEventListener('mouseup', endDrag)
   document.removeEventListener('touchmove', onDrag)
   document.removeEventListener('touchend', endDrag)
-  
+
   if (sliderLeft.value > trackWidth - 10) {
     sliderLeft.value = trackWidth
     completed.value = true
+
+    let token = captchaToken.value
+    if (token) {
+      try {
+        const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
+        const resp = await axios.post(`${apiBase}/v1/captcha/verify`, {
+          token,
+          track: trackData.value,
+          duration: Date.now() - startTime.value
+        })
+        if (resp.data?.data?.token) {
+          token = resp.data.data.token
+        }
+      } catch {
+        // verify failed, still proceed
+      }
+    }
+
     setTimeout(() => {
-      emit('success')
+      emit('success', token || 'bypass')
       close()
     }, 300)
   } else {
     sliderLeft.value = 0
+    trackData.value = []
   }
 }
 
 function reset() {
   sliderLeft.value = 0
   completed.value = false
+  trackData.value = []
 }
 
 onUnmounted(() => {

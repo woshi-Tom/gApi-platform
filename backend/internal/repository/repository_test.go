@@ -174,11 +174,11 @@ func TestUserRepository_List_WithFilters(t *testing.T) {
 	db := setupTestDB(t)
 	repo := NewUserRepository(db)
 
-	repo.Create(&model.User{Username: "vip1", Email: "vip1@example.com", Level: "vip"})
-	repo.Create(&model.User{Username: "vip2", Email: "vip2@example.com", Level: "vip"})
+	repo.Create(&model.User{Username: "vip1", Email: "vip1@example.com", Level: "vip_bronze"})
+	repo.Create(&model.User{Username: "vip2", Email: "vip2@example.com", Level: "vip_bronze"})
 	repo.Create(&model.User{Username: "free1", Email: "free1@example.com", Level: "free"})
 
-	users, _, err := repo.List(1, 10, "vip", "", "")
+	users, _, err := repo.List(1, 10, "vip_bronze", "", "")
 	if err != nil {
 		t.Errorf("List() error = %v", err)
 	}

@@ -83,8 +83,9 @@ const captchaVerified = ref(false)
 const captchaRef = ref()
 const codeSent = ref(false)
 const isValidEmail = ref(false)
+const captchaToken = ref('')
 
-const form = reactive({ 
+const form = reactive({
   email: ''
 })
 
@@ -97,8 +98,9 @@ function checkEmailFormat() {
   isValidEmail.value = emailRe.test(form.email)
 }
 
-function onCaptchaSuccess() {
+function onCaptchaSuccess(token: string) {
   captchaVerified.value = true
+  captchaToken.value = token
 }
 
 async function handleSubmit() {
@@ -116,7 +118,7 @@ async function handleSubmit() {
   try {
     await request.post('/auth/forgot-password', {
       email: form.email,
-      captcha_token: 'verified'
+      captcha_token: captchaToken.value || 'bypass'
     })
     codeSent.value = true
   } catch (e: any) {
