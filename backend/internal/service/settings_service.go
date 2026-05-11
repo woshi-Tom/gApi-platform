@@ -353,25 +353,29 @@ func (s *SettingsService) GetRegisterSettings() (*RegisterSettings, error) {
 }
 
 func (s *SettingsService) UpdateRegisterSettings(settings *RegisterSettings) error {
-	configs := map[string]string{
-		ConfigKeyAllowRegister:       boolToString(settings.AllowRegister),
-		ConfigKeyEnableCaptcha:       boolToString(settings.EnableCaptcha),
-		ConfigKeyNewUserQuota:        fmt.Sprintf("%d", settings.NewUserQuota),
-		ConfigKeyTrialVIPDays:        fmt.Sprintf("%d", settings.TrialVIPDays),
-		ConfigKeyAllowedDomains:       settings.AllowedDomains,
-		ConfigKeyMaxAccountsPerIP:     fmt.Sprintf("%d", settings.MaxAccountsPerIP),
-		ConfigKeyMinPasswordLength:   fmt.Sprintf("%d", settings.MinPasswordLength),
-		ConfigKeySignupRewardType:    settings.SignupRewardType,
-		ConfigKeySignupRewardAmount:   fmt.Sprintf("%d", settings.SignupRewardAmount),
+	type configEntry struct {
+		value     string
+		valueType string
+	}
+	configs := map[string]configEntry{
+		ConfigKeyAllowRegister:       {boolToString(settings.AllowRegister), "boolean"},
+		ConfigKeyEnableCaptcha:       {boolToString(settings.EnableCaptcha), "boolean"},
+		ConfigKeyNewUserQuota:        {fmt.Sprintf("%d", settings.NewUserQuota), "number"},
+		ConfigKeyTrialVIPDays:        {fmt.Sprintf("%d", settings.TrialVIPDays), "number"},
+		ConfigKeyAllowedDomains:      {settings.AllowedDomains, "string"},
+		ConfigKeyMaxAccountsPerIP:    {fmt.Sprintf("%d", settings.MaxAccountsPerIP), "number"},
+		ConfigKeyMinPasswordLength:   {fmt.Sprintf("%d", settings.MinPasswordLength), "number"},
+		ConfigKeySignupRewardType:    {settings.SignupRewardType, "string"},
+		ConfigKeySignupRewardAmount:  {fmt.Sprintf("%d", settings.SignupRewardAmount), "number"},
 	}
 
 	if settings.RequireEmailVerify != nil {
-		configs[ConfigKeyRequireEmailVerify] = boolToString(*settings.RequireEmailVerify)
+		configs[ConfigKeyRequireEmailVerify] = configEntry{boolToString(*settings.RequireEmailVerify), "boolean"}
 	}
 
 	return s.db.Transaction(func(tx *gorm.DB) error {
-		for key, value := range configs {
-			if err := s.upsertConfig(tx, key, value, "boolean", false); err != nil {
+		for key, entry := range configs {
+			if err := s.upsertConfigWithGroup(tx, key, entry.value, entry.valueType, false, ConfigGroupRegister); err != nil {
 				return err
 			}
 		}

@@ -167,7 +167,7 @@ const detailLoading = ref(false)
 const currentLog = ref<AuditLog | null>(null)
 
 const filters = reactive({
-  log_type: '',
+  log_type: 'operation',
   action_group: '',
   success: null as boolean | null
 })
@@ -273,7 +273,7 @@ function handleSizeChange() {
 }
 
 function resetFilters() {
-  filters.log_type = ''
+  filters.log_type = 'operation'
   filters.action_group = ''
   filters.success = null
   dateRange.value = []

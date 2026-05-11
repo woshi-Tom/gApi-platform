@@ -1,6 +1,6 @@
 # Git 协作规范
 
-> 适用版本: v1.0 | 最后更新: 2026-05-11
+> 适用版本: v1.1 | 最后更新: 2026-05-12
 
 ---
 
@@ -12,6 +12,7 @@
 【每日铁律】 开工前/推送前各 rebase 一次 main
 【合入门槛】 对方 Review 通过 + CI 通过
 【分支寿命】 理想 1-2 天，最长不超 1 周
+【发布流程】 dev 测试 → main 合入 → main 打 tag → 自动 Release
 ```
 
 ---
@@ -169,5 +170,63 @@ Closes #42
 ## 5. 不该提交的文件
 
 `.env`、`node_modules/`、`dist/`、`bin/`、`*.log`、`.idea/`、`.vscode/`、Docker 构建缓存。
+
+---
+
+## 6. Release 发布流程
+
+### 6.1 核心原则
+
+```
+tag 和分支是独立的 —— tag 绑定的是 commit，不是分支。
+Release 由 GitHub Actions 自动生成，触发条件是 git tag push。
+```
+
+**关键规则**：
+- 只在 `main` 分支上打正式发布 tag
+- 不要在 dev 分支上打正式 tag（测试 tag 用完即删）
+- 同一个 tag 名 push 多次会触发多次 workflow，生成重复 release
+
+### 6.2 标准发布流程
+
+```bash
+# 1. 在 dev 分支上测试 release（可选）
+git tag v1.2.1-rc.1
+git push origin dev-tom --tags
+# → GitHub Actions 会触发，生成 pre-release，验证打包是否正确
+
+# 2. 清理测试 tag（避免污染）
+git tag -d v1.2.1-rc.1                  # 删除本地 tag
+git push origin :refs/tags/v1.2.1-rc.1  # 删除远程 tag
+
+# 3. 合并到 main
+git checkout main
+git merge dev-tom
+git push origin main
+
+# 4. 在 main 上打正式 tag
+git tag v1.2.1
+git push origin v1.2.1
+# → GitHub Actions 自动构建并发布 Release
+```
+
+### 6.3 Release 产物说明
+
+| 文件 | 适用平台 | 说明 |
+|------|----------|------|
+| `gapi-platform-{VERSION}-linux-amd64.tar.gz` | Linux / macOS | Docker Compose 一键部署 |
+| `gapi-platform-{VERSION}-windows-amd64.zip` | Windows | 同上，Windows 用 zip 解压 |
+
+### 6.4 Tag 管理注意事项
+
+| 操作 | 命令 | 说明 |
+|------|------|------|
+| 创建 tag | `git tag v1.0.0` | 打在当前 HEAD |
+| 推送 tag | `git push origin v1.0.0` | 只推送单个 tag，避免 `--tags` 误推 |
+| 删除本地 tag | `git tag -d v1.0.0` | 安全，不影响远程 |
+| 删除远程 tag | `git push origin :refs/tags/v1.0.0` | 会删除已生成的 Release |
+| 慎用 `--tags` | `git push origin --tags` | 会推送所有本地 tag，容易把测试 tag 也推上去 |
+
+**推荐做法**：始终用 `git push origin <tag名>` 单独推送 tag，不用 `--tags`。
 
 ---
