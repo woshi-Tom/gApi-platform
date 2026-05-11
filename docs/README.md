@@ -82,6 +82,7 @@ docs/
 | 文档 | 说明 | 状态 |
 |------|------|------|
 | [development-notes.md](./05-development/development-notes.md) | ⚠️ **开发前必读** | ✅ |
+| [git-workflow.md](./05-development/git-workflow.md) | ⚠️ **Git 协作规范** | ✅ |
 
 ---
 
