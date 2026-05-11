@@ -59,7 +59,7 @@ coverage/
 *.jpeg
 *.gif
 *.sh
-!.sh
+!deploy/release/*.sh
 
 # Testing
 test-results/
