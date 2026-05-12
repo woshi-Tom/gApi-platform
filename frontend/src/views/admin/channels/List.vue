@@ -779,8 +779,11 @@ const load = async () => {
     
     const res = await api.list(params)
     if (res.data.data) {
-      channels.value = res.data.data.list || res.data.data
-      pagination.total = res.data.data.pagination?.total || channels.value.length
+      channels.value = Array.isArray(res.data.data) ? res.data.data : (res.data.data.list || [])
+      pagination.total = res.data.pagination?.total ?? channels.value.length
+      if (res.data.pagination?.page_size) {
+        pagination.pageSize = res.data.pagination.page_size
+      }
     }
   } catch (e: any) {
     ElMessage.error('加载失败: ' + (e.response?.data?.error?.message || e.message))

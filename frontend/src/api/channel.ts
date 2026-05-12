@@ -68,15 +68,17 @@ export type ChannelTestHistory = {
 }
 
 export const channelApi = {
-  list: (params?: { 
-    page?: number; 
-    page_size?: number; 
-    type?: string; 
+  list: (params?: {
+    page?: number;
+    page_size?: number;
+    type?: string;
     status?: string;
     group?: string;
     keyword?: string;
-  }) => adminAPI.get<{ 
-    data: { list: Channel[]; pagination: { total: number; page: number; page_size: number } } 
+  }) => adminAPI.get<{
+    success: boolean;
+    data: Channel[];
+    pagination: { total: number; page: number; page_size: number; total_pages: number }
   }>('/channels', { params }),
   
   create: (data: Partial<Channel>) => adminAPI.post('/channels', data),
