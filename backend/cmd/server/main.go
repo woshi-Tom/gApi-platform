@@ -98,7 +98,8 @@ func main() {
 	healthCheckService.Start()
 	defer healthCheckService.Stop()
 
-	r := gin.Default()
+	r := gin.New()
+	r.Use(gin.Recovery())
 
 	router.SetupUserRoutes(r, cfg, db, redisClient)
 	router.SetupAdminRoutes(r, cfg, db, redisClient, healthCheckService)

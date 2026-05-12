@@ -186,6 +186,9 @@ func (c *Config) loadFromEnv() {
 	if v := os.Getenv("GAPI_FRONTEND_URL"); v != "" {
 		c.Server.Frontend = v
 	}
+	if v := os.Getenv("GAPI_ADMIN_FRONTEND_URL"); v != "" {
+		c.Server.AdminFrontend = v
+	}
 	if v := os.Getenv("GAPI_ADMIN_SECRET"); v != "" {
 		c.Server.AdminSecret = v
 	}

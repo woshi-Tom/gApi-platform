@@ -4,6 +4,18 @@
 
 ---
 
+## [v1.2.1] - 2026-05-12
+
+### Fixes
+- **CORS 环境变量加载**: 修复 `GAPI_ADMIN_FRONTEND_URL` 环境变量未加载导致管理后台跨域请求失败
+- **Model 表自动迁移**: `AutoMigrate` 注册 `ModelGroup`、`ChannelGroupRelation`、`UserGroupRelation`、`ModelPricing` 四个模型，修复新部署时模型管理功能不可用
+- **Response 类型清理**: 删除 `model/response.go` 中未使用的 `Pagination`/`PageData` 类型，添加文件注释说明类型职责
+- **配置文件清理**: `.env.example` 移除 `config.go` 不支持的微信支付环境变量
+- **死代码清理**: 删除未使用的前端组件 `SliderCaptcha.vue`、`HelloWorld.vue`；移除 `router.go` 中冗余的 `_ = idempRepo`
+- **日志中间件去重**: `gin.Default()` 改为 `gin.New()` + `gin.Recovery()`，避免与审计日志重复输出请求日志
+
+---
+
 ## [v1.2.0] - 2026-05-12
 
 ### Breaking Changes
