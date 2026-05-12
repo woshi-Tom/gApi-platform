@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,13 +26,13 @@ var sensitiveFields = map[string]bool{
 	"private_key":   true,
 }
 
-// skipPaths contains paths that should not be audited
-var skipPaths = map[string]bool{
-	"/api/v1/internal/health":      true,
-	"/health":                      true,
-	"/ping":                        true,
-	"/api/v1/admin/logs/operation": true, // 避免审计日志本身的记录形成数据膨胀
-	"/api/v1/admin/logs/login":     true,
+// skipPathPrefixes contains path prefixes that should not be audited
+var skipPathPrefixes = []string{
+	"/api/v1/internal/health",
+	"/health",
+	"/ping",
+	"/api/v1/admin/logs/operation", // 避免审计日志本身的记录形成数据膨胀
+	"/api/v1/admin/logs/login",
 }
 
 // importantGetPrefixes contains GET path prefixes that should still be audited
@@ -42,10 +43,12 @@ var importantGetPrefixes = []string{
 // AuditLog creates an audit logging middleware
 func AuditLog(auditRepo *repository.AuditRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Skip audit for certain paths
-		if skipPaths[c.Request.URL.Path] {
-			c.Next()
-			return
+		// Skip audit for certain paths (prefix match)
+		for _, prefix := range skipPathPrefixes {
+			if strings.HasPrefix(c.Request.URL.Path, prefix) {
+				c.Next()
+				return
+			}
 		}
 
 		// Skip GET requests to reduce data bloat (unless they are important operations)
@@ -250,16 +253,10 @@ func determineResource(path string) (string, *uint) {
 
 	// Check if there's an ID
 	if len(parts) >= 2 {
-		// Try to parse ID (simplified - just check if it's numeric)
 		idStr := parts[1]
-		if len(idStr) > 0 && idStr[0] >= '0' && idStr[0] <= '9' {
-			var id uint
-			for _, c := range idStr {
-				if c >= '0' && c <= '9' {
-					id = id*10 + uint(c-'0')
-				}
-			}
-			return resourceType, &id
+		if id, err := strconv.ParseUint(idStr, 10, 64); err == nil {
+			uid := uint(id)
+			return resourceType, &uid
 		}
 	}
 
@@ -271,17 +268,33 @@ func maskSensitiveData(data string) string {
 		return data
 	}
 
-	var obj map[string]interface{}
-	if err := json.Unmarshal([]byte(data), &obj); err != nil {
+	var raw interface{}
+	if err := json.Unmarshal([]byte(data), &raw); err != nil {
 		return data
 	}
 
-	for key := range obj {
-		if sensitiveFields[strings.ToLower(key)] {
-			obj[key] = "***"
-		}
-	}
-
-	result, _ := json.Marshal(obj)
+	masked := maskValue(raw)
+	result, _ := json.Marshal(masked)
 	return string(result)
+}
+
+func maskValue(v interface{}) interface{} {
+	switch val := v.(type) {
+	case map[string]interface{}:
+		for key := range val {
+			if sensitiveFields[strings.ToLower(key)] {
+				val[key] = "***"
+			} else {
+				val[key] = maskValue(val[key])
+			}
+		}
+		return val
+	case []interface{}:
+		for i, item := range val {
+			val[i] = maskValue(item)
+		}
+		return val
+	default:
+		return v
+	}
 }

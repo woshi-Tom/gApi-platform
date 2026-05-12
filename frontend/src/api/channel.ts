@@ -51,6 +51,22 @@ export type ChannelHealthResult = {
   response_time_ms: number
 }
 
+export type ChannelTestHistory = {
+  id: number
+  channel_id: number
+  user_id: number
+  test_type: string
+  model: string
+  status_code: number
+  response_time_ms: number
+  success: boolean
+  error_message: string
+  error_type: string
+  request_body: string
+  response_body: string
+  created_at: string
+}
+
 export const channelApi = {
   list: (params?: { 
     page?: number; 
@@ -76,8 +92,17 @@ export const channelApi = {
   
   disable: (id: number) => adminAPI.post(`/channels/${id}/disable`),
   
-  triggerHealthCheck: (id: number) => 
+  triggerHealthCheck: (id: number) =>
     adminAPI.post<{ data: ChannelHealthResult }>(`/channels/${id}/health`),
+
+  getTestHistory: (id: number, limit?: number) =>
+    adminAPI.get<{ data: ChannelTestHistory[] }>(`/channels/${id}/test-history`, { params: { limit: limit || 50 } }),
+
+  importChannels: (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return adminAPI.post<{ data: { success_count: number; fail_count: number; errors?: string[] } }>('/channels/import', formData)
+  },
 }
 
 export const CHANNEL_TYPES = [

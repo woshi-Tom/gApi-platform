@@ -32,5 +32,8 @@ ENV TZ=Asia/Shanghai
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 
+RUN adduser -D -g '' appuser
+USER appuser
+
 ENTRYPOINT ["./gapi-server", "-config", "/app/config/config.yaml"]
 

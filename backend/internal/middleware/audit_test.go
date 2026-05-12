@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -55,6 +56,16 @@ func TestMaskSensitiveData(t *testing.T) {
 			input:    `{"Password": "secret", "API_KEY": "key123"}`,
 			expected: `{"API_KEY":"***","Password":"***"}`,
 		},
+		{
+			name:     "json array with sensitive fields",
+			input:    `[{"password":"secret","name":"a"},{"token":"tok123","name":"b"}]`,
+			expected: `[{"name":"a","password":"***"},{"name":"b","token":"***"}]`,
+		},
+		{
+			name:     "nested object with sensitive field",
+			input:    `{"user":{"name":"admin","api_key":"sk-xxx"}}`,
+			expected: `{"user":{"api_key":"***","name":"admin"}}`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -62,7 +73,7 @@ func TestMaskSensitiveData(t *testing.T) {
 			result := maskSensitiveData(tt.input)
 			// Compare JSON by parsing both to normalize ordering
 			if tt.input != "" && tt.input != "plain text" {
-				var expectedObj, resultObj map[string]interface{}
+				var expectedObj, resultObj interface{}
 				json.Unmarshal([]byte(tt.expected), &expectedObj)
 				json.Unmarshal([]byte(result), &resultObj)
 				assert.Equal(t, expectedObj, resultObj)
@@ -73,17 +84,18 @@ func TestMaskSensitiveData(t *testing.T) {
 	}
 }
 
-func TestSkipPaths(t *testing.T) {
-	// Verify known skip paths are in the map
+func TestSkipPathPrefixes(t *testing.T) {
 	skipTests := []struct {
-		path   string
-		skip   bool
+		path string
+		skip bool
 	}{
 		{"/api/v1/internal/health", true},
 		{"/health", true},
 		{"/ping", true},
 		{"/api/v1/admin/logs/operation", true},
+		{"/api/v1/admin/logs/operation/123", true},  // prefix match covers detail pages
 		{"/api/v1/admin/logs/login", true},
+		{"/api/v1/admin/logs/login/1", true},
 		{"/api/v1/user/profile", false},
 		{"/api/v1/admin/dashboard", false},
 		{"/api/v1/payment/alipay/query/123", false},
@@ -91,8 +103,14 @@ func TestSkipPaths(t *testing.T) {
 
 	for _, tt := range skipTests {
 		t.Run(tt.path, func(t *testing.T) {
-			_, exists := skipPaths[tt.path]
-			assert.Equal(t, tt.skip, exists, "skipPaths[%q]", tt.path)
+			matched := false
+			for _, prefix := range skipPathPrefixes {
+				if strings.HasPrefix(tt.path, prefix) {
+					matched = true
+					break
+				}
+			}
+			assert.Equal(t, tt.skip, matched, "skipPathPrefix match for %q", tt.path)
 		})
 	}
 }

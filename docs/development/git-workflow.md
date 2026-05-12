@@ -230,3 +230,57 @@ git push origin v1.2.1
 **推荐做法**：始终用 `git push origin <tag名>` 单独推送 tag，不用 `--tags`。
 
 ---
+
+## 7. 回滚策略
+
+### 7.1 触发条件
+
+| 场景 | 响应时间 | 操作人 |
+|------|---------|--------|
+| Release 后 24h 内发现关键 bug（功能不可用、数据丢失、安全漏洞） | 立即 | 开发 |
+| 用户反馈严重影响使用的功能异常 | 2h 内评估 | 产品/开发 |
+| 安全漏洞发现 | 立即 | 开发/安全 |
+
+### 7.2 回滚步骤
+
+```bash
+# 1. 在 main 上 revert 问题 commit
+git checkout main
+git log --oneline -10              # 确认要 revert 的 commit
+git revert <问题commit的hash>
+git push origin main
+
+# 2. 打补丁 tag
+git tag v1.2.1                     # 补丁版本号递增
+git push origin v1.2.1
+# → GitHub Actions 自动构建并发布补丁 Release
+
+# 3. 通知相关人员
+# Release notes 中说明回滚原因和修复内容
+```
+
+### 7.3 注意事项
+
+- **禁止** `git reset --hard` 修改已推送的历史
+- **禁止** `git push --force` 覆盖远程 main 分支
+- 删除远程 tag 会删除对应的 GitHub Release，谨慎操作
+- revert 后在 dev 分支同步修复，避免下次合入时被重新引入
+
+---
+
+## 8. 发布检查清单
+
+发布前逐项确认：
+
+- [ ] CHANGELOG.md 已更新到当前版本并包含全部变更
+- [ ] README.md 版本号已更新
+- [ ] docs/README.md 文档索引已同步
+- [ ] 所有 PR 已合并到 dev 分支
+- [ ] dev 分支 CI 通过（含测试和 lint）
+- [ ] 测试环境已验证
+- [ ] 测试 tag 已清理
+- [ ] main 分支已更新到最新 dev
+- [ ] 正式 tag 已创建并推送
+- [ ] Release Notes 已审核
+
+---

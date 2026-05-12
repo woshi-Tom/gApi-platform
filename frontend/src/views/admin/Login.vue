@@ -15,7 +15,7 @@
           <el-input v-model="form.password" type="password" placeholder="请输入密码" prefix-icon="Lock" size="large" show-password />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :loading="loading" @click="handleLogin" size="large" style="width:100%">登 录</el-button>
+          <el-button native-type="submit" type="primary" :loading="loading" @click="handleLogin" size="large" style="width:100%">登 录</el-button>
         </el-form-item>
       </el-form>
     </el-card>

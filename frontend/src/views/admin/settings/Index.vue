@@ -10,8 +10,8 @@
           <template #header>
             <span>基本设置</span>
           </template>
-          <el-form :model="generalForm" label-width="140px">
-            <el-form-item label="网站名称">
+          <el-form :model="generalForm" label-width="140px" :rules="generalRules" ref="generalFormRef">
+            <el-form-item label="网站名称" prop="site_name">
               <el-input v-model="generalForm.site_name" placeholder="API Proxy Platform" />
             </el-form-item>
             <el-form-item label="网站 Logo">
@@ -32,7 +32,7 @@
           <template #header>
             <span>注册设置</span>
           </template>
-          <el-form :model="registerForm" label-width="140px">
+          <el-form :model="registerForm" label-width="140px" :rules="registerRules" ref="registerFormRef">
             <el-form-item label="允许注册">
               <el-switch v-model="registerForm.allow_register" />
             </el-form-item>
@@ -103,7 +103,7 @@
               <el-tag v-else type="info" size="small">已禁用</el-tag>
             </div>
           </template>
-          <el-form :model="emailForm" label-width="140px">
+          <el-form :model="emailForm" label-width="140px" :rules="emailRules" ref="emailFormRef">
             <el-form-item label="启用邮箱服务">
               <el-switch v-model="emailForm.enabled" />
               <span class="form-tip">开启后用户可收到注册验证码、密码重置邮件</span>
@@ -167,7 +167,7 @@
           <template #header>
             <span>速率限制</span>
           </template>
-          <el-form :model="rateForm" label-width="160px">
+          <el-form :model="rateForm" label-width="160px" :rules="rateRules" ref="rateFormRef">
             <el-divider content-position="left">免费用户</el-divider>
             <el-form-item label="RPM 限制">
               <el-input-number v-model="rateForm.free_rpm" :min="1" :max="10000" />
@@ -196,7 +196,7 @@
           <template #header>
             <span>支付设置</span>
           </template>
-          <el-form :model="paymentForm" label-width="140px">
+          <el-form :model="paymentForm" label-width="140px" :rules="paymentRules" ref="paymentFormRef">
             <el-divider content-position="left">支付宝</el-divider>
             <el-form-item label="启用支付宝">
               <el-switch v-model="paymentForm.alipay_enabled" />
@@ -226,8 +226,8 @@
           <template #header>
             <span>安全设置</span>
           </template>
-          <el-form :model="securityForm" label-width="140px">
-            <el-form-item label="JWT 密钥">
+          <el-form :model="securityForm" label-width="140px" :rules="securityRules" ref="securityFormRef">
+            <el-form-item label="JWT 密钥" prop="jwt_secret">
               <el-input v-model="securityForm.jwt_secret" type="password" show-password />
               <span class="form-tip warning">修改后所有用户需要重新登录</span>
             </el-form-item>
@@ -273,7 +273,6 @@ const generalForm = reactive({
 const registerForm = reactive({
   allow_register: true,
   require_email_verify: true,
-  smtp_enabled: false,
   enable_captcha: true,
   new_user_quota: 100000,
   trial_vip_days: 0,
@@ -317,18 +316,45 @@ const securityForm = reactive({
   password_expire_days: 90,
 })
 
-async function loadGeneralSettings() {
-  try {
-    const res = await settingsAPI.getGeneralSettings()
-    if (res.data.data) {
-      const data = res.data.data
-      generalForm.site_name = data.site_name
-      generalForm.site_logo = data.site_logo
-      generalForm.site_description = data.site_description
-    }
-  } catch (e) {
-    ElMessage.error('加载基本设置失败')
-  }
+// Form refs for validation
+const generalFormRef = ref<any>(null)
+const registerFormRef = ref<any>(null)
+const emailFormRef = ref<any>(null)
+const rateFormRef = ref<any>(null)
+const paymentFormRef = ref<any>(null)
+const securityFormRef = ref<any>(null)
+
+// Validation rules
+const generalRules = {
+  site_name: [{ required: true, message: '请输入网站名称', trigger: 'blur' }],
+  site_logo: [{ required: true, message: '请输入网站 Logo 路径', trigger: 'blur' }],
+}
+
+const registerRules = {
+  allowed_domains: [{ pattern: /^([a-zA-Z0-9.-]+(,[a-zA-Z0-9.-]+)*)?$/, message: '域名格式不正确，用逗号分隔', trigger: 'blur' }],
+  min_password_length: [{ type: 'number', min: 6, max: 32, message: '密码长度应在 6-32 之间', trigger: 'blur' }],
+  max_accounts_per_ip: [{ type: 'number', min: 0, max: 100, message: '范围 0-100', trigger: 'blur' }],
+}
+
+const emailRules = {
+  host: [{ required: true, message: '请输入 SMTP 服务器地址', trigger: 'blur' }],
+  port: [{ type: 'number', required: true, min: 1, max: 65535, message: '端口范围 1-65535', trigger: 'blur' }],
+  username: [{ required: true, message: '请输入 SMTP 用户名', trigger: 'blur' }],
+  from_email: [{ type: 'email', message: '邮箱格式不正确', trigger: 'blur' }],
+}
+
+const rateRules = {
+  free_rpm: [{ type: 'number', required: true, min: 1, message: '请输入有效值', trigger: 'blur' }],
+  vip_rpm: [{ type: 'number', required: true, min: 1, message: '请输入有效值', trigger: 'blur' }],
+}
+
+const paymentRules = {
+  alipay_app_id: [{ required: true, message: '请输入支付宝 APP ID', trigger: 'blur' }],
+}
+
+const securityRules = {
+  jwt_secret: [{ required: true, min: 16, message: 'JWT 密钥至少 16 位', trigger: 'blur' }],
+  jwt_expire_hours: [{ type: 'number', required: true, min: 1, message: '请输入有效值', trigger: 'blur' }],
 }
 
 async function loadEmailConfig() {
@@ -357,7 +383,6 @@ async function loadRegisterSettings() {
       const data = res.data.data
       registerForm.allow_register = data.allow_register
       registerForm.require_email_verify = data.require_email_verify
-      registerForm.smtp_enabled = data.smtp_enabled
       registerForm.enable_captcha = data.enable_captcha
       registerForm.new_user_quota = data.new_user_quota
       registerForm.trial_vip_days = data.trial_vip_days

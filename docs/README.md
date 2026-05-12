@@ -119,6 +119,7 @@ docs/
 | [deployment.md](deployment/deployment.md) | Docker 部署文档 |
 | [security-deployment.md](deployment/security-deployment.md) | 安全与部署指南 |
 | [business-detail.md](deployment/business-detail.md) | 业务详细设计 |
+| [upgrade-v1.2.0.md](deployment/upgrade-v1.2.0.md) | v1.2.0 升级指南 |
 
 ---
 

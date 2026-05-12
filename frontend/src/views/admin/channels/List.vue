@@ -10,6 +10,9 @@
         <el-button type="info" :loading="batchChecking" @click="batchCheckAll">
           <el-icon><Refresh /></el-icon> 批量检测
         </el-button>
+        <el-button type="warning" @click="importDialogVisible = true">
+          批量导入
+        </el-button>
         <el-button type="primary" @click="showAdd">
           <el-icon><Plus /></el-icon> 添加渠道
         </el-button>
@@ -104,6 +107,7 @@
                 <el-dropdown-menu>
                   <el-dropdown-item command="edit">编辑</el-dropdown-item>
                   <el-dropdown-item command="test">测试</el-dropdown-item>
+                  <el-dropdown-item command="history">测试历史</el-dropdown-item>
                   <el-dropdown-item command="health" :disabled="healthChecking[row.id]">
                     {{ healthChecking[row.id] ? '检测中...' : '检测' }}
                   </el-dropdown-item>
@@ -243,6 +247,73 @@
         <el-button type="primary" :loading="testing" @click="runTest">运行测试</el-button>
       </template>
     </el-dialog>
+
+    <!-- 测试历史抽屉 -->
+    <el-drawer v-model="historyVisible" :title="historyChannelName + ' - 测试历史'" size="600px">
+      <el-table :data="testHistory" v-loading="historyLoading" stripe size="small">
+        <el-table-column label="时间" width="160">
+          <template #default="{ row }">{{ formatTime(row.created_at) }}</template>
+        </el-table-column>
+        <el-table-column label="类型" width="90">
+          <template #default="{ row }">
+            <el-tag size="small" :type="row.test_type==='models'?'':row.test_type==='chat'?'success':'warning'">{{ row.test_type }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="80">
+          <template #default="{ row }">
+            <el-tag :type="row.success?'success':'danger'" size="small">{{ row.success?'成功':'失败' }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="status_code" label="HTTP" width="70" />
+        <el-table-column label="响应时间" width="90">
+          <template #default="{ row }">{{ row.response_time_ms }}ms</template>
+        </el-table-column>
+        <el-table-column label="错误信息" min-width="150" show-overflow-tooltip>
+          <template #default="{ row }">{{ row.error_message || '-' }}</template>
+        </el-table-column>
+      </el-table>
+      <div v-if="testHistory.length === 0 && !historyLoading" style="text-align:center;padding:40px;color:#909399">
+        暂无测试记录
+      </div>
+    </el-drawer>
+
+    <!-- 批量导入对话框 -->
+    <el-dialog v-model="importDialogVisible" title="批量导入渠道" width="500px">
+      <div style="margin-bottom:16px">
+        <p style="color:#606266;font-size:14px;margin-bottom:12px">上传 CSV 文件批量导入渠道，文件格式要求：</p>
+        <div style="background:#f5f7fa;padding:12px;border-radius:4px;font-size:13px;font-family:monospace;word-break:break-all">
+          <div style="font-weight:600;margin-bottom:4px">CSV 表头（必填列标 *）：</div>
+          <div>name(*), type(*), base_url(*), api_key(*), models, weight, priority, group_name</div>
+          <div style="margin-top:8px;color:#909399">models 列用 | 分隔多个模型，如: gpt-4|gpt-3.5-turbo</div>
+        </div>
+      </div>
+      <el-upload
+        :auto-upload="false"
+        :limit="1"
+        accept=".csv"
+        :on-change="handleFileChange"
+        :on-remove="() => importFile = null"
+        drag
+      >
+        <div style="padding:20px">
+          <div style="font-size:28px;margin-bottom:8px"> </div>
+          <div>将 CSV 文件拖到此处，或 <em>点击上传</em></div>
+        </div>
+      </el-upload>
+      <div v-if="importResult" style="margin-top:16px">
+        <el-alert :type="importResult.fail_count === 0 ? 'success' : 'warning'" :closable="false">
+          <div>成功导入: <strong>{{ importResult.success_count }}</strong> 条</div>
+          <div v-if="importResult.fail_count > 0">失败: <strong>{{ importResult.fail_count }}</strong> 条</div>
+          <div v-if="importResult.errors" style="margin-top:8px;font-size:12px;max-height:120px;overflow-y:auto">
+            <div v-for="e in importResult.errors" :key="e" style="color:#f56c6c">{{ e }}</div>
+          </div>
+        </el-alert>
+      </div>
+      <template #footer>
+        <el-button @click="importDialogVisible = false">关闭</el-button>
+        <el-button type="primary" :loading="importing" :disabled="!importFile" @click="doImport">开始导入</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -251,7 +322,7 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { Plus, Refresh, ArrowDown } from '@element-plus/icons-vue'
 import { channelApi, CHANNEL_TYPES, CHANNEL_STATUS } from '@/api/channel'
-import type { Channel, ChannelTestResult } from '@/api/channel'
+import type { Channel, ChannelTestResult, ChannelTestHistory } from '@/api/channel'
 
 const api = channelApi
 
@@ -265,6 +336,18 @@ const isEdit = ref(false)
 const formRef = ref<FormInstance>()
 const testChannel = ref<Channel | null>(null)
 const testResult = ref<ChannelTestResult | null>(null)
+
+// Test history
+const historyVisible = ref(false)
+const historyLoading = ref(false)
+const historyChannelName = ref('')
+const testHistory = ref<ChannelTestHistory[]>([])
+
+// Import
+const importDialogVisible = ref(false)
+const importing = ref(false)
+const importFile = ref<File | null>(null)
+const importResult = ref<{ success_count: number; fail_count: number; errors?: string[] } | null>(null)
 
 // Health check loading state
 const healthChecking = ref<Record<number, boolean>>({})
@@ -626,6 +709,9 @@ const handleAction = (cmd: string, row: Channel) => {
     case 'test':
       test(row)
       break
+    case 'history':
+      showHistory(row)
+      break
     case 'health':
       checkHealth(row)
       break
@@ -635,6 +721,47 @@ const handleAction = (cmd: string, row: Channel) => {
     case 'delete':
       del(row.id)
       break
+  }
+}
+
+const formatTime = (ts: string) => {
+  if (!ts) return '-'
+  const d = new Date(ts)
+  return d.toLocaleString('zh-CN', { hour12: false })
+}
+
+const showHistory = async (c: Channel) => {
+  historyChannelName.value = c.name
+  historyVisible.value = true
+  historyLoading.value = true
+  try {
+    const res = await channelApi.getTestHistory(c.id)
+    testHistory.value = res.data.data || []
+  } catch {
+    testHistory.value = []
+  } finally {
+    historyLoading.value = false
+  }
+}
+
+const handleFileChange = (file: any) => {
+  importFile.value = file.raw
+  importResult.value = null
+}
+
+const doImport = async () => {
+  if (!importFile.value) return
+  importing.value = true
+  try {
+    const res = await channelApi.importChannels(importFile.value)
+    importResult.value = res.data.data
+    if (importResult.value && importResult.value.success_count > 0) {
+      load()
+    }
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.error?.message || '导入失败')
+  } finally {
+    importing.value = false
   }
 }
 

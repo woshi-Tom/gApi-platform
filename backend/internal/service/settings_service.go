@@ -197,7 +197,7 @@ func (s *SettingsService) UpdateSMTPConfig(cfg *SMTPConfig) error {
 				continue
 			}
 
-			if err := s.upsertConfig(tx, key, value, "boolean", data.IsSensitive); err != nil {
+			if err := s.upsertConfigWithGroup(tx, key, value, "boolean", data.IsSensitive, ConfigGroupEmail); err != nil {
 				return err
 			}
 		}
@@ -239,32 +239,6 @@ func (s *SettingsService) getConfigsByGroup(group string) ([]model.SystemConfig,
 	return configs, err
 }
 
-func (s *SettingsService) upsertConfig(tx *gorm.DB, key, value, valueType string, isSensitive bool) error {
-	var config model.SystemConfig
-	err := tx.Where("config_key = ?", key).First(&config).Error
-
-	description := getConfigDescription(key)
-
-	if err == gorm.ErrRecordNotFound {
-		config = model.SystemConfig{
-			ConfigKey:   key,
-			ConfigValue: value,
-			ValueType:   valueType,
-			ConfigGroup: ConfigGroupEmail,
-			IsSensitive: isSensitive,
-			Description: description,
-		}
-		return tx.Create(&config).Error
-	} else if err != nil {
-		return err
-	}
-
-	config.ConfigValue = value
-	if isSensitive {
-		config.IsSensitive = true
-	}
-	return tx.Save(&config).Error
-}
 
 func (s *SettingsService) InvalidateCache() {
 	s.cacheMutex.Lock()
