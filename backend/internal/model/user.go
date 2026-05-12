@@ -70,7 +70,7 @@ type AdminUser struct {
 	LastLoginIP string     `json:"last_login_ip" gorm:"size:50"`
 
 	// Password Security
-	PasswordChangedAt   time.Time  `json:"password_changed_at" gorm:"default:now()"`
+	PasswordChangedAt   time.Time  `json:"password_changed_at" gorm:"default:CURRENT_TIMESTAMP"`
 	PasswordExpireDays  int        `json:"password_expire_days" gorm:"default:90"`
 	FailedLoginAttempts int        `json:"failed_login_attempts" gorm:"default:0"`
 	LockedUntil         *time.Time `json:"locked_until"`

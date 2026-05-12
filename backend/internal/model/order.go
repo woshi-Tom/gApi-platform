@@ -181,7 +181,7 @@ type RedemptionUsage struct {
 	QuotaGranted int64     `json:"quota_granted" gorm:"default:0"`
 	VIPGranted   bool      `json:"vip_granted" gorm:"column:vip_granted;default:false"`
 	VIPDays      int       `json:"vip_days" gorm:"column:vip_days;default:0"`
-	RedeemedAt   time.Time `json:"redeemed_at" gorm:"not null;default:now()"`
+	RedeemedAt   time.Time `json:"redeemed_at" gorm:"not null;default:CURRENT_TIMESTAMP"`
 	IPAddress    string    `json:"ip_address" gorm:"size:50"`
 	UserAgent    string    `json:"user_agent" gorm:"size:500"`
 }
