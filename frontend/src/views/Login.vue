@@ -22,7 +22,7 @@
           </div>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" :loading="loading" :disabled="!captchaVerified" @click="handleLogin" size="large" style="width:100%">登 录</el-button>
+          <el-button native-type="submit" type="primary" :loading="loading" :disabled="!captchaVerified" @click="handleLogin" size="large" style="width:100%">登 录</el-button>
         </el-form-item>
       </el-form>
       <div class="login-footer">
