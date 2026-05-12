@@ -6,6 +6,9 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// 本文件中的类型专用于 OpenAI 兼容 API 响应格式（/v1/chat/completions 等）。
+// 业务 API（/api/v1/*、/api/v1/admin/*）请使用 pkg/response 包。
+
 // APIResponse represents a standard API response
 type APIResponse struct {
 	Success bool        `json:"success"`
@@ -18,20 +21,6 @@ type APIResponse struct {
 type APIError struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
-}
-
-// Pagination represents pagination info
-type Pagination struct {
-	Page       int `json:"page"`
-	PageSize   int `json:"page_size"`
-	Total      int `json:"total"`
-	TotalPages int `json:"total_pages"`
-}
-
-// PageData represents paginated data response
-type PageData struct {
-	List       interface{} `json:"list"`
-	Pagination *Pagination `json:"pagination"`
 }
 
 // JWTPayload represents JWT token claims

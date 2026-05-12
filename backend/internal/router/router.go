@@ -28,7 +28,6 @@ func SetupUserRoutes(
 	loginLogRepo := repository.NewLoginLogRepository(db.GetDB())
 	apiAccessLogRepo := repository.NewAPIAccessLogRepository(db.GetDB())
 	idempRepo := repository.NewIdempotencyRepository(db.GetDB())
-	_ = idempRepo
 
 	settingsService := service.NewSettingsService(db.GetDB())
 	authService := service.NewAuthService(userRepo, tokenRepo, &cfg.JWT)
