@@ -54,7 +54,7 @@ func (a *DeepSeekAdapter) Chat(ctx context.Context, channel *Channel, req *ChatR
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.APIKey))
 
-	resp, err := a.client.Do(httpReq)
+	resp, err := DoChannelRequest(a.client, httpReq, channel)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (a *DeepSeekAdapter) ChatStream(ctx context.Context, channel *Channel, req 
 	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.APIKey))
 	httpReq.Header.Set("Accept", "text/event-stream")
 
-	resp, err := a.client.Do(httpReq)
+	resp, err := DoChannelRequest(a.client, httpReq, channel)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +147,7 @@ func (a *DeepSeekAdapter) Embeddings(ctx context.Context, channel *Channel, req 
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.APIKey))
 
-	resp, err := a.client.Do(httpReq)
+	resp, err := DoChannelRequest(a.client, httpReq, channel)
 	if err != nil {
 		return nil, err
 	}

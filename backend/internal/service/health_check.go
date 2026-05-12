@@ -118,7 +118,7 @@ func (s *HealthCheckService) checkChannel(channelID uint) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(RequestTimeout)*time.Second)
 	defer cancel()
 
-	result := s.testChannel(ctx, chatAdapter, channel.BaseURL, apiKey)
+	result := s.testChannel(ctx, chatAdapter, channel.BaseURL, apiKey, channel.ProxyEnabled, channel.ProxyType, channel.ProxyURL)
 
 	if result.Success {
 		s.markHealthy(channel, result.ResponseTimeMs)
@@ -133,12 +133,15 @@ type TestResult struct {
 	Error          string
 }
 
-func (s *HealthCheckService) testChannel(ctx context.Context, chatAdapter adapter.Adapter, baseURL, apiKey string) *TestResult {
+func (s *HealthCheckService) testChannel(ctx context.Context, chatAdapter adapter.Adapter, baseURL, apiKey string, proxyEnabled bool, proxyType, proxyURL string) *TestResult {
 	start := time.Now()
 
 	channel := &adapter.Channel{
-		BaseURL: baseURL,
-		APIKey:  apiKey,
+		BaseURL:      baseURL,
+		APIKey:       apiKey,
+		ProxyEnabled: proxyEnabled,
+		ProxyType:    proxyType,
+		ProxyURL:     proxyURL,
 	}
 
 	modelsResp, err := chatAdapter.ListModels(ctx, channel)
@@ -259,7 +262,7 @@ func (s *HealthCheckService) CheckChannelManually(channelID uint) *TestResult {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(RequestTimeout)*time.Second)
 	defer cancel()
 
-	return s.testChannel(ctx, chatAdapter, channel.BaseURL, apiKey)
+	return s.testChannel(ctx, chatAdapter, channel.BaseURL, apiKey, channel.ProxyEnabled, channel.ProxyType, channel.ProxyURL)
 }
 
 func (s *HealthCheckService) GetChannelStatus(channelID uint) (bool, int, time.Time) {
