@@ -60,7 +60,7 @@ func setupIntegrationTest(t *testing.T) (*gin.Engine, *gorm.DB) {
 
 	userHandler := NewUserHandler(authService, userService, loginLogRepo)
 	tokenHandler := NewTokenHandler(tokenService)
-	apiHandler := NewAPIHandler(tokenService, channelService, userRepo)
+	apiHandler := NewAPIHandler(tokenService, channelService, userRepo, nil, nil)
 	redemptionCacheService := &service.RedemptionCacheService{}
 	redemptionHandler := NewRedemptionHandler(db, userRepo, auditRepo, redemptionCacheService)
 
