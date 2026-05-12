@@ -140,7 +140,7 @@ func (h *APIHandler) chatWithFailover(ctx context.Context, chatReq *adapter.Chat
 
 		apiKey, err := crypto.Decrypt(selectedChannel.APIKeyEncrypted)
 		if err != nil {
-			logger.Error("failed to decrypt API key for channel %d: %v", selectedChannel.ID, err)
+			logger.Errorf("failed to decrypt API key for channel %d: %v", selectedChannel.ID, err)
 			continue
 		}
 
@@ -200,7 +200,7 @@ func (h *APIHandler) handleStreamWithFailover(ctx context.Context, c *gin.Contex
 
 		apiKey, err := crypto.Decrypt(selectedChannel.APIKeyEncrypted)
 		if err != nil {
-			logger.Error("failed to decrypt API key for channel %d: %v", selectedChannel.ID, err)
+			logger.Errorf("failed to decrypt API key for channel %d: %v", selectedChannel.ID, err)
 			continue
 		}
 
@@ -523,7 +523,7 @@ func (h *APIHandler) embeddingsWithFailover(ctx context.Context, embedReq *adapt
 
 		apiKey, err := crypto.Decrypt(selectedChannel.APIKeyEncrypted)
 		if err != nil {
-			logger.Error("failed to decrypt API key for channel %d: %v", selectedChannel.ID, err)
+			logger.Errorf("failed to decrypt API key for channel %d: %v", selectedChannel.ID, err)
 			continue
 		}
 
