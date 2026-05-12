@@ -26,17 +26,17 @@ v1.2.0 通过 6 角色并行审查 + 1 轮外部评审，汇总发现 **5 个 P0
 | 4 | build 作业添加 `permissions: contents: read` | `.github/workflows/build.yml` | 开发 | ✅ |
 | 5 | Audit goroutine 添加 panic recover | `audit.go` | 开发 | ✅ |
 
-### P1 — 随行就市（7 项，未修复的不阻塞发布）
+### P1 — 已修复 ✅
 
 | # | 任务 | 优先级 | 状态 |
 |---|------|--------|------|
-| 06 | Action 版本锁 SHA | P1 | ⬜ |
-| 07 | Release 产物 checksum | P1 | ⬜ |
-| 08 | Settings handler 输入验证 | P1 | ⬜ |
-| 09 | maskSensitiveData 递归脱敏 | P1 | ⬜ |
-| 10 | CHANGELOG 模型管理页面条目 | P1 | ⬜ |
-| 11 | CHANGELOG Breaking Changes 章节 | P1 | ⬜ |
-| 12 | settings_handler 忽略 error | P1 | ⬜ |
+| 06 | Action 版本锁 SHA | P1 | ✅ |
+| 07 | Release 产物 checksum | P1 | ✅ |
+| 08 | Settings handler 输入验证 | P1 | ✅ |
+| 09 | maskSensitiveData 递归脱敏 | P1 | ✅ |
+| 10 | CHANGELOG 模型管理页面条目 | P1 | ✅ |
+| 11 | CHANGELOG Breaking Changes 章节 | P1 | ✅ |
+| 12 | settings_handler 忽略 error | P1 | ✅ |
 
 ### 过程中发现的修复
 
@@ -71,6 +71,6 @@ v1.2.0 通过 6 角色并行审查 + 1 轮外部评审，汇总发现 **5 个 P0
 ## 完成标准
 
 - [x] 5 个 P0 问题全部修复
+- [x] 7 个 P1 问题全部修复
 - [x] 通过全角色重新审查（6 角色再评一轮）
-- [ ] P1 问题按实际进度尽可能修复（后续版本）
 - [ ] v1.2.0 正式发布（等待合入 main）
