@@ -17,10 +17,12 @@ type APIResponse struct {
 	Error   *APIError   `json:"error,omitempty"`
 }
 
-// APIError represents an API error
+// APIError represents an API error (OpenAI-compatible format)
 type APIError struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
+	Type    string      `json:"type,omitempty"`
+	Code    string      `json:"code"`
+	Message string      `json:"message"`
+	Param   interface{} `json:"param,omitempty"`
 }
 
 // JWTPayload represents JWT token claims
@@ -216,6 +218,17 @@ type ChatCompletionsRequest struct {
 	Stream      bool                     `json:"stream"`
 	User        string                   `json:"user"`
 	Functions   []map[string]interface{} `json:"functions"`
+}
+
+// CompletionsRequest represents OpenAI text completions request
+type CompletionsRequest struct {
+	Model       string  `json:"model" binding:"required"`
+	Prompt      interface{} `json:"prompt" binding:"required"` // string or []string
+	MaxTokens   int     `json:"max_tokens"`
+	Temperature float64 `json:"temperature"`
+	TopP        float64 `json:"top_p"`
+	Stream      bool    `json:"stream"`
+	User        string  `json:"user"`
 }
 
 // EmbeddingsRequest represents OpenAI embeddings request

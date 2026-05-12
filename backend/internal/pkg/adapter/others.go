@@ -51,7 +51,7 @@ func (a *ZhipuAdapter) Chat(ctx context.Context, channel *Channel, req *ChatRequ
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.APIKey))
 
-	resp, err := a.client.Do(httpReq)
+	resp, err := DoChannelRequest(a.client, httpReq, channel)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func (a *ZhipuAdapter) ChatStream(ctx context.Context, channel *Channel, req *Ch
 	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.APIKey))
 	httpReq.Header.Set("Accept", "text/event-stream")
 
-	resp, err := a.client.Do(httpReq)
+	resp, err := DoChannelRequest(a.client, httpReq, channel)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +141,7 @@ func (a *ZhipuAdapter) Embeddings(ctx context.Context, channel *Channel, req *Em
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.APIKey))
 
-	resp, err := a.client.Do(httpReq)
+	resp, err := DoChannelRequest(a.client, httpReq, channel)
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +217,7 @@ func (a *BaiduAdapter) Chat(ctx context.Context, channel *Channel, req *ChatRequ
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.APIKey))
 
-	resp, err := a.client.Do(httpReq)
+	resp, err := DoChannelRequest(a.client, httpReq, channel)
 	if err != nil {
 		return nil, err
 	}
@@ -309,7 +309,7 @@ func (a *YiAdapter) Chat(ctx context.Context, channel *Channel, req *ChatRequest
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.APIKey))
 
-	resp, err := a.client.Do(httpReq)
+	resp, err := DoChannelRequest(a.client, httpReq, channel)
 	if err != nil {
 		return nil, err
 	}
@@ -456,7 +456,7 @@ func (a *OllamaAdapter) Chat(ctx context.Context, channel *Channel, req *ChatReq
 	httpReq, _ := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(jsonPayload))
 	httpReq.Header.Set("Content-Type", "application/json")
 
-	resp, err := a.client.Do(httpReq)
+	resp, err := DoChannelRequest(a.client, httpReq, channel)
 	if err != nil {
 		return nil, err
 	}
@@ -530,7 +530,7 @@ func (a *OllamaAdapter) ChatStream(ctx context.Context, channel *Channel, req *C
 	httpReq, _ := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(jsonPayload))
 	httpReq.Header.Set("Content-Type", "application/json")
 
-	resp, err := a.client.Do(httpReq)
+	resp, err := DoChannelRequest(a.client, httpReq, channel)
 	if err != nil {
 		return nil, err
 	}
@@ -596,7 +596,7 @@ func (a *OllamaAdapter) Embeddings(ctx context.Context, channel *Channel, req *E
 	httpReq, _ := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(jsonPayload))
 	httpReq.Header.Set("Content-Type", "application/json")
 
-	resp, err := a.client.Do(httpReq)
+	resp, err := DoChannelRequest(a.client, httpReq, channel)
 	if err != nil {
 		return nil, err
 	}
@@ -636,7 +636,7 @@ func (a *OllamaAdapter) ListModels(ctx context.Context, channel *Channel) (*Mode
 
 	httpReq, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
 
-	resp, err := a.client.Do(httpReq)
+	resp, err := DoChannelRequest(a.client, httpReq, channel)
 	if err != nil {
 		return nil, err
 	}
@@ -747,7 +747,7 @@ func (a *LocalAIAdapter) Chat(ctx context.Context, channel *Channel, req *ChatRe
 		httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.APIKey))
 	}
 
-	resp, err := a.client.Do(httpReq)
+	resp, err := DoChannelRequest(a.client, httpReq, channel)
 	if err != nil {
 		return nil, err
 	}
@@ -784,7 +784,7 @@ func (a *LocalAIAdapter) ChatStream(ctx context.Context, channel *Channel, req *
 	}
 	httpReq.Header.Set("Accept", "text/event-stream")
 
-	resp, err := a.client.Do(httpReq)
+	resp, err := DoChannelRequest(a.client, httpReq, channel)
 	if err != nil {
 		return nil, err
 	}
@@ -836,7 +836,7 @@ func (a *LocalAIAdapter) Embeddings(ctx context.Context, channel *Channel, req *
 		httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.APIKey))
 	}
 
-	resp, err := a.client.Do(httpReq)
+	resp, err := DoChannelRequest(a.client, httpReq, channel)
 	if err != nil {
 		return nil, err
 	}
@@ -860,7 +860,7 @@ func (a *LocalAIAdapter) ListModels(ctx context.Context, channel *Channel) (*Mod
 
 	httpReq, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
 
-	resp, err := a.client.Do(httpReq)
+	resp, err := DoChannelRequest(a.client, httpReq, channel)
 	if err != nil {
 		return nil, err
 	}
@@ -916,7 +916,7 @@ func (a *GroqAdapter) Chat(ctx context.Context, channel *Channel, req *ChatReque
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.APIKey))
 
-	resp, err := a.client.Do(httpReq)
+	resp, err := DoChannelRequest(a.client, httpReq, channel)
 	if err != nil {
 		return nil, err
 	}
@@ -951,7 +951,7 @@ func (a *GroqAdapter) ChatStream(ctx context.Context, channel *Channel, req *Cha
 	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.APIKey))
 	httpReq.Header.Set("Accept", "text/event-stream")
 
-	resp, err := a.client.Do(httpReq)
+	resp, err := DoChannelRequest(a.client, httpReq, channel)
 	if err != nil {
 		return nil, err
 	}

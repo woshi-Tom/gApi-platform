@@ -130,7 +130,7 @@
         </el-form-item>
         <el-form-item label="标签">
           <el-checkbox v-model="form.is_recommended">推荐</el-checkbox>
-          <el-checkbox v-model="form.is_popular" style="margin-left:20px">热门</el-checkbox>
+          <el-checkbox v-model="form.is_hot" style="margin-left:20px">热门</el-checkbox>
         </el-form-item>
         <el-form-item label="状态">
           <el-radio-group v-model="form.status">
@@ -147,7 +147,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
@@ -177,7 +177,7 @@ const defaultForm = () => ({
   concurrent_limit: 10,
   sort_order: 0,
   is_recommended: false,
-  is_popular: false,
+  is_hot: false,
   status: 'active'
 })
 
@@ -223,7 +223,7 @@ function handleEdit(row) {
     concurrent_limit: row.concurrent_limit || 10,
     sort_order: row.sort_order || 0,
     is_recommended: row.is_recommended || false,
-    is_popular: row.is_hot || false,
+    is_hot: row.is_hot || false,
     status: row.status
   })
   dialogVisible.value = true
@@ -247,11 +247,12 @@ async function handleSave() {
       price: form.price,
       sort_order: form.sort_order,
       is_recommended: form.is_recommended,
-      is_popular: form.is_popular,
+      is_hot: form.is_hot,
       status: form.status
     }
+    let payload: any
     if (form.product_type === 'vip') {
-      var payload = {
+      payload = {
         ...basePayload,
         product_type: 'vip',
         vip_days: form.vip_days,
@@ -261,7 +262,7 @@ async function handleSave() {
         concurrent_limit: form.concurrent_limit
       }
     } else {
-      var payload = {
+      payload = {
         ...basePayload,
         product_type: 'recharge',
         quota: form.quota,

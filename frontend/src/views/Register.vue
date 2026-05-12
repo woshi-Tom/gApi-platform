@@ -120,10 +120,11 @@ async function sendCode() {
   
   sendingCode.value = true
   try {
-    await request.post('/email/send-code', {
-      email: form.email,
-      captcha_token: captchaToken.value || 'bypass'
-    })
+    const payload: any = { email: form.email }
+    if (captchaToken.value) {
+      payload.captcha_token = captchaToken.value
+    }
+    await request.post('/email/send-code', payload)
     ElMessage.success('验证码已发送到您的邮箱')
     countdown.value = 60
     if (countdownTimer.value) {

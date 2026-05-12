@@ -2,7 +2,7 @@ import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
 
-const createRequest = (baseURL: string, tokenKey: string, clearKeys: string[]) => {
+const createRequest = (baseURL: string, tokenKey: string, clearKeys: string[], loginPath: string = '/login') => {
   const instance = axios.create({
     baseURL,
     timeout: 30000
@@ -21,7 +21,7 @@ const createRequest = (baseURL: string, tokenKey: string, clearKeys: string[]) =
     error => {
       if (error.response?.status === 401) {
         clearKeys.forEach(key => localStorage.removeItem(key))
-        router.push('/login')
+        router.push(loginPath)
         ElMessage.error('登录已过期，请重新登录')
       } else if (error.response?.status === 403 && error.response?.data?.error?.message?.includes('admin')) {
         // Skip showing error for admin auth issues, let the page handle it
@@ -38,6 +38,6 @@ const createRequest = (baseURL: string, tokenKey: string, clearKeys: string[]) =
 }
 
 export const userAPI = createRequest('/api/v1', 'token', ['token'])
-export const adminAPI = createRequest('/api/v1/admin', 'admin_token', ['admin_token', 'admin_secret'])
+export const adminAPI = createRequest('/api/v1/admin', 'admin_token', ['admin_token', 'admin_secret'], '/admin/login')
 
 export default userAPI

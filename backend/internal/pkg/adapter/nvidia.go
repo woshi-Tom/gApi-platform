@@ -70,7 +70,7 @@ func (a *NVIDIAAdapter) Chat(ctx context.Context, channel *Channel, req *ChatReq
 	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.APIKey))
 	httpReq.Header.Set("Accept", "application/json")
 
-	resp, err := a.client.Do(httpReq)
+	resp, err := DoChannelRequest(a.client, httpReq, channel)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
@@ -131,7 +131,7 @@ func (a *NVIDIAAdapter) ChatStream(ctx context.Context, channel *Channel, req *C
 	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.APIKey))
 	httpReq.Header.Set("Accept", "text/event-stream")
 
-	resp, err := a.client.Do(httpReq)
+	resp, err := DoChannelRequest(a.client, httpReq, channel)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
@@ -206,7 +206,7 @@ func (a *NVIDIAAdapter) Embeddings(ctx context.Context, channel *Channel, req *E
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.APIKey))
 
-	resp, err := a.client.Do(httpReq)
+	resp, err := DoChannelRequest(a.client, httpReq, channel)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
@@ -241,7 +241,7 @@ func (a *NVIDIAAdapter) ListModels(ctx context.Context, channel *Channel) (*Mode
 
 	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.APIKey))
 
-	resp, err := a.client.Do(httpReq)
+	resp, err := DoChannelRequest(a.client, httpReq, channel)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}

@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"gapi-platform/internal/config"
@@ -66,9 +67,11 @@ func NewDatabase(cfg *config.DatabaseConfig) (*Database, error) {
 	}, nil
 }
 
-// AutoMigrate runs auto migration
+// AutoMigrate runs auto migration.
+// GORM may attempt non-idempotent constraint operations on re-run,
+// so errors are logged as warnings instead of blocking startup.
 func (d *Database) AutoMigrate() error {
-	return d.DB.AutoMigrate(
+	if err := d.DB.AutoMigrate(
 		&model.Tenant{},
 		&model.AdminUser{},
 		&model.User{},
@@ -95,7 +98,10 @@ func (d *Database) AutoMigrate() error {
 		&model.ChannelGroupRelation{},
 		&model.UserGroupRelation{},
 		&model.ModelPricing{},
-	)
+	); err != nil {
+		log.Printf("[WARN] AutoMigrate non-fatal error (ignored): %v", err)
+	}
+	return nil
 }
 
 // Close closes the database connection

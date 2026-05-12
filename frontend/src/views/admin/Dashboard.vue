@@ -138,6 +138,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart, PieChart, BarChart } from 'echarts/charts'
@@ -302,6 +303,14 @@ const lineChartOption = computed(() => {
       smooth: true,
       itemStyle: { color: '#67c23a' },
       areaStyle: { color: 'rgba(103, 194, 58, 0.1)' }
+    },
+    {
+      name: 'Token消耗',
+      type: 'line',
+      data: tokenData,
+      smooth: true,
+      itemStyle: { color: '#409eff' },
+      areaStyle: { color: 'rgba(64, 158, 255, 0.1)' }
     }]
   }
 })
@@ -497,7 +506,7 @@ async function loadData() {
     // Calculate trends
     if (userOverviewRes.data?.data) {
       const data = userOverviewRes.data.data
-      userTrend.value = { up: data.TotalRequests > 1000, rate: Math.floor(Math.random() * 20) + 5 }
+      userTrend.value = { up: data.TotalRequests > 1000, rate: data.growth_rate ?? 0 }
     }
     
     fetchUserRanking()

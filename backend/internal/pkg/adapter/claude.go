@@ -71,7 +71,7 @@ func (a *ClaudeAdapter) Chat(ctx context.Context, channel *Channel, req *ChatReq
 	httpReq.Header.Set("x-api-key", channel.APIKey)
 	httpReq.Header.Set("anthropic-version", "2023-06-01")
 
-	resp, err := a.client.Do(httpReq)
+	resp, err := DoChannelRequest(a.client, httpReq, channel)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}

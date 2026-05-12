@@ -78,7 +78,7 @@ const qrCodeImage = ref<string>('')
 const expireAt = ref<string | null>(null)
 const packageName = ref<string>('')
 const amount = ref<number>(0)
-const status = ref<'pending'|'paid'|'expired'|'cancelled'>('pending')
+const status = ref<'pending'|'paid'|'completed'|'expired'|'cancelled'|'refunded'>('pending')
 const loading = ref(false)
 const loadingOrderInfo = ref(false)
 

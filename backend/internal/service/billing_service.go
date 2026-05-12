@@ -7,6 +7,7 @@ import (
 
 	"gapi-platform/internal/model"
 	"gapi-platform/internal/repository"
+	"gorm.io/gorm"
 )
 
 var (
@@ -16,10 +17,12 @@ var (
 )
 
 type BillingService struct {
-	userRepo  *repository.UserRepository
-	tokenRepo *repository.TokenRepository
-	usageRepo *repository.UsageLogRepository
-	txRepo    *repository.QuotaTransactionRepository
+	userRepo          *repository.UserRepository
+	tokenRepo         *repository.TokenRepository
+	usageRepo         *repository.UsageLogRepository
+	txRepo            *repository.QuotaTransactionRepository
+	rechargeRecordRepo *repository.UserRechargeRecordRepository
+	db                *gorm.DB
 }
 
 func NewBillingService(
@@ -27,12 +30,15 @@ func NewBillingService(
 	tokenRepo *repository.TokenRepository,
 	usageRepo *repository.UsageLogRepository,
 	txRepo *repository.QuotaTransactionRepository,
+	rechargeRecordRepo *repository.UserRechargeRecordRepository,
 ) *BillingService {
 	return &BillingService{
-		userRepo:  userRepo,
-		tokenRepo: tokenRepo,
-		usageRepo: usageRepo,
-		txRepo:    txRepo,
+		userRepo:           userRepo,
+		tokenRepo:          tokenRepo,
+		usageRepo:          usageRepo,
+		txRepo:             txRepo,
+		rechargeRecordRepo: rechargeRecordRepo,
+		db:                 userRepo.GetDB(),
 	}
 }
 
@@ -97,7 +103,10 @@ func (s *BillingService) GetTotalAvailableQuota(user *model.User) int64 {
 }
 
 func (s *BillingService) getActiveRechargeQuota(userID uint) int64 {
-	return 0
+	if s.rechargeRecordRepo == nil {
+		return 0
+	}
+	return s.rechargeRecordRepo.GetTotalActiveQuota(userID)
 }
 
 func (s *BillingService) PostConsumeQuota(userID, tokenID uint, modelName string, promptTokens, completionTokens int) error {
@@ -112,74 +121,115 @@ func (s *BillingService) PostConsumeQuota(userID, tokenID uint, modelName string
 	}
 
 	actualQuota := s.CalculateQuota(modelName, promptTokens, completionTokens)
-	_ = s.CalculateCost(modelName, promptTokens, completionTokens)
-
 	remaining := int64(actualQuota)
 
-	if user.FreeQuota > 0 && (user.FreeExpiredAt == nil || user.FreeExpiredAt.After(time.Now())) {
-		consume := min(remaining, user.FreeQuota)
-		user.FreeQuota -= consume
-		remaining -= consume
+	// T-06: Wrap all writes in a DB transaction
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		// 1. Deduct free_quota
+		if user.FreeQuota > 0 && (user.FreeExpiredAt == nil || user.FreeExpiredAt.After(time.Now())) {
+			consume := min(remaining, user.FreeQuota)
+			user.FreeQuota -= consume
+			remaining -= consume
 
-		err = s.txRepo.Create(&model.QuotaTransaction{
-			UserID:        userID,
-			TokenID:       &tokenID,
-			Type:          "usage",
-			QuotaType:     "free",
-			ChangeAmount:  -consume,
-			BalanceBefore: user.FreeQuota + consume,
-			BalanceAfter:  user.FreeQuota,
-			Description:   "API usage (free): " + modelName,
-			Model:         modelName,
-		})
-		if err != nil {
-			return err
+			if err := tx.Create(&model.QuotaTransaction{
+				UserID:        userID,
+				TokenID:       &tokenID,
+				Type:          "usage",
+				QuotaType:     "free",
+				ChangeAmount:  -consume,
+				BalanceBefore: user.FreeQuota + consume,
+				BalanceAfter:  user.FreeQuota,
+				Description:   "API usage (free): " + modelName,
+				Model:         modelName,
+			}).Error; err != nil {
+				return err
+			}
 		}
-	}
 
-	if remaining > 0 {
-		hasRecharge := s.consumeRechargeQuota(userID, tokenID, &remaining, modelName)
-		if hasRecharge && remaining > 0 {
+		// 2. Deduct recharge_quota (FIFO by expired_at)
+		if remaining > 0 && s.rechargeRecordRepo != nil {
+			records, err := s.rechargeRecordRepo.GetActiveByUser(userID)
+			if err == nil {
+				for i := range records {
+					if remaining <= 0 {
+						break
+					}
+					rec := &records[i]
+					consume := min(remaining, rec.Remaining)
+					newRemaining := rec.Remaining - consume
+					recStatus := "active"
+					if newRemaining <= 0 {
+						newRemaining = 0
+						recStatus = "used"
+					}
+
+					if err := tx.Model(&model.UserRechargeRecord{}).
+						Where("id = ?", rec.ID).
+						Updates(map[string]interface{}{
+							"remaining":  newRemaining,
+							"status":     recStatus,
+							"updated_at": time.Now(),
+						}).Error; err != nil {
+						return err
+					}
+
+					if err := tx.Create(&model.QuotaTransaction{
+						UserID:        userID,
+						TokenID:       &tokenID,
+						Type:          "usage",
+						QuotaType:     "recharge",
+						ChangeAmount:  -consume,
+						BalanceBefore: rec.Remaining,
+						BalanceAfter:  newRemaining,
+						Description:   "API usage (recharge): " + modelName,
+						Model:         modelName,
+					}).Error; err != nil {
+						return err
+					}
+
+					remaining -= consume
+				}
+			}
+		}
+
+		// 3. Deduct vip_quota (if recharge was consumed and still remaining)
+		if remaining > 0 {
+			vipBefore := user.VIPQuota
 			user.VIPQuota -= remaining
 			if user.VIPQuota < 0 {
 				user.VIPQuota = 0
 			}
 
-			err = s.txRepo.Create(&model.QuotaTransaction{
+			if err := tx.Create(&model.QuotaTransaction{
 				UserID:        userID,
 				TokenID:       &tokenID,
 				Type:          "usage",
 				QuotaType:     "vip",
-				ChangeAmount:  -remaining,
-				BalanceBefore: user.VIPQuota + remaining,
+				ChangeAmount:  -(vipBefore - user.VIPQuota),
+				BalanceBefore: vipBefore,
 				BalanceAfter:  user.VIPQuota,
 				Description:   "API usage (VIP): " + modelName,
 				Model:         modelName,
-			})
-			if err != nil {
+			}).Error; err != nil {
 				return err
 			}
 		}
-	}
 
-	token.UsedQuota += int64(actualQuota)
-	if !token.UnlimitedQuota {
-		token.RemainQuota -= int64(actualQuota)
-	}
+		// 4. Update token.used_quota / remain_quota
+		token.UsedQuota += int64(actualQuota)
+		if !token.UnlimitedQuota {
+			token.RemainQuota -= int64(actualQuota)
+		}
 
-	if err := s.userRepo.Update(user); err != nil {
-		return err
-	}
+		if err := tx.Save(user).Error; err != nil {
+			return err
+		}
+		if err := tx.Save(token).Error; err != nil {
+			return err
+		}
 
-	if err := s.tokenRepo.Update(token); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *BillingService) consumeRechargeQuota(userID, tokenID uint, remaining *int64, modelName string) bool {
-	return false
+		return nil
+	})
 }
 
 func (s *BillingService) CalculateQuota(modelName string, promptTokens, completionTokens int) int {

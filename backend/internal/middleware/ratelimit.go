@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"gapi-platform/internal/model"
+	"gapi-platform/internal/service"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/time/rate"
 )
@@ -119,8 +120,8 @@ func UserRateLimit(rps float64, burst int) gin.HandlerFunc {
 }
 
 // TokenRateLimit creates a per-token rate limiting middleware
-func TokenRateLimit() gin.HandlerFunc {
-	// Use a map of token ID to rate limiter
+// T-05: Supports per-token RPM/TPM configuration from the database
+func TokenRateLimit(tokenService *service.TokenService) gin.HandlerFunc {
 	limiters := make(map[uint]*tokenLimiterEntry)
 	mu := sync.RWMutex{}
 
@@ -153,12 +154,33 @@ func TokenRateLimit() gin.HandlerFunc {
 		mu.RUnlock()
 
 		if !ok {
+			// Load token config from database
+			rpm := 10 // default RPM
+			tpm := 0  // default: no TPM limit
+			if tokenService != nil {
+				if token, err := tokenService.GetByID(tid); err == nil && token != nil {
+					if token.RPMLimit != nil && *token.RPMLimit > 0 {
+						rpm = *token.RPMLimit
+					}
+					if token.TPMLimit != nil && *token.TPMLimit > 0 {
+						tpm = *token.TPMLimit
+					}
+				}
+			}
+
 			mu.Lock()
 			// Double-check after acquiring write lock
 			if entry, ok = limiters[tid]; !ok {
+				burst := rpm
+				if burst < 1 {
+					burst = 1
+				}
 				entry = &tokenLimiterEntry{
-					limiter:  rate.NewLimiter(10, 10), // 10 requests per second, burst 10
-					lastUsed: time.Now(),
+					limiter:   rate.NewLimiter(rate.Limit(rpm)/60.0, burst), // RPM → per-second
+					tpmLimit:  tpm,
+					tpmWindow: time.Now(),
+					tpmCount:  0,
+					lastUsed:  time.Now(),
 				}
 				limiters[tid] = entry
 			}
@@ -169,16 +191,42 @@ func TokenRateLimit() gin.HandlerFunc {
 		entry.lastUsed = time.Now()
 		mu.Unlock()
 
+		// RPM check
 		if !entry.limiter.Allow() {
-			c.JSON(http.StatusTooManyRequests, model.APIResponse{
-				Success: false,
+			c.JSON(http.StatusTooManyRequests, model.APIErrorResponse{
 				Error: &model.APIError{
-					Code:    "RATE_LIMITED",
-					Message: "Token rate limit exceeded",
+					Type:    "rate_limit_error",
+					Code:    "rate_limit_rpm",
+					Message: "Token RPM rate limit exceeded",
 				},
 			})
 			c.Abort()
 			return
+		}
+
+		// TPM check (simple per-minute window)
+		if entry.tpmLimit > 0 {
+			mu.Lock()
+			now := time.Now()
+			if now.Sub(entry.tpmWindow) > time.Minute {
+				entry.tpmWindow = now
+				entry.tpmCount = 0
+			}
+			entry.tpmCount++
+			exceeded := entry.tpmCount > entry.tpmLimit
+			mu.Unlock()
+
+			if exceeded {
+				c.JSON(http.StatusTooManyRequests, model.APIErrorResponse{
+					Error: &model.APIError{
+						Type:    "rate_limit_error",
+						Code:    "rate_limit_tpm",
+						Message: "Token TPM rate limit exceeded",
+					},
+				})
+				c.Abort()
+				return
+			}
 		}
 
 		c.Next()
@@ -186,6 +234,9 @@ func TokenRateLimit() gin.HandlerFunc {
 }
 
 type tokenLimiterEntry struct {
-	limiter  *rate.Limiter
-	lastUsed time.Time
+	limiter   *rate.Limiter
+	lastUsed  time.Time
+	tpmLimit  int
+	tpmWindow time.Time
+	tpmCount  int
 }

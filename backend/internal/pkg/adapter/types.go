@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -18,6 +19,9 @@ type Channel struct {
 	Models       []string
 	ModelMapping map[string]string
 	Timeout      int
+	ProxyEnabled bool
+	ProxyType    string
+	ProxyURL     string
 }
 
 type ChatRequest struct {
@@ -141,6 +145,21 @@ func GetHTTPClient(timeout int) *http.Client {
 	}
 }
 
+// NewHTTPClient creates an HTTP client with optional proxy support.
+func NewHTTPClient(timeout int, proxyEnabled bool, proxyType, proxyURL string) *http.Client {
+	if timeout <= 0 {
+		timeout = 120
+	}
+	client := &http.Client{Timeout: time.Duration(timeout) * time.Second}
+	if proxyEnabled && proxyURL != "" {
+		u, err := url.Parse(proxyURL)
+		if err == nil {
+			client.Transport = &http.Transport{Proxy: http.ProxyURL(u)}
+		}
+	}
+	return client
+}
+
 func NewRequest(method, url string, body interface{}, headers map[string]string) (*http.Request, error) {
 	var bodyReader io.Reader
 	if body != nil {
@@ -170,6 +189,15 @@ func NewRequest(method, url string, body interface{}, headers map[string]string)
 
 func DoRequest(client *http.Client, req *http.Request) (*http.Response, error) {
 	return client.Do(req)
+}
+
+// DoChannelRequest sends an HTTP request using the channel's proxy configuration.
+func DoChannelRequest(defaultClient *http.Client, req *http.Request, ch *Channel) (*http.Response, error) {
+	if ch.ProxyEnabled && ch.ProxyURL != "" {
+		client := NewHTTPClient(ch.Timeout, ch.ProxyEnabled, ch.ProxyType, ch.ProxyURL)
+		return client.Do(req)
+	}
+	return defaultClient.Do(req)
 }
 
 type TestResult struct {

@@ -86,7 +86,7 @@ func (a *GeminiAdapter) Chat(ctx context.Context, channel *Channel, req *ChatReq
 
 	httpReq.Header.Set("Content-Type", "application/json")
 
-	resp, err := a.client.Do(httpReq)
+	resp, err := DoChannelRequest(a.client, httpReq, channel)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
@@ -208,7 +208,7 @@ func (a *GeminiAdapter) Embeddings(ctx context.Context, channel *Channel, req *E
 
 	httpReq.Header.Set("Content-Type", "application/json")
 
-	resp, err := a.client.Do(httpReq)
+	resp, err := DoChannelRequest(a.client, httpReq, channel)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}

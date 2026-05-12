@@ -357,6 +357,20 @@ const securityRules = {
   jwt_expire_hours: [{ type: 'number', required: true, min: 1, message: '请输入有效值', trigger: 'blur' }],
 }
 
+async function loadGeneralSettings() {
+  try {
+    const res = await settingsAPI.getGeneralSettings()
+    if (res.data.data) {
+      const data = res.data.data
+      generalForm.site_name = data.site_name || 'API Proxy Platform'
+      generalForm.site_logo = data.site_logo || '/static/logo.png'
+      generalForm.site_description = data.site_description || ''
+    }
+  } catch (e) {
+    ElMessage.error('加载基本设置失败')
+  }
+}
+
 async function loadEmailConfig() {
   try {
     const res = await settingsAPI.getSMTPConfig()

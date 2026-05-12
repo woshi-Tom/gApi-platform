@@ -158,6 +158,11 @@ type APIAccessLog struct {
 	ResponseTime int    `json:"response_time" gorm:"default:0"` // milliseconds
 	ErrorMessage string `json:"error_message" gorm:"type:text"`
 
+	// T-13: Per-stage latency breakdown (milliseconds)
+	PreCheckDurationMs     int `json:"pre_check_duration_ms" gorm:"default:0"`
+	ChannelSelectDurationMs int `json:"channel_select_duration_ms" gorm:"default:0"`
+	UpstreamDurationMs     int `json:"upstream_duration_ms" gorm:"default:0"`
+
 	// Request metadata
 	RequestIP string `json:"request_ip" gorm:"size:50"`
 	UserAgent string `json:"user_agent" gorm:"size:200"`

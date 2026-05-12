@@ -130,10 +130,10 @@
               </el-select>
             </el-form-item>
             <el-form-item label="启用">
-              <el-switch v-model="pricingForm.is_enabled" true-value="true" false-value="false" />
+              <el-switch v-model="pricingForm.is_enabled" />
             </el-form-item>
             <el-form-item label="是否特色">
-              <el-switch v-model="pricingForm.is_featured" true-value="true" false-value="false" />
+              <el-switch v-model="pricingForm.is_featured" />
             </el-form-item>
             <el-form-item label="排序">
               <el-input-number v-model="pricingForm.sort_order" :min="0" style="width:180px" />
@@ -168,7 +168,7 @@
         <el-dialog title="设置用户分组" v-model="userGroupDialogVisible" width="680px">
           <div style="max-height:320px;overflow:auto;">
             <el-checkbox-group v-model="selectedGroupIds" style="display:flex;flex-direction:column;gap:8px;">
-              <el-checkbox v-for="g in modelGroupsAll" :key="g.id" :label="g.id">{{ g.display_name || g.name }}</el-checkbox>
+              <el-checkbox v-for="g in modelGroupsAll" :key="g.id" :value="g.id">{{ g.display_name || g.name }}</el-checkbox>
             </el-checkbox-group>
           </div>
           <template #footer>

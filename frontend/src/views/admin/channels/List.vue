@@ -319,7 +319,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
+import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { Plus, Refresh, ArrowDown } from '@element-plus/icons-vue'
 import { channelApi, CHANNEL_TYPES, CHANNEL_STATUS } from '@/api/channel'
 import type { Channel, ChannelTestResult, ChannelTestHistory } from '@/api/channel'
@@ -446,29 +446,17 @@ const testForm = reactive({
 })
 
 const testChannelModels = computed(() => {
-  // 首先从 testResult 获取（测试刚获取的）
   if (testResult.value?.models && testResult.value.models.length > 0) {
-    console.log('Using testResult models:', testResult.value.models.length)
     return testResult.value.models
   }
-  // 其次从 testChannel 获取（可能是数组或 JSON 字符串）
   const m = testChannel.value?.models
-  console.log('testChannel.models:', m, typeof m)
   if (!m) return []
-  if (Array.isArray(m)) {
-    console.log('Using testChannel as array, length:', m.length)
-    return m
-  }
+  if (Array.isArray(m)) return m
   if (typeof m === 'string') {
     try {
       const parsed = JSON.parse(m)
-      if (Array.isArray(parsed)) {
-        console.log('Using parsed string, length:', parsed.length)
-        return parsed
-      }
-    } catch (e) {
-      console.log('Parse failed')
-    }
+      if (Array.isArray(parsed)) return parsed
+    } catch {}
   }
   return []
 })
@@ -693,11 +681,18 @@ const checkHealth = async (c: Channel) => {
 
 const del = async (id: number) => {
   try {
+    await ElMessageBox.confirm('确定删除此渠道？此操作不可恢复！', '警告', {
+      type: 'warning',
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+    })
     await api.delete(id)
     ElMessage.success('已删除')
     load()
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.error?.message || '删除失败')
+    if (e !== 'cancel') {
+      ElMessage.error(e.response?.data?.error?.message || '删除失败')
+    }
   }
 }
 
@@ -779,8 +774,11 @@ const load = async () => {
     
     const res = await api.list(params)
     if (res.data.data) {
-      channels.value = res.data.data.list || res.data.data
-      pagination.total = res.data.data.pagination?.total || channels.value.length
+      channels.value = Array.isArray(res.data.data) ? res.data.data : (res.data.data.list || [])
+      pagination.total = res.data.pagination?.total ?? channels.value.length
+      if (res.data.pagination?.page_size) {
+        pagination.pageSize = res.data.pagination.page_size
+      }
     }
   } catch (e: any) {
     ElMessage.error('加载失败: ' + (e.response?.data?.error?.message || e.message))
