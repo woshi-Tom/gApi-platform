@@ -23,13 +23,14 @@ services:
     image: redis:7-alpine
     container_name: gapi-redis-test
     restart: unless-stopped
-    command: redis-server --requirepass redis123
     volumes:
+      - ../../deploy/release/redis.conf:/usr/local/etc/redis/redis.conf:ro
       - redis_data_test:/data
     ports:
       - "6380:6379"
+    command: redis-server /usr/local/etc/redis/redis.conf
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "redis123", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5

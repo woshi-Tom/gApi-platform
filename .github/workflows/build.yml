@@ -208,6 +208,7 @@ jobs:
           # --- Release infrastructure ---
           cp deploy/release/docker-compose.yml "${DIR}/"
           cp deploy/release/Dockerfile.backend "${DIR}/"
+          cp deploy/release/redis.conf "${DIR}/"
           cp deploy/release/nginx.conf "${DIR}/"
           cp deploy/release/.env.example "${DIR}/"
           cp deploy/release/config.yaml.example "${DIR}/"
