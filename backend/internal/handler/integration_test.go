@@ -38,6 +38,10 @@ func setupIntegrationTest(t *testing.T) (*gin.Engine, *gorm.DB) {
 		&model.VIPPackage{},
 		&model.RechargePackage{},
 		&model.APIAccessLog{},
+		&model.SystemConfig{},
+		&model.RedemptionCode{},
+		&model.RedemptionUsage{},
+		&model.PasswordReset{},
 	)
 	if err != nil {
 		t.Fatalf("failed to migrate: %v", err)

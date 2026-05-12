@@ -80,7 +80,7 @@ func (r *UserRepository) List(page, pageSize int, level, status, keyword string)
 		query = query.Where("status = ?", status)
 	}
 	if keyword != "" {
-		query = query.Where("username ILIKE ? OR email ILIKE ?", "%"+keyword+"%", "%"+keyword+"%")
+		query = query.Where("LOWER(username) LIKE LOWER(?) OR LOWER(email) LIKE LOWER(?)", "%"+keyword+"%", "%"+keyword+"%")
 	}
 
 	err := query.Count(&total).Error
