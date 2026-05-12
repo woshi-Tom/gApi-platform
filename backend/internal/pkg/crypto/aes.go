@@ -14,14 +14,10 @@ type AESEncryptor struct {
 }
 
 func NewAESEncryptor(key string) (*AESEncryptor, error) {
-	keyBytes := []byte(key)
-	if len(keyBytes) < 32 {
-		padded := make([]byte, 32)
-		copy(padded, keyBytes)
-		keyBytes = padded
-	} else if len(keyBytes) > 32 {
-		keyBytes = keyBytes[:32]
+	if len(key) < 32 {
+		return nil, errors.New("encryption key must be at least 32 characters")
 	}
+	keyBytes := []byte(key)[:32]
 	return &AESEncryptor{key: keyBytes}, nil
 }
 
