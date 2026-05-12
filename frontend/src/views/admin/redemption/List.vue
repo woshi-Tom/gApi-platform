@@ -196,7 +196,6 @@ const usages = ref<RedemptionUsage[]>([])
 const codesVisible = ref(false)
 const generatedCodes = ref<RedemptionCode[]>([])
 const formRef = ref<FormInstance>()
-const formRef2 = ref<FormInstance>()
 
 const filters = reactive({
   code_type: '',
@@ -288,6 +287,7 @@ const save = async () => {
         quota: form.quota ?? undefined,
         quota_type: form.quota_type ?? undefined,
         vip_days: form.vip_days ?? undefined,
+        is_permanent: form.is_permanent,
         max_uses: form.max_uses,
         valid_from: form.valid_from || undefined,
         valid_until: form.valid_until || undefined,
