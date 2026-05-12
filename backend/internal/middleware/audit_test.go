@@ -55,6 +55,16 @@ func TestMaskSensitiveData(t *testing.T) {
 			input:    `{"Password": "secret", "API_KEY": "key123"}`,
 			expected: `{"API_KEY":"***","Password":"***"}`,
 		},
+		{
+			name:     "json array with sensitive fields",
+			input:    `[{"password":"secret","name":"a"},{"token":"tok123","name":"b"}]`,
+			expected: `[{"name":"a","password":"***"},{"name":"b","token":"***"}]`,
+		},
+		{
+			name:     "nested object with sensitive field",
+			input:    `{"user":{"name":"admin","api_key":"sk-xxx"}}`,
+			expected: `{"user":{"api_key":"***","name":"admin"}}`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -62,7 +72,7 @@ func TestMaskSensitiveData(t *testing.T) {
 			result := maskSensitiveData(tt.input)
 			// Compare JSON by parsing both to normalize ordering
 			if tt.input != "" && tt.input != "plain text" {
-				var expectedObj, resultObj map[string]interface{}
+				var expectedObj, resultObj interface{}
 				json.Unmarshal([]byte(tt.expected), &expectedObj)
 				json.Unmarshal([]byte(result), &resultObj)
 				assert.Equal(t, expectedObj, resultObj)

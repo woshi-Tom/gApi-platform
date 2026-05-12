@@ -273,7 +273,6 @@ const generalForm = reactive({
 const registerForm = reactive({
   allow_register: true,
   require_email_verify: true,
-  smtp_enabled: false,
   enable_captcha: true,
   new_user_quota: 100000,
   trial_vip_days: 0,
@@ -357,7 +356,6 @@ async function loadRegisterSettings() {
       const data = res.data.data
       registerForm.allow_register = data.allow_register
       registerForm.require_email_verify = data.require_email_verify
-      registerForm.smtp_enabled = data.smtp_enabled
       registerForm.enable_captcha = data.enable_captcha
       registerForm.new_user_quota = data.new_user_quota
       registerForm.trial_vip_days = data.trial_vip_days

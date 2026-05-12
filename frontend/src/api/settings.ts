@@ -29,7 +29,6 @@ export interface TestEmailRequest {
 export interface RegisterSettings {
   allow_register: boolean
   require_email_verify: boolean
-  smtp_enabled: boolean
   enable_captcha: boolean
   new_user_quota: number
   trial_vip_days: number
