@@ -52,7 +52,7 @@ func (r *ChannelRepository) List(page, pageSize int, channelType, status, group,
 		query = query.Where("group_name = ?", group)
 	}
 	if keyword != "" {
-		query = query.Where("name ILIKE ?", "%"+keyword+"%")
+		query = query.Where("LOWER(name) LIKE LOWER(?)", "%"+keyword+"%")
 	}
 
 	query.Count(&total)
@@ -95,7 +95,7 @@ func (r *ChannelRepository) GetActiveChannelsByIDs(ids []uint) ([]model.Channel,
 func (r *ChannelRepository) GetByModel(modelName string) ([]model.Channel, error) {
 	var channels []model.Channel
 	err := r.db.Where("status = ? AND is_healthy = ?", 1, true).
-		Where("models ILIKE ?", "%"+modelName+"%").
+		Where("LOWER(models) LIKE LOWER(?)", "%"+modelName+"%").
 		Order("priority DESC, weight DESC").
 		Find(&channels).Error
 	return channels, err
