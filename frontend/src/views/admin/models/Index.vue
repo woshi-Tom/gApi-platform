@@ -35,7 +35,7 @@
           </el-table>
         </el-card>
         <!-- Group Dialog -->
-        <el-dialog :title="groupDialogMode ? '编辑分组' : '创建分组'" v-model:visible="groupDialogVisible" width="700px">
+        <el-dialog :title="groupDialogMode ? '编辑分组' : '创建分组'" v-model="groupDialogVisible" width="700px">
           <el-form :model="groupForm" label-width="120px" ref="groupFormRef">
             <el-form-item label="名称" prop="name" required>
               <el-input v-model="groupForm.name" placeholder="分组英文名，唯一标识" />
@@ -101,7 +101,7 @@
           </el-table>
         </el-card>
         <!-- Pricing Dialog -->
-        <el-dialog :title="pricingDialogMode ? '编辑定价' : '添加定价'" v-model:visible="pricingDialogVisible" width="800px">
+        <el-dialog :title="pricingDialogMode ? '编辑定价' : '添加定价'" v-model="pricingDialogVisible" width="800px">
           <el-form :model="pricingForm" label-width="120px" ref="pricingFormRef">
             <el-form-item label="模型" required>
               <el-input v-model="pricingForm.model" placeholder="如：gpt-4" />
@@ -165,7 +165,7 @@
           </el-table>
         </el-card>
         <!-- User Group Dialog -->
-        <el-dialog title="设置用户分组" v-model:visible="userGroupDialogVisible" width="680px">
+        <el-dialog title="设置用户分组" v-model="userGroupDialogVisible" width="680px">
           <div style="max-height:320px;overflow:auto;">
             <el-checkbox-group v-model="selectedGroupIds" style="display:flex;flex-direction:column;gap:8px;">
               <el-checkbox v-for="g in modelGroupsAll" :key="g.id" :label="g.id">{{ g.display_name || g.name }}</el-checkbox>
@@ -366,7 +366,7 @@ async function loadUsers() {
   ldUsers.value = true
   try {
     const res = await adminUserApi.listUsers({ page: 1, page_size: 50 })
-    users.value = res.data?.data?.list ?? []
+    users.value = res.data?.data ?? []
   } catch {
     users.value = []
   } finally {

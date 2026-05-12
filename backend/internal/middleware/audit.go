@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"log"
 	"strings"
 	"time"
 
@@ -85,6 +86,11 @@ func AuditLog(auditRepo *repository.AuditRepository) gin.HandlerFunc {
 
 		// Record audit log asynchronously
 		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("[audit] panic recovered: %v", r)
+				}
+			}()
 			// Get user info from context
 			var userID *uint
 			var username string
