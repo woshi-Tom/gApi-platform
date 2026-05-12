@@ -1,10 +1,11 @@
 # API Key 全生命周期与 API 调用链路完善计划
 
-> 版本: v1.0
+> 版本: v1.1
 > 日期: 2026-05-12
-> 状态: 待审批
+> 状态: 进行中
 > 目标版本: v1.3.0
 > 优先级: 高
+> 完成度: Phase 1 ✅ / Phase 2 ❌ / Phase 3 ⚠️ / Phase 4 ❌
 
 ---
 
@@ -44,16 +45,16 @@
 | P0-2 | TokenAuth | 未校验 Token 的 `allowed_models` 模型权限 | 🔴 高 | Token 限模型不生效 | ✅ 已修复 |
 | P0-3 | Billing | 流式响应无 PostConsumeQuota，配额不扣减 | 🔴 高 | 流式调用免费 | ✅ 已修复 |
 | P0-4 | Billing | 无流式 token 统计，usage 无法记录 | 🔴 高 | 流式调用无日志 | ✅ 已修复 |
-| P1-1 | RateLimit | TokenRateLimit 硬编码 10 RPS，忽略 token.RPMLimit | 🟡 中 | 用户自定义限速不生效 |
-| P1-2 | RateLimit | 无 TPM（每分钟 Token 数）限制 | 🟡 中 | 无法控制 Token 消耗速率 |
-| P1-3 | AccessLog | `model` 字段从 `PostForm` 提取，实际请求为 JSON body | 🟡 中 | 日志中 model 恒为 "unknown" |
-| P1-4 | API | 无 `/v1/completions` 端点 | 🟡 中 | 不完整 OpenAI 兼容 |
-| P1-5 | Billing | PostConsumeQuota 无事务保护 | 🟡 中 | 并发扣费可能数据不一致 |
-| P1-6 | Billing | `consumeRechargeQuota` 返回 false（空实现） | 🟡 中 | 充值配额永远不消耗 |
-| P2-1 | TokenAuth | 未校验 `denied_models` 黑名单 | 🟢 低 | 黑名单功能不生效 |
-| P2-2 | API | 非流式响应后无 PostConsumeQuota 调用 | 🟢 低 | 非流式也未扣费 |
-| P2-3 | API | 无 `/v1/completions`（text completions） | 🟢 低 | OpenAI 兼容不完整 |
-| P2-4 | Error | 错误响应格式不统一（混合 APIResponse 和 APIErrorResponse） | 🟢 低 | 客户端适配困难 |
+| P1-1 | RateLimit | TokenRateLimit 硬编码 10 RPS，忽略 token.RPMLimit | 🟡 中 | 用户自定义限速不生效 | ❌ 待修复 |
+| P1-2 | RateLimit | 无 TPM（每分钟 Token 数）限制 | 🟡 中 | 无法控制 Token 消耗速率 | ❌ 待修复 |
+| P1-3 | AccessLog | `model` 字段从 `PostForm` 提取，实际请求为 JSON body | 🟡 中 | 日志中 model 恒为 "unknown" | ❌ 待修复 |
+| P1-4 | API | 无 `/v1/completions` 端点 | 🟡 中 | 不完整 OpenAI 兼容 | ❌ 待修复 |
+| P1-5 | Billing | PostConsumeQuota 无事务保护 | 🟡 中 | 并发扣费可能数据不一致 | ❌ 待修复 |
+| P1-6 | Billing | `consumeRechargeQuota` 返回 false（空实现） | 🟡 中 | 充值配额永远不消耗 | ❌ 待修复 |
+| P2-1 | TokenAuth | 未校验 `denied_models` 黑名单 | 🟢 低 | 黑名单功能不生效 | ✅ 已修复 |
+| P2-2 | API | 非流式响应后无 PostConsumeQuota 调用 | 🟢 低 | 非流式也未扣费 | ✅ 已修复 |
+| P2-3 | API | 无 `/v1/completions`（text completions） | 🟢 低 | OpenAI 兼容不完整 | ❌ 待修复 |
+| P2-4 | Error | 错误响应格式不统一（混合 APIResponse 和 APIErrorResponse） | 🟢 低 | 客户端适配困难 | ⚠️ 部分完成 |
 
 ---
 
@@ -176,234 +177,133 @@
 
 ## 四、实现任务清单
 
-### Phase 1: 安全加固（P0）
+### Phase 1: 安全加固（P0）— ✅ 全部完成
 
-#### T-01: TokenAuth 增加 IP 白名单校验
-
-| 项 | 内容 |
-|---|------|
-| 文件 | `backend/internal/middleware/jwt.go` → `TokenAuth()` |
-| 修改点 | 在 token 验证通过后、设置 context 前，增加 IP 白名单检查 |
-| 逻辑 | `token.GetAllowedIPs()` 非空时，`c.ClientIP()` 必须在列表中 |
-| 错误响应 | `403 {"error":{"type":"invalid_request_error","code":"ip_not_allowed"}}` |
-| 测试 | Token 设置 allowed_ips=["10.0.0.1"]，用其他 IP 请求应被拒绝 |
-
-```go
-// 在 TokenAuth 中，token 校验通过后添加:
-allowedIPs := token.GetAllowedIPs()
-if len(allowedIPs) > 0 {
-    clientIP := c.ClientIP()
-    if !isIPAllowed(clientIP, allowedIPs) {
-        c.JSON(http.StatusForbidden, model.APIErrorResponse{
-            Error: &model.APIError{
-                Type:    "invalid_request_error",
-                Code:    "ip_not_allowed",
-                Message: fmt.Sprintf("IP %s is not in the token's allowed list", clientIP),
-            },
-        })
-        c.Abort()
-        return
-    }
-}
-```
-
-#### T-02: TokenAuth 增加模型权限校验
+#### T-01: TokenAuth 增加 IP 白名单校验 ✅
 
 | 项 | 内容 |
 |---|------|
 | 文件 | `backend/internal/middleware/jwt.go` → `TokenAuth()` |
-| 修改点 | 在 IP 白名单校验之后，解析请求 model 字段并校验权限 |
-| 逻辑 | 1. 从请求体中提取 model（需读取 body 并重置）<br>2. `allowed_models` 非空 → model 必须在列表中<br>3. `denied_models` 非空 → model 不能在列表中 |
-| 错误响应 | `403 {"error":{"type":"invalid_request_error","code":"model_not_allowed"}}` |
-| 注意 | 需要读取 body，对 `/v1/models` 等无 model 字段的请求跳过 |
+| 状态 | ✅ 已实现 |
+| 实现 | `TokenAuth()` 中 `token.GetAllowedIPs()` 非空时检查 `c.ClientIP()` |
+| 辅助函数 | `isIPAllowed()` 支持精确 IP 匹配和 CIDR 网段匹配 |
+| 错误响应 | 403 `ip_not_allowed`（使用 APIErrorResponse 格式） |
+| 修改行 | jwt.go:121-134 |
 
-```go
-// 辅助函数：从请求体中安全提取 model 字段
-func extractModelFromRequest(c *gin.Context) string {
-    // 仅对 chat/completions 和 embeddings 生效
-    path := c.Request.URL.Path
-    if !strings.Contains(path, "/completions") && !strings.Contains(path, "/embeddings") {
-        return ""
-    }
+#### T-02: TokenAuth 增加模型权限校验 ✅
 
-    body, err := io.ReadAll(c.Request.Body)
-    if err != nil {
-        return ""
-    }
-    // 重置 body 供后续 handler 读取
-    c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
+| 项 | 内容 |
+|---|------|
+| 文件 | `backend/internal/middleware/jwt.go` → `TokenAuth()` |
+| 状态 | ✅ 已实现 |
+| 实现 | `extractModelFromRequest()` 安全读取 body 并重置，校验 denied_models 黑名单 + allowed_models 白名单 |
+| 范围 | 仅对 `/completions` 和 `/embeddings` 路径生效 |
+| 错误响应 | 403 `model_not_allowed` |
+| 修改行 | jwt.go:137-176, 208-227 |
 
-    var partial struct {
-        Model string `json:"model"`
-    }
-    if err := json.Unmarshal(body, &partial); err != nil {
-        return ""
-    }
-    return partial.Model
-}
-```
-
-#### T-03: 流式响应配额扣减与 Token 统计
+#### T-03: 流式响应配额扣减与 Token 统计 ✅
 
 | 项 | 内容 |
 |---|------|
 | 文件 | `backend/internal/handler/api_handler.go` → `handleStreamWithFailover()` |
-| 修改点 | 流式结束后调用 PostConsumeQuota 和 LogUsage |
-| 关键问题 | 流式模式下，上游返回的是 SSE stream，不会在单个 response 中返回 usage |
-| 方案 | 在最后一个 chunk（`[DONE]` 之前）或 `[DONE]` 之后，从累计统计中提取 token 用量 |
+| 状态 | ✅ 已实现 |
+| 实现 | 流式过程中累积 `completionContentLen`；最终 chunk 检查上游 usage；有则精确扣费，无则用 `estimateChatTokens` + 字符数/4 估算兜底 |
+| 调用 | PostConsumeQuota + LogUsage（填充 ChannelID） |
+| 修改行 | api_handler.go:265-333 |
 
-**方案 A：客户端报告（推荐，对标 OpenAI 官方）**
-
-OpenAI 官方流式响应中，最后一个 chunk 包含 `usage` 字段（需传 `stream_options.include_usage = true`）。在平台侧：
-- 如果上游返回了 usage chunk → 直接使用
-- 如果上游未返回 → 用 `estimateChatTokens` 估算（兜底）
-
-**方案 B：平台侧计数**
-
-在 adapter 层统计返回的 content token 数，但精度不高。
-
-```go
-// 在 c.Stream 回调中，DONE 时触发扣费
-if chunk.Done {
-    // 从 chunk 中提取 usage（如果上游返回了）
-    if chunk.Usage != nil {
-        go h.postConsumeAfterStream(c, chatReq.Model, selectedChannel.ID,
-            chunk.Usage.PromptTokens, chunk.Usage.CompletionTokens)
-    } else {
-        // 兜底：用估算值
-        estimated := h.estimateChatTokens(chatReq.Messages, chatReq.MaxTokens)
-        go h.postConsumeAfterStream(c, chatReq.Model, selectedChannel.ID,
-            estimated/2, estimated/2) // 粗略分配 prompt/completion
-    }
-    return false
-}
-```
-
-#### T-04: 非流式响应配额扣减
+#### T-04: 非流式响应配额扣减 ✅
 
 | 项 | 内容 |
 |---|------|
 | 文件 | `backend/internal/handler/api_handler.go` → `ChatCompletions()` |
-| 修改点 | `chatWithFailover` 成功后，从响应中提取 usage 并调用 PostConsumeQuota |
-| 逻辑 | 1. adapter.Chat() 返回的响应包含 usage 字段<br>2. 调用 billingService.PostConsumeQuota<br>3. 调用 billingService.LogUsage |
-
-```go
-// chatWithFailover 成功后:
-if h.billingService != nil {
-    userID := getUserID(c)
-    tokenID := getTokenID(c)
-    if userID > 0 && tokenID > 0 {
-        if chatResp, ok := resp.(*adapter.ChatResponse); ok && chatResp.Usage != nil {
-            h.billingService.PostConsumeQuota(userID, tokenID, req.Model,
-                chatResp.Usage.PromptTokens, chatResp.Usage.CompletionTokens)
-        }
-    }
-}
-```
+| 状态 | ✅ 已实现 |
+| 实现 | 非流式成功后从 `adapter.ChatResponse.Usage` 提取 token 用量，调用 PostConsumeQuota + LogUsage |
+| 同步修复 | `Embeddings()` 同样增加了扣费逻辑 |
+| 修改行 | api_handler.go:124-139（ChatCompletions）, 571-587（Embeddings） |
 
 ---
 
-### Phase 2: 限速与计费完善（P1）
+### Phase 2: 限速与计费完善（P1）— ❌ 待实施
 
-#### T-05: TokenRateLimit 支持自定义 RPM/TPM
+#### T-05: TokenRateLimit 支持自定义 RPM/TPM ❌
 
 | 项 | 内容 |
 |---|------|
 | 文件 | `backend/internal/middleware/ratelimit.go` → `TokenRateLimit()` |
-| 修改点 | 当前硬编码 `rate.NewLimiter(10, 10)`，改为从 token 记录读取 |
-| 方案 | TokenRateLimit 接收 tokenService 参数，从 context 中的 token_id 查库获取 RPMLimit/TPMLimit |
-| 缓存 | 使用 sync.Map 缓存 token 限速配置，避免每次请求查库 |
+| 现状 | ❌ 硬编码 `rate.NewLimiter(10, 10)`（ratelimit.go:160），不读取 token 配置 |
+| 问题 | 用户创建 Token 时可设置 RPMLimit/TPMLimit（token_handler.go:82），但限速中间件完全忽略 |
+| 修改点 | TokenRateLimit 接收 tokenService 参数，从 context 中的 token_id 查库获取 RPMLimit/TPMLimit |
+| 缓存 | 现有 limiter map 已有 sync.Map + cleanup goroutine，可复用结构 |
+| 注意 | 函数签名变更 → 路由调用需同步更新（router.go:187-189） |
 
 ```go
-func TokenRateLimit(tokenService *service.TokenService) gin.HandlerFunc {
-    // 缓存: tokenID → {rpm, tpm}
-    configs := sync.Map{}
-
-    return func(c *gin.Context) {
-        tokenID, _ := c.Get("token_id")
-        tid := tokenID.(uint)
-
-        // 从缓存或数据库获取限速配置
-        cfg, _ := configs.Load(tid)
-        if cfg == nil {
-            token, err := tokenService.GetByID(tid)
-            if err == nil && token != nil {
-                rpm := 10 // 默认
-                if token.RPMLimit != nil && *token.RPMLimit > 0 {
-                    rpm = *token.RPMLimit
-                }
-                tpm := 0
-                if token.TPMLimit != nil {
-                    tpm = *token.TPMLimit
-                }
-                cfg = &tokenRateConfig{rpm: rpm, tpm: tpm}
-                configs.Store(tid, cfg)
-            }
-        }
-        // ... 限速检查逻辑
-    }
-}
+// 需要修改的调用方式（router.go）:
+// 原: middleware.TokenRateLimit()
+// 新: middleware.TokenRateLimit(tokenService)
 ```
 
-#### T-06: PostConsumeQuota 事务保护
+#### T-06: PostConsumeQuota 事务保护 ❌
 
 | 项 | 内容 |
 |---|------|
 | 文件 | `backend/internal/service/billing_service.go` → `PostConsumeQuota()` |
-| 修改点 | 当前 user/token 更新无事务，需包裹在 DB 事务中 |
-| 逻辑 | 1. `s.userRepo.BeginTx()`<br>2. 扣减 user 配额 + 写 quota_transaction<br>3. 更新 token.used_quota/remain_quota<br>4. 失败则 `tx.Rollback()` |
+| 现状 | ❌ 当前 user/token 更新无事务（billing_service.go:103-179），free_quota 扣减 + token 更新分散在多个独立 DB 操作中 |
+| 风险 | 并发扣费可能导致配额数据不一致 |
+| 逻辑 | 1. `s.userRepo.BeginTx()` 或 `s.userRepo.Transaction(func(tx)...)`<br>2. 扣减 free_quota + 写 quota_transaction<br>3. 调用 consumeRechargeQuota（FIFO）<br>4. 扣减 vip_quota<br>5. 更新 token.used_quota/remain_quota<br>6. 失败则自动 rollback |
 
-#### T-07: 实现 consumeRechargeQuota
+#### T-07: 实现 consumeRechargeQuota ❌
 
 | 项 | 内容 |
 |---|------|
 | 文件 | `backend/internal/service/billing_service.go` → `consumeRechargeQuota()` |
-| 现状 | 返回 `false`（空实现），充值配额永远不消耗 |
-| 逻辑 | 1. 查询用户有效的 `user_recharge_records`（按过期时间 FIFO 排序）<br>2. 逐条扣减 `remaining`<br>3. 用完的记录标记 status=used<br>4. 写入 quota_transaction |
+| 现状 | ❌ 返回 `false`（billing_service.go:181-183），充值配额永远不消耗 |
+| 连带影响 | `getActiveRechargeQuota()` 也返回 0（billing_service.go:99-101），充值配额不计入可用总额 |
+| 前置依赖 | 需确认 `user_recharge_records` 表/模型是否存在 |
+| 逻辑 | 1. 查询用户有效的 recharge records（按过期时间 FIFO 排序）<br>2. 逐条扣减 remaining<br>3. 用完的记录标记 status=used<br>4. 写入 quota_transaction |
 
-#### T-08: APIAccessLog 修复 model 字段提取
+#### T-08: APIAccessLog 修复 model 字段提取 ❌
 
 | 项 | 内容 |
 |---|------|
 | 文件 | `backend/internal/middleware/api_access_log.go` → `APIAccessLog()` |
-| 问题 | `c.PostForm("model")` 返回空值（请求体为 JSON，非 form） |
-| 方案 | 从 gin.Context 中读取已解析的 model（handler 设置到 context 中），或从 URL path 判断 |
-
-```go
-// 方案: 在 handler 中解析完请求后，将 model 设置到 context
-// api_handler.go ChatCompletions() 开头:
-c.Set("request_model", req.Model)
-
-// api_access_log.go 中:
-modelName := "unknown"
-if m, exists := c.Get("request_model"); exists {
-    modelName = m.(string)
-}
-```
+| 现状 | ❌ 仍使用 `c.PostForm("model")`（api_access_log.go:43），对 JSON body 请求返回空值 |
+| 结果 | 日志中 model 字段恒为 "unknown" |
+| 方案 | 在 api_handler.go 中解析请求后将 model 设置到 context（`c.Set("request_model", req.Model)`），api_access_log.go 从 context 读取 |
 
 ---
 
-### Phase 3: 功能补全（P1-P2）
+### Phase 3: 功能补全（P1-P2）— ⚠️ 部分完成
 
-#### T-09: 新增 /v1/completions 端点
+#### T-09: 新增 /v1/completions 端点 ❌
 
 | 项 | 内容 |
 |---|------|
-| 文件 | `backend/internal/handler/api_handler.go`（新增方法）|
+| 文件 | `backend/internal/handler/api_handler.go`（需新增方法）|
 | 路由 | `backend/internal/router/router.go` |
-| 路径 | `v1.POST("/completions", middleware.TokenAuth(...), ..., apiHandler.Completions)` |
+| 现状 | ❌ 路由中无 `/v1/completions` 端点（router.go 只有 chat/completions、models、embeddings） |
 | 逻辑 | 类似 ChatCompletions，但请求体为 `{model, prompt, max_tokens, stream}` |
 | 适配器 | 复用 adapter 层，将 prompt 转换为 messages 格式 |
+| 路由注册 | `v1.POST("/completions", middleware.TokenAuth(...), middleware.TokenRateLimit(), ..., apiHandler.Completions)` |
 
-#### T-10: APIError 结构统一
+#### T-10: APIError 结构统一 ⚠️
 
 | 项 | 内容 |
 |---|------|
 | 文件 | `backend/internal/model/response.go` |
-| 修改 | APIError 增加 `Type` 字段，统一所有 `/v1/*` 接口的错误格式 |
+| 现状 | ⚠️ APIError 只有 `Code` 和 `Message`（response.go:21-24），缺少 `Type` 和 `Param` 字段 |
+| 已有 | `APIErrorResponse` 已存在（response.go:228-230），jwt.go 中 T-01/T-02 已使用带 `Type` 字段的错误（但通过内联定义而非结构体） |
+| 问题 | jwt.go 中部分错误使用 `model.APIResponse`（无 Type），部分使用 `model.APIErrorResponse`（有 Type），格式不统一 |
+| 修改 | APIError 增加 `Type` 和 `Param` 字段，统一所有 `/v1/*` 接口的错误格式 |
 | 格式 | `{"error":{"type":"...","code":"...","message":"...","param":null}}` |
 
 ```go
+// 当前 response.go 中的 APIError:
+type APIError struct {
+    Code    string `json:"code"`
+    Message string `json:"message"`
+}
+
+// 需要改为（与 OpenAI 兼容）:
 type APIError struct {
     Type    string      `json:"type"`
     Code    string      `json:"code"`
@@ -412,30 +312,34 @@ type APIError struct {
 }
 ```
 
-#### T-11: Token 列表返回配额使用情况
+#### T-11: Token 列表返回配额使用情况 ⚠️
 
 | 项 | 内容 |
 |---|------|
 | 文件 | `backend/internal/handler/token_handler.go` → `List()` |
-| 修改 | 每个 token 返回 `used_quota`、`remain_quota`、`usage_percent` |
+| 现状 | ⚠️ 返回 `TotalQuota`（token_handler.go:47-58），但未按 token 级别返回 `used_quota`、`remain_quota`、`usage_percent` |
+| 修改 | 每个 token 需要独立返回配额使用情况（当前只返回用户总配额） |
 
 ---
 
-### Phase 4: 压力测试与可观测（P2）
+### Phase 4: 压力测试与可观测（P2）— ❌ 待 Phase 2-3 完成后实施
 
-#### T-12: API 压力测试脚本
+#### T-12: API 压力测试脚本 ❌
 
 | 项 | 内容 |
 |---|------|
+| 状态 | ❌ 未开始 |
 | 工具 | `k6`（推荐）或扩展 `test_api.py` |
 | 场景 | 见第六节测试计划 |
 | 输出 | TPS、P50/P95/P99 延迟、错误率 |
 
-#### T-13: API 调用链路监控增强
+#### T-13: API 调用链路监控增强 ❌
 
 | 项 | 内容 |
 |---|------|
 | 文件 | `backend/internal/middleware/api_access_log.go` |
+| 状态 | ❌ 未开始 |
+| 前置依赖 | T-08（model 字段修复）完成后实施 |
 | 新增字段 | `pre_check_duration_ms`（配额预检耗时）、`channel_select_duration_ms`（渠道选择耗时）、`upstream_duration_ms`（上游调用耗时）|
 | 目的 | 定位链路中的性能瓶颈 |
 
@@ -519,45 +423,45 @@ func (s *BillingService) PostConsumeQuota(...) error {
 
 ---
 
-## 七、实现顺序
+## 七、实现进度与剩余计划
 
 ```
-Phase 1: 安全加固（P0）── 优先级最高
-├── T-01: TokenAuth IP 白名单校验          ~2h
-├── T-02: TokenAuth 模型权限校验            ~3h
-├── T-03: 流式配额扣减                      ~4h
-├── T-04: 非流式配额扣减                    ~2h
-└── Phase 1 集成测试                        ~2h
+Phase 1: 安全加固（P0）── ✅ 全部完成
+├── T-01: TokenAuth IP 白名单校验          ✅ done (jwt.go:121-134)
+├── T-02: TokenAuth 模型权限校验            ✅ done (jwt.go:137-176)
+├── T-03: 流式配额扣减                      ✅ done (api_handler.go:265-333)
+├── T-04: 非流式配额扣减                    ✅ done (api_handler.go:124-139)
+└── Phase 1 验证文档                        ✅ done (issues/007)
 
-Phase 2: 限速与计费（P1）
-├── T-05: TokenRateLimit 自定义 RPM/TPM     ~3h
-├── T-06: PostConsumeQuota 事务保护          ~2h
-├── T-07: consumeRechargeQuota 实现          ~3h
-├── T-08: APIAccessLog model 字段修复        ~1h
+Phase 2: 限速与计费（P1）── ❌ 待实施（最高优先级）
+├── T-05: TokenRateLimit 自定义 RPM/TPM     ❌ ~3h（硬编码 10 RPS）
+├── T-06: PostConsumeQuota 事务保护          ❌ ~2h（无事务，竞态风险）
+├── T-07: consumeRechargeQuota 实现          ❌ ~3h（空实现，充值配额不消耗）
+├── T-08: APIAccessLog model 字段修复        ❌ ~1h（PostForm 取值为空）
 └── Phase 2 单元测试 + 集成测试              ~3h
 
-Phase 3: 功能补全（P1-P2）
-├── T-09: /v1/completions 端点              ~3h
-├── T-10: APIError 结构统一                  ~1h
-├── T-11: Token 列表返回配额使用情况          ~1h
+Phase 3: 功能补全（P1-P2）── ⚠️ 部分完成
+├── T-09: /v1/completions 端点              ❌ ~3h（路由未注册）
+├── T-10: APIError 结构统一                  ⚠️ ~1h（缺少 Type/Param 字段）
+├── T-11: Token 列表返回配额使用情况          ⚠️ ~1h（只返回总配额，非 token 级）
 └── Phase 3 测试                            ~2h
 
-Phase 4: 压力测试（P2）
+Phase 4: 压力测试（P2）── ❌ 待 Phase 2-3 完成后
 ├── T-12: 压力测试脚本 + 执行               ~4h
 ├── T-13: 监控增强                          ~2h
 └── Phase 4 调优 + 回归测试                  ~4h
 
-预估总工时: ~42h（约 5-6 个工作日）
+剩余预估工时: ~25h（Phase 1 已完成 ~17h）
 ```
 
 ---
 
 ## 八、完成标准
 
-- [ ] 任意 Token 的 IP 白名单限制生效，非白名单 IP 请求返回 403
-- [ ] 任意 Token 的模型白名单/黑名单限制生效
-- [ ] 非流式和流式 API 调用均正确扣减配额
-- [ ] 流式调用结束后配额扣减有兜底机制
+- [x] 任意 Token 的 IP 白名单限制生效，非白名单 IP 请求返回 403
+- [x] 任意 Token 的模型白名单/黑名单限制生效
+- [x] 非流式和流式 API 调用均正确扣减配额
+- [x] 流式调用结束后配额扣减有兜底机制
 - [ ] Token 级 RPM/TPM 限速按用户配置生效
 - [ ] 充值配额按 FIFO 正确扣减
 - [ ] PostConsumeQuota 在 DB 事务中执行
@@ -582,6 +486,15 @@ Phase 4: 压力测试（P2）
 
 ---
 
-**文档版本**: v1.0
+**文档版本**: v1.1
 **创建人**: TOM
-**下一步**: 审批通过后按 Phase 1 → Phase 4 顺序实施
+**下一步**: 实施 Phase 2（T-05 ~ T-08，限速与计费完善）
+
+---
+
+## 变更记录
+
+| 版本 | 日期 | 变更内容 |
+|------|------|---------|
+| v1.0 | 2026-05-12 | 初始版本 |
+| v1.1 | 2026-05-12 | 更新完成状态：Phase 1 全部完成 ✅，P2-1/P2-2 提前修复，修正 Phase 2-4 待办详情，添加代码行引用，更新剩余工时 |

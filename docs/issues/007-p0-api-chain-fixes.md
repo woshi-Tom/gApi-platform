@@ -3,6 +3,7 @@
 > 日期: 2026-05-12
 > 关联计划: [api-key-lifecycle-plan.md](../plans/api-key-lifecycle-plan.md)
 > 状态: 代码完成，待编译验证
+> 编译测试: [007-compile-test.md](007-compile-test.md)
 
 ---
 

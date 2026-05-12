@@ -96,7 +96,7 @@ docs/
 | 文档 | 说明 | 状态 |
 |------|------|------|
 | [current-sprint.md](plans/current-sprint.md) | v1.2.0 迭代工作项（5 个 P0） | ✅ 已完成 |
-| [api-key-lifecycle-plan.md](plans/api-key-lifecycle-plan.md) | API Key 全生命周期与调用链路完善（v1.3.0） | ⬜ 待审批 |
+| [api-key-lifecycle-plan.md](plans/api-key-lifecycle-plan.md) | API Key 全生命周期与调用链路完善（v1.3.0） | 🟡 进行中（Phase 1 ✅） |
 | [fix-plan-2026.md](plans/fix-plan-2026.md) | 2026 修复计划与技术债追踪 | ⬜ 待审核 |
 | [roadmap.md](plans/roadmap.md) | 产品路线图与里程碑 | ⬜ 待完善 |
 
