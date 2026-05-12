@@ -280,7 +280,6 @@ func (h *APIHandler) handleStreamWithFailover(ctx context.Context, c *gin.Contex
 		var (
 			upstreamPromptTokens     int
 			upstreamCompletionTokens int
-			upstreamTotalTokens      int
 			hasUpstreamUsage         bool
 			completionContentLen     int
 		)
@@ -297,7 +296,6 @@ func (h *APIHandler) handleStreamWithFailover(ctx context.Context, c *gin.Contex
 					if chunk.Usage != nil {
 						upstreamPromptTokens = chunk.Usage.PromptTokens
 						upstreamCompletionTokens = chunk.Usage.CompletionTokens
-						upstreamTotalTokens = chunk.Usage.TotalTokens
 						hasUpstreamUsage = true
 					}
 					return false
@@ -656,7 +654,7 @@ func (h *APIHandler) Completions(c *gin.Context) {
 		"model":   chatResp.Model,
 		"choices": choices,
 	}
-	if chatResp.Usage != nil {
+	if chatResp.Usage.TotalTokens > 0 {
 		completionsResp["usage"] = chatResp.Usage
 	}
 
@@ -664,7 +662,7 @@ func (h *APIHandler) Completions(c *gin.Context) {
 	if h.billingService != nil {
 		userID := getUserID(c)
 		tokenID := getTokenID(c)
-		if userID > 0 && tokenID > 0 && chatResp.Usage != nil {
+		if userID > 0 && tokenID > 0 && chatResp.Usage.TotalTokens > 0 {
 			h.billingService.PostConsumeQuota(userID, tokenID, req.Model,
 				chatResp.Usage.PromptTokens, chatResp.Usage.CompletionTokens)
 			h.billingService.LogUsage(&service.UsageRecord{
@@ -682,7 +680,6 @@ func (h *APIHandler) Completions(c *gin.Context) {
 }
 
 func (h *APIHandler) Embeddings(c *gin.Context) {
-	preCheckStart := time.Now()
 	var req model.EmbeddingsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, model.APIErrorResponse{
