@@ -136,8 +136,9 @@ docs/
 | 004 | [Code Review 全面修复](issues/004-code-review-fixes.md) | ✅ 已修复 |
 | 005 | [批量健康检查全异常 — Adapter 代理支持](issues/005-batch-healthcheck-proxy-fix.md) | ✅ 已修复 |
 | 006 | [前端全面修复 16 个 Bug](issues/006-frontend-bug-fixes.md) | ✅ 已修复 |
-| 007 | [P0 API 调用链路修复](issues/007-p0-api-chain-fixes.md) | ✅ 待编译测试 |
-| 008 | [Phase 2 限速与计费完善](issues/008-phase2-compile-test.md) | ✅ 待编译测试 |
+| 007 | [P0 API 调用链路修复](issues/007-p0-api-chain-fixes.md) | ✅ 已修复 |
+| 008 | [Phase 2 限速与计费完善](issues/008-phase2-compile-test.md) | ✅ 已修复 |
+| 009 | [Phase 3 功能补全](issues/009-phase3-compile-test.md) | ✅ 已修复 |
 
 ---
 
