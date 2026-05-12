@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   User, Avatar, Setting, ArrowDown, Back, Clock, Connection,
-  Document, DataAnalysis, Lock, Goods, Monitor, Ticket
+  Document, DataAnalysis, Lock, Goods, Monitor, Ticket, Grid
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -76,6 +76,10 @@ onBeforeMount(() => {
         <el-menu-item index="/channels">
           <el-icon><Connection /></el-icon>
           <span>渠道管理</span>
+        </el-menu-item>
+        <el-menu-item index="/models">
+          <el-icon><Grid /></el-icon>
+          <span>模型管理</span>
         </el-menu-item>
         <el-menu-item index="/orders">
           <el-icon><Document /></el-icon>
