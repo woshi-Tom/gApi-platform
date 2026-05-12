@@ -28,6 +28,7 @@
 | # | 问题 | 来源 | 说明 | 状态 |
 |---|------|------|------|------|
 | K11 | Redis 密码泄露于进程列表 | v1.2.0 审查 | docker-compose.yml 命令行传密码 | ⬜ |
+| K12 | AutoMigrate 约束操作非幂等 | #005 部署 | GORM AutoMigrate 对已迁移数据库重跑时，尝试 DROP 不存在的约束（`uni_model_groups_name`）导致启动失败 | ⬜ |
 
 ---
 
