@@ -120,6 +120,24 @@ func (h *APIHandler) ChatCompletions(c *gin.Context) {
 		return
 	}
 
+	// T-04: Post-consume quota for non-streaming response
+	if chatResp, ok := resp.(*adapter.ChatResponse); ok && h.billingService != nil {
+		userID := getUserID(c)
+		tokenID := getTokenID(c)
+		if userID > 0 && tokenID > 0 {
+			h.billingService.PostConsumeQuota(userID, tokenID, req.Model,
+				chatResp.Usage.PromptTokens, chatResp.Usage.CompletionTokens)
+			h.billingService.LogUsage(&service.UsageRecord{
+				UserID:           userID,
+				TokenID:          tokenID,
+				Model:            req.Model,
+				PromptTokens:     chatResp.Usage.PromptTokens,
+				CompletionTokens: chatResp.Usage.CompletionTokens,
+				TotalTokens:      chatResp.Usage.TotalTokens,
+			})
+		}
+	}
+
 	c.JSON(http.StatusOK, resp)
 }
 
@@ -244,6 +262,15 @@ func (h *APIHandler) handleStreamWithFailover(ctx context.Context, c *gin.Contex
 			return
 		}
 
+		// T-03: Track usage for streaming quota consumption
+		var (
+			upstreamPromptTokens     int
+			upstreamCompletionTokens int
+			upstreamTotalTokens      int
+			hasUpstreamUsage         bool
+			completionContentLen     int
+		)
+
 		c.Stream(func(w io.Writer) bool {
 			select {
 			case <-ctx.Done():
@@ -253,6 +280,13 @@ func (h *APIHandler) handleStreamWithFailover(ctx context.Context, c *gin.Contex
 					return false
 				}
 				if chunk.Done {
+					// Capture usage from final usage-only chunk (if upstream sends it)
+					if chunk.Usage != nil {
+						upstreamPromptTokens = chunk.Usage.PromptTokens
+						upstreamCompletionTokens = chunk.Usage.CompletionTokens
+						upstreamTotalTokens = chunk.Usage.TotalTokens
+						hasUpstreamUsage = true
+					}
 					return false
 				}
 				if chunk.Error != nil {
@@ -260,12 +294,43 @@ func (h *APIHandler) handleStreamWithFailover(ctx context.Context, c *gin.Contex
 					flusher.Flush()
 					return false
 				}
+				// Accumulate streamed content length for fallback estimation
+				for _, choice := range chunk.Choices {
+					completionContentLen += len(choice.Delta.Content)
+				}
 				data, _ := json.Marshal(chunk)
 				c.SSEvent("message", string(data))
 				flusher.Flush()
 				return true
 			}
 		})
+
+		// T-03: Post-consume quota after stream completes
+		if h.billingService != nil {
+			userID := getUserID(c)
+			tokenID := getTokenID(c)
+			if userID > 0 && tokenID > 0 {
+				var promptTokens, completionTokens int
+				if hasUpstreamUsage {
+					promptTokens = upstreamPromptTokens
+					completionTokens = upstreamCompletionTokens
+				} else {
+					// Fallback: estimate from request content and accumulated output
+					promptTokens = h.estimateChatTokens(chatReq.Messages, 0)
+					completionTokens = completionContentLen/4 + 1
+				}
+				h.billingService.PostConsumeQuota(userID, tokenID, chatReq.Model, promptTokens, completionTokens)
+				h.billingService.LogUsage(&service.UsageRecord{
+					UserID:           userID,
+					TokenID:          tokenID,
+					ChannelID:        selectedChannel.ID,
+					Model:            chatReq.Model,
+					PromptTokens:     promptTokens,
+					CompletionTokens: completionTokens,
+					TotalTokens:      promptTokens + completionTokens,
+				})
+			}
+		}
 
 		h.channelService.ResetFailureCount(selectedChannel.ID)
 		return
@@ -501,6 +566,24 @@ func (h *APIHandler) Embeddings(c *gin.Context) {
 			},
 		})
 		return
+	}
+
+	// Post-consume quota for embeddings
+	if embedResp, ok := resp.(*adapter.EmbeddingsResponse); ok && h.billingService != nil {
+		userID := getUserID(c)
+		tokenID := getTokenID(c)
+		if userID > 0 && tokenID > 0 {
+			h.billingService.PostConsumeQuota(userID, tokenID, req.Model,
+				embedResp.Usage.PromptTokens, 0)
+			h.billingService.LogUsage(&service.UsageRecord{
+				UserID:           userID,
+				TokenID:          tokenID,
+				Model:            req.Model,
+				PromptTokens:     embedResp.Usage.PromptTokens,
+				CompletionTokens: 0,
+				TotalTokens:      embedResp.Usage.TotalTokens,
+			})
+		}
 	}
 
 	c.JSON(http.StatusOK, resp)

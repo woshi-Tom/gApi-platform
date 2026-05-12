@@ -95,7 +95,8 @@ docs/
 
 | 文档 | 说明 | 状态 |
 |------|------|------|
-| [current-sprint.md](plans/current-sprint.md) | 当前迭代工作项（5 个 P0） | 🟡 进行中 |
+| [current-sprint.md](plans/current-sprint.md) | v1.2.0 迭代工作项（5 个 P0） | ✅ 已完成 |
+| [api-key-lifecycle-plan.md](plans/api-key-lifecycle-plan.md) | API Key 全生命周期与调用链路完善（v1.3.0） | ⬜ 待审批 |
 | [fix-plan-2026.md](plans/fix-plan-2026.md) | 2026 修复计划与技术债追踪 | ⬜ 待审核 |
 | [roadmap.md](plans/roadmap.md) | 产品路线图与里程碑 | ⬜ 待完善 |
 
@@ -135,6 +136,7 @@ docs/
 | 004 | [Code Review 全面修复](issues/004-code-review-fixes.md) | ✅ 已修复 |
 | 005 | [批量健康检查全异常 — Adapter 代理支持](issues/005-batch-healthcheck-proxy-fix.md) | ✅ 已修复 |
 | 006 | [前端全面修复 16 个 Bug](issues/006-frontend-bug-fixes.md) | ✅ 待编译测试 |
+| 007 | [P0 API 调用链路修复](issues/007-p0-api-chain-fixes.md) | ✅ 待编译测试 |
 
 ---
 
