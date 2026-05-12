@@ -98,9 +98,12 @@ func TestUserRepository_GetByEmail_NotFound(t *testing.T) {
 	db := setupTestDB(t)
 	repo := NewUserRepository(db)
 
-	_, err := repo.GetByEmail("notfound@example.com")
-	if err == nil {
-		t.Error("GetByEmail() expected error for non-existent email")
+	user, err := repo.GetByEmail("notfound@example.com")
+	if err != nil {
+		t.Errorf("GetByEmail() error = %v, want nil for non-existent email", err)
+	}
+	if user != nil {
+		t.Error("GetByEmail() expected nil user for non-existent email")
 	}
 }
 
