@@ -24,7 +24,7 @@ services:
     container_name: gapi-redis-test
     restart: unless-stopped
     volumes:
-      - ../../deploy/release/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
       - redis_data_test:/data
     ports:
       - "6380:6379"
