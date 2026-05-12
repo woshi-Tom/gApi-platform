@@ -6,12 +6,30 @@
 
 ## [v1.2.0] - 2026-05-12
 
+### Breaking Changes
+- **审计日志 GET 过滤**: 审计中间件默认跳过 GET 请求的记录（重要路径如 `/api/v1/payment/` 除外），以减少数据膨胀。如需记录所有 GET 请求，需修改中间件配置。
+- **Settings 页面字段调整**: 移除注册设置中的 `smtp_enabled` 字段（后端无此字段）；微信支付配置字段从 UI 中移除。
+
+### Features
+- **系统设置全栈 API**: 新增通用设置、速率限制、安全设置 3 组设置项，前后端完整实现
+- **模型管理前端页面**: 新增模型分组/定价/权限的前端管理界面
+- **审计日志增强**: 新增递归敏感字段脱敏（支持嵌套 JSON 和数组）
+
 ### CI/CD
 - **GitHub Actions 升级**: 修复因Node.js 20弃用导致的release打包失败
 - **Release 包名优化**: 添加平台后缀（`*-linux-amd64.tar.gz` / `*-windows-amd64.zip`）
 - **Release Notes 优化**: 改为内联说明，展示文件适用平台和快速部署指引
 - **修复非tag触发时的VERSION提取**: 支持branch push时安全获取版本号
 - **Git 协作规范**: 新增Release发布流程与Tag管理规范
+- **Action 版本锁定**: 所有 GitHub Actions 锁定到不可变 commit SHA
+- **Release 产物校验**: 新增 SHA256SUMS 校验文件
+
+### Tests
+- **新增单元测试**: 审计中间件 22 个测试 + Settings Service 8 个测试 + Settings Handler 8 个测试，共 38 个
+
+### Fixes
+- **Audit goroutine 稳定性**: 异步审计日志写入添加 panic recover，防止进程崩溃
+- **用户分组 No Data**: 修复模型管理页面用户分组列表因 `data?.list` 取值错误导致的数据不显示
 
 ---
 

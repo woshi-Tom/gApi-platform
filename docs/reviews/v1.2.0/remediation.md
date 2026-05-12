@@ -16,17 +16,17 @@
 | 04 | GITHUB_TOKEN 权限过大 | DevOps | build 作业添加 `permissions: contents: read` | 开发 | ✅ | 2026-05-12 |
 | 05 | Audit goroutine 无 recover | Backend | 添加 `defer recover()` | 开发 | ✅ | 2026-05-12 |
 
-## P1 — 建议发布前修复
+## P1 — 已修复
 
 | # | 问题 | 领域 | 措施 | 责任人 | 状态 | 完成日期 |
 |---|------|------|------|--------|------|---------|
-| 06 | Action 版本未锁 SHA | DevOps | 锁定到 commit SHA | 开发 | ⬜ | - |
-| 07 | Release 产物无 checksum | DevOps | 生成 SHA256SUMS | 开发 | ⬜ | - |
-| 08 | Settings handler 无输入验证 | Backend | 添加 binding validation | 开发 | ⬜ | - |
-| 09 | maskSensitiveData 脱敏不完整 | Backend | 实现递归脱敏 | 开发 | ⬜ | - |
-| 10 | CHANGELOG 遗漏模型管理页面 | Docs | 追加条目 | 开发 | ⬜ | - |
-| 11 | CHANGELOG 无 Breaking Changes | Docs | 增加章节 | 开发 | ⬜ | - |
-| 12 | settings_handler 忽略 error | Backend | 处理 error（nil 指针风险） | 开发 | ⬜ | - |
+| 06 | Action 版本未锁 SHA | DevOps | 锁定到 commit SHA | 开发 | ✅ | 2026-05-12 |
+| 07 | Release 产物无 checksum | DevOps | 生成 SHA256SUMS | 开发 | ✅ | 2026-05-12 |
+| 08 | Settings handler 无输入验证 | Backend | 添加 binding validation | 开发 | ✅ | 2026-05-12 |
+| 09 | maskSensitiveData 脱敏不完整 | Backend | 实现递归脱敏 | 开发 | ✅ | 2026-05-12 |
+| 10 | CHANGELOG 遗漏模型管理页面 | Docs | 追加条目 | 开发 | ✅ | 2026-05-12 |
+| 11 | CHANGELOG 无 Breaking Changes | Docs | 增加章节 | 开发 | ✅ | 2026-05-12 |
+| 12 | settings_handler 忽略 error | Backend | 处理 error（nil 指针风险） | 开发 | ✅ | 2026-05-12 |
 
 ## P2 — 后续版本修复
 
@@ -37,7 +37,7 @@
 | 15 | CI 无前端 lint/typecheck | DevOps | 添加 `vue-tsc --noEmit` | 前端 | ⬜ |
 | 16 | AES 密钥未校验 | Backend | Init 增加密钥长度检查 | 开发 | ⬜ |
 | 17 | Dockerfile 以 root 运行 | Deploy | 添加 USER 指令 | 开发 | ⬜ |
-| 18 | Release 命名与实际不符 | DevOps | 改文件名或分平台打包 | 开发 | ⬜ |
+| 18 | Release 命名与实际不符 | DevOps | 已评估：命名指主机平台非目标平台，包内容完整，无需修改 | 开发 | ✅ |
 | 19 | 无 Smoke Test | DevOps | 增加冒烟测试步骤 | 开发 | ⬜ |
 | 20 | skipPaths 精确匹配 | Backend | 改为前缀匹配 | 开发 | ⬜ |
 | 21 | Audit 日志状态矛盾 | Docs | 统一 features/README 标注 | 开发 | ✅ |

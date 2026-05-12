@@ -26,13 +26,13 @@ var sensitiveFields = map[string]bool{
 	"private_key":   true,
 }
 
-// skipPaths contains paths that should not be audited
-var skipPaths = map[string]bool{
-	"/api/v1/internal/health":      true,
-	"/health":                      true,
-	"/ping":                        true,
-	"/api/v1/admin/logs/operation": true, // 避免审计日志本身的记录形成数据膨胀
-	"/api/v1/admin/logs/login":     true,
+// skipPathPrefixes contains path prefixes that should not be audited
+var skipPathPrefixes = []string{
+	"/api/v1/internal/health",
+	"/health",
+	"/ping",
+	"/api/v1/admin/logs/operation", // 避免审计日志本身的记录形成数据膨胀
+	"/api/v1/admin/logs/login",
 }
 
 // importantGetPrefixes contains GET path prefixes that should still be audited
@@ -43,10 +43,12 @@ var importantGetPrefixes = []string{
 // AuditLog creates an audit logging middleware
 func AuditLog(auditRepo *repository.AuditRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Skip audit for certain paths
-		if skipPaths[c.Request.URL.Path] {
-			c.Next()
-			return
+		// Skip audit for certain paths (prefix match)
+		for _, prefix := range skipPathPrefixes {
+			if strings.HasPrefix(c.Request.URL.Path, prefix) {
+				c.Next()
+				return
+			}
 		}
 
 		// Skip GET requests to reduce data bloat (unless they are important operations)

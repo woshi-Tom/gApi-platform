@@ -124,7 +124,11 @@ func (h *SettingsHandler) UpdateRegisterSettings(c *gin.Context) {
 		}
 	}
 
-	current, _ := h.settingsSvc.GetRegisterSettings()
+	current, err := h.settingsSvc.GetRegisterSettings()
+	if err != nil {
+		response.InternalError(c, "failed to get current register settings: "+err.Error())
+		return
+	}
 	settings := &service.RegisterSettings{
 		AllowRegister:      req.AllowRegister,
 		RequireEmailVerify: req.RequireEmailVerify,
