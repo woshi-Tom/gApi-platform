@@ -40,9 +40,11 @@ func APIAccessLog(apiAccessLogRepo *repository.APIAccessLogRepository) gin.Handl
 			responseTime := int(time.Since(startTime).Milliseconds())
 			statusCode := c.Writer.Status()
 
-			modelName := c.PostForm("model")
-			if modelName == "" {
-				modelName = "unknown"
+			modelName := "unknown"
+			if m, exists := c.Get("request_model"); exists {
+				if mStr, ok := m.(string); ok && mStr != "" {
+					modelName = mStr
+				}
 			}
 
 			tokenID, _ := c.Get("token_id")

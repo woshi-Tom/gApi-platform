@@ -62,6 +62,9 @@ func (h *APIHandler) ChatCompletions(c *gin.Context) {
 		return
 	}
 
+	// T-08: Set model in context for APIAccessLog middleware
+	c.Set("request_model", req.Model)
+
 	// Pre-check quota
 	if h.billingService != nil {
 		userID := getUserID(c)
@@ -519,6 +522,9 @@ func (h *APIHandler) Embeddings(c *gin.Context) {
 	if req.Model == "" {
 		req.Model = "text-embedding-ada-002"
 	}
+
+	// T-08: Set model in context for APIAccessLog middleware
+	c.Set("request_model", req.Model)
 
 	// Pre-check quota
 	if h.billingService != nil {

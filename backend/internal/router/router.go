@@ -63,7 +63,8 @@ func SetupUserRoutes(
 
 	usageLogRepo := repository.NewUsageLogRepository(db.GetDB())
 	quotaTxRepo := repository.NewQuotaTransactionRepository(db.GetDB())
-	billingService := service.NewBillingService(userRepo, tokenRepo, usageLogRepo, quotaTxRepo)
+	rechargeRecordRepo := repository.NewUserRechargeRecordRepository(db.GetDB())
+	billingService := service.NewBillingService(userRepo, tokenRepo, usageLogRepo, quotaTxRepo, rechargeRecordRepo)
 	apiHandler := handler.NewAPIHandler(tokenService, channelService, userRepo, modelGroupService, billingService)
 	emailHandler := handler.NewEmailVerificationHandler(emailVerificationService, captchaService)
 	captchaHandler := handler.NewCaptchaHandler(captchaService)
@@ -184,9 +185,9 @@ func SetupUserRoutes(
 			redemption.GET("/history", redemptionHandler.GetUserHistory)
 		}
 
-		v1.POST("/chat/completions", middleware.TokenAuth(tokenService), middleware.TokenRateLimit(), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.ChatCompletions)
-		v1.GET("/models", middleware.TokenAuth(tokenService), middleware.TokenRateLimit(), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.ListModels)
-		v1.POST("/embeddings", middleware.TokenAuth(tokenService), middleware.TokenRateLimit(), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.Embeddings)
+		v1.POST("/chat/completions", middleware.TokenAuth(tokenService), middleware.TokenRateLimit(tokenService), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.ChatCompletions)
+		v1.GET("/models", middleware.TokenAuth(tokenService), middleware.TokenRateLimit(tokenService), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.ListModels)
+		v1.POST("/embeddings", middleware.TokenAuth(tokenService), middleware.TokenRateLimit(tokenService), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.Embeddings)
 
 		internal := v1.Group("/internal")
 		internal.Use(middleware.AdminAuth(cfg.Server.AdminSecret))
