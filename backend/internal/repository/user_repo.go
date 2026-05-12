@@ -2,6 +2,7 @@ package repository
 
 import (
 	"time"
+t"errors"
 
 	"gapi-platform/internal/model"
 	"gorm.io/gorm"
@@ -41,6 +42,9 @@ func (r *UserRepository) GetByEmail(email string) (*model.User, error) {
 	var user model.User
 	err := r.db.Where("email = ?", email).First(&user).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &user, nil
@@ -51,6 +55,9 @@ func (r *UserRepository) GetByUsername(username string) (*model.User, error) {
 	var user model.User
 	err := r.db.Where("username = ?", username).First(&user).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &user, nil
