@@ -24,6 +24,9 @@ cd deploy/docker
 # 复制环境变量配置
 cp .env.example .env
 
+# 复制后端配置模板（Docker 环境下环境变量会覆盖，但文件必须存在）
+cp ../../backend/config/config.yaml.example ../../backend/config/config.yaml
+
 # 启动所有服务
 docker-compose up -d
 
