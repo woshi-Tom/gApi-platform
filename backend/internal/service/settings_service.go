@@ -29,7 +29,7 @@ const (
 	ConfigKeyTrialVIPDays       = "trial_vip_days"
 	ConfigKeyAllowedDomains     = "allowed_domains"
 	ConfigKeyMaxAccountsPerIP   = "max_accounts_per_ip"
-	ConfigKeyMinPasswordLength = "min_password_length"
+	ConfigKeyMinPasswordLength  = "min_password_length"
 	ConfigKeySignupRewardType   = "signup_reward_type"
 	ConfigKeySignupRewardAmount = "signup_reward_amount"
 	ConfigGroupRegister         = "register"
@@ -46,6 +46,32 @@ const (
 	ConfigGroupPayment        = "payment"
 )
 
+// ConfigKey constants for General settings
+const (
+	ConfigKeySiteName        = "site_name"
+	ConfigKeySiteLogo        = "site_logo"
+	ConfigKeySiteDescription = "site_description"
+	ConfigGroupGeneral       = "general"
+)
+
+// ConfigKey constants for Rate Limit settings
+const (
+	ConfigKeyFreeRPM     = "free_rpm"
+	ConfigKeyFreeTPM     = "free_tpm"
+	ConfigKeyVIPRPM      = "vip_rpm"
+	ConfigKeyVIPTPM      = "vip_tpm"
+	ConfigGroupRateLimit = "rate_limit"
+)
+
+// ConfigKey constants for Security settings
+const (
+	ConfigKeyJWTSecret          = "jwt_secret"
+	ConfigKeyJWTExpireHours     = "jwt_expire_hours"
+	ConfigKeyPasswordMinLength  = "password_min_length"
+	ConfigKeyPasswordExpireDays = "password_expire_days"
+	ConfigGroupSecurity         = "security"
+)
+
 // SMTPConfig represents SMTP settings
 type SMTPConfig struct {
 	Enabled   bool   `json:"enabled"`
@@ -60,12 +86,15 @@ type SMTPConfig struct {
 
 // SettingsService handles system configuration
 type SettingsService struct {
-	db          *gorm.DB
-	smtpCache   *SMTPConfig
-	alipayCache *AlipayConfig
-	cacheMutex  sync.RWMutex
-	cacheTime   time.Time
-	cacheTTL    time.Duration
+	db             *gorm.DB
+	smtpCache      *SMTPConfig
+	alipayCache    *AlipayConfig
+	generalCache   *GeneralSettings
+	rateLimitCache *RateLimitSettings
+	securityCache  *SecuritySettings
+	cacheMutex     sync.RWMutex
+	cacheTime      time.Time
+	cacheTTL       time.Duration
 }
 
 // NewSettingsService creates a new settings service
@@ -115,7 +144,6 @@ func (s *SettingsService) GetSMTPConfig() (*SMTPConfig, error) {
 		case ConfigKeySMTPUsername:
 			cfg.Username = c.ConfigValue
 		case ConfigKeySMTPPassword:
-			// Decrypt password
 			if c.ConfigValue != "" {
 				decrypted, err := crypto.Decrypt(c.ConfigValue)
 				if err == nil {
@@ -148,7 +176,7 @@ func (s *SettingsService) UpdateSMTPConfig(cfg *SMTPConfig) error {
 		ConfigKeySMTPPort:      {Value: fmt.Sprintf("%d", cfg.Port), IsSensitive: false},
 		ConfigKeySMTPUseTLS:    {Value: boolToString(cfg.UseTLS), IsSensitive: false},
 		ConfigKeySMTPUsername:  {Value: cfg.Username, IsSensitive: false},
-		ConfigKeySMTPPassword:  {Value: cfg.Password, IsSensitive: true}, // Will be encrypted
+		ConfigKeySMTPPassword:  {Value: cfg.Password, IsSensitive: true},
 		ConfigKeySMTPFromName:  {Value: cfg.FromName, IsSensitive: false},
 		ConfigKeySMTPFromEmail: {Value: cfg.FromEmail, IsSensitive: false},
 	}
@@ -157,7 +185,6 @@ func (s *SettingsService) UpdateSMTPConfig(cfg *SMTPConfig) error {
 		for key, data := range updates {
 			value := data.Value
 
-			// Encrypt password if sensitive and not empty
 			if data.IsSensitive && value != "" {
 				encrypted, err := crypto.Encrypt(value)
 				if err != nil {
@@ -166,7 +193,6 @@ func (s *SettingsService) UpdateSMTPConfig(cfg *SMTPConfig) error {
 				value = encrypted
 			}
 
-			// Skip empty password updates (don't overwrite existing)
 			if key == ConfigKeySMTPPassword && value == "" {
 				continue
 			}
@@ -194,7 +220,6 @@ func (s *SettingsService) TestSMTPConnection(testEmail string) error {
 		return errors.New("SMTP configuration is incomplete")
 	}
 
-	// Create a temporary mailer with test config
 	mailer := &testMailer{
 		host:      cfg.Host,
 		port:      cfg.Port,
@@ -221,7 +246,6 @@ func (s *SettingsService) upsertConfig(tx *gorm.DB, key, value, valueType string
 	description := getConfigDescription(key)
 
 	if err == gorm.ErrRecordNotFound {
-		// Insert new
 		config = model.SystemConfig{
 			ConfigKey:   key,
 			ConfigValue: value,
@@ -235,7 +259,6 @@ func (s *SettingsService) upsertConfig(tx *gorm.DB, key, value, valueType string
 		return err
 	}
 
-	// Update existing
 	config.ConfigValue = value
 	if isSensitive {
 		config.IsSensitive = true
@@ -247,11 +270,13 @@ func (s *SettingsService) InvalidateCache() {
 	s.cacheMutex.Lock()
 	s.smtpCache = nil
 	s.alipayCache = nil
+	s.generalCache = nil
+	s.rateLimitCache = nil
+	s.securityCache = nil
 	s.cacheTime = time.Time{}
 	s.cacheMutex.Unlock()
 }
 
-// Helper functions
 func boolToString(b bool) string {
 	if b {
 		return "true"
@@ -261,20 +286,31 @@ func boolToString(b bool) string {
 
 func getConfigDescription(key string) string {
 	descriptions := map[string]string{
-		ConfigKeySMTPEnabled:      "启用邮箱服务",
-		ConfigKeySMTPHost:         "SMTP 服务器地址",
-		ConfigKeySMTPPort:         "SMTP 端口",
-		ConfigKeySMTPUseTLS:       "使用 TLS 加密",
-		ConfigKeySMTPUsername:     "SMTP 用户名",
-		ConfigKeySMTPPassword:     "SMTP 密码 (加密存储)",
-		ConfigKeySMTPFromName:     "发件人名称",
-		ConfigKeySMTPFromEmail:    "发件人邮箱",
-		ConfigKeyAlipayEnabled:    "启用支付宝支付",
-		ConfigKeyAlipayAppID:      "支付宝应用 APP ID",
-		ConfigKeyAlipayPrivateKey: "支付宝应用私钥 (加密存储)",
-		ConfigKeyAlipayPublicKey:  "支付宝公钥",
-		ConfigKeyAlipayEncryptKey: "支付宝加密密钥 (加密存储)",
-		ConfigKeyAlipaySandbox:    "启用沙箱模式",
+		ConfigKeySMTPEnabled:        "启用邮箱服务",
+		ConfigKeySMTPHost:           "SMTP 服务器地址",
+		ConfigKeySMTPPort:           "SMTP 端口",
+		ConfigKeySMTPUseTLS:         "使用 TLS 加密",
+		ConfigKeySMTPUsername:       "SMTP 用户名",
+		ConfigKeySMTPPassword:       "SMTP 密码 (加密存储)",
+		ConfigKeySMTPFromName:       "发件人名称",
+		ConfigKeySMTPFromEmail:      "发件人邮箱",
+		ConfigKeyAlipayEnabled:      "启用支付宝支付",
+		ConfigKeyAlipayAppID:        "支付宝应用 APP ID",
+		ConfigKeyAlipayPrivateKey:   "支付宝应用私钥 (加密存储)",
+		ConfigKeyAlipayPublicKey:    "支付宝公钥",
+		ConfigKeyAlipayEncryptKey:   "支付宝加密密钥 (加密存储)",
+		ConfigKeyAlipaySandbox:      "启用沙箱模式",
+		ConfigKeySiteName:           "网站名称",
+		ConfigKeySiteLogo:           "网站 Logo",
+		ConfigKeySiteDescription:    "网站描述",
+		ConfigKeyFreeRPM:            "免费用户每分钟请求数",
+		ConfigKeyFreeTPM:            "免费用户每分钟 Token 数",
+		ConfigKeyVIPRPM:             "VIP 用户每分钟请求数",
+		ConfigKeyVIPTPM:             "VIP 用户每分钟 Token 数",
+		ConfigKeyJWTSecret:          "JWT 签名密钥 (加密存储)",
+		ConfigKeyJWTExpireHours:     "JWT Token 过期时间 (小时)",
+		ConfigKeyPasswordMinLength:  "密码最小长度",
+		ConfigKeyPasswordExpireDays: "密码过期天数",
 	}
 	if desc, ok := descriptions[key]; ok {
 		return desc
@@ -302,6 +338,26 @@ type AlipayConfig struct {
 	PublicKey  string `json:"public_key"`
 	EncryptKey string `json:"-"`
 	Sandbox    bool   `json:"sandbox"`
+}
+
+type GeneralSettings struct {
+	SiteName        string `json:"site_name"`
+	SiteLogo        string `json:"site_logo"`
+	SiteDescription string `json:"site_description"`
+}
+
+type RateLimitSettings struct {
+	FreeRPM int `json:"free_rpm"`
+	FreeTPM int `json:"free_tpm"`
+	VIPRPM  int `json:"vip_rpm"`
+	VIPTPM  int `json:"vip_tpm"`
+}
+
+type SecuritySettings struct {
+	JWTSecret          string `json:"jwt_secret"`
+	JWTExpireHours     int    `json:"jwt_expire_hours"`
+	PasswordMinLength  int    `json:"password_min_length"`
+	PasswordExpireDays int    `json:"password_expire_days"`
 }
 
 func (s *SettingsService) GetRegisterSettings() (*RegisterSettings, error) {
@@ -484,7 +540,6 @@ func (s *SettingsService) UpdateAlipayConfig(cfg *AlipayConfig) error {
 		return nil
 	})
 	if err == nil {
-		// Invalidate in-memory Alipay config cache after successful update
 		s.InvalidateCache()
 	}
 	return err
@@ -523,6 +578,222 @@ func (s *SettingsService) IsAlipayEnabled() bool {
 		return false
 	}
 	return cfg.Enabled && cfg.AppID != "" && cfg.PrivateKey != ""
+}
+
+func (s *SettingsService) GetGeneralSettings() (*GeneralSettings, error) {
+	s.cacheMutex.RLock()
+	if time.Since(s.cacheTime) < s.cacheTTL && s.generalCache != nil {
+		cfg := s.generalCache
+		s.cacheMutex.RUnlock()
+		return cfg, nil
+	}
+	s.cacheMutex.RUnlock()
+
+	cfg := &GeneralSettings{
+		SiteName:        "API Proxy Platform",
+		SiteLogo:        "/static/logo.png",
+		SiteDescription: "OpenAI API 代理平台",
+	}
+
+	configs, err := s.getConfigsByGroup(ConfigGroupGeneral)
+	if err != nil {
+		return cfg, err
+	}
+
+	for _, c := range configs {
+		switch c.ConfigKey {
+		case ConfigKeySiteName:
+			cfg.SiteName = c.ConfigValue
+		case ConfigKeySiteLogo:
+			cfg.SiteLogo = c.ConfigValue
+		case ConfigKeySiteDescription:
+			cfg.SiteDescription = c.ConfigValue
+		}
+	}
+
+	s.cacheMutex.Lock()
+	s.generalCache = cfg
+	s.cacheTime = time.Now()
+	s.cacheMutex.Unlock()
+
+	return cfg, nil
+}
+
+func (s *SettingsService) UpdateGeneralSettings(cfg *GeneralSettings) error {
+	configs := map[string]struct {
+		Value     string
+		ValueType string
+	}{
+		ConfigKeySiteName:        {cfg.SiteName, "string"},
+		ConfigKeySiteLogo:        {cfg.SiteLogo, "string"},
+		ConfigKeySiteDescription: {cfg.SiteDescription, "string"},
+	}
+
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		for key, data := range configs {
+			if err := s.upsertConfigWithGroup(tx, key, data.Value, data.ValueType, false, ConfigGroupGeneral); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err == nil {
+		s.InvalidateCache()
+	}
+	return err
+}
+
+func (s *SettingsService) GetRateLimitSettings() (*RateLimitSettings, error) {
+	s.cacheMutex.RLock()
+	if time.Since(s.cacheTime) < s.cacheTTL && s.rateLimitCache != nil {
+		cfg := s.rateLimitCache
+		s.cacheMutex.RUnlock()
+		return cfg, nil
+	}
+	s.cacheMutex.RUnlock()
+
+	cfg := &RateLimitSettings{
+		FreeRPM: 60,
+		FreeTPM: 10000,
+		VIPRPM:  2000,
+		VIPTPM:  500000,
+	}
+
+	configs, err := s.getConfigsByGroup(ConfigGroupRateLimit)
+	if err != nil {
+		return cfg, err
+	}
+
+	for _, c := range configs {
+		switch c.ConfigKey {
+		case ConfigKeyFreeRPM:
+			fmt.Sscanf(c.ConfigValue, "%d", &cfg.FreeRPM)
+		case ConfigKeyFreeTPM:
+			fmt.Sscanf(c.ConfigValue, "%d", &cfg.FreeTPM)
+		case ConfigKeyVIPRPM:
+			fmt.Sscanf(c.ConfigValue, "%d", &cfg.VIPRPM)
+		case ConfigKeyVIPTPM:
+			fmt.Sscanf(c.ConfigValue, "%d", &cfg.VIPTPM)
+		}
+	}
+
+	s.cacheMutex.Lock()
+	s.rateLimitCache = cfg
+	s.cacheTime = time.Now()
+	s.cacheMutex.Unlock()
+
+	return cfg, nil
+}
+
+func (s *SettingsService) UpdateRateLimitSettings(cfg *RateLimitSettings) error {
+	configs := map[string]struct {
+		Value     string
+		ValueType string
+	}{
+		ConfigKeyFreeRPM: {fmt.Sprintf("%d", cfg.FreeRPM), "number"},
+		ConfigKeyFreeTPM: {fmt.Sprintf("%d", cfg.FreeTPM), "number"},
+		ConfigKeyVIPRPM:  {fmt.Sprintf("%d", cfg.VIPRPM), "number"},
+		ConfigKeyVIPTPM:  {fmt.Sprintf("%d", cfg.VIPTPM), "number"},
+	}
+
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		for key, data := range configs {
+			if err := s.upsertConfigWithGroup(tx, key, data.Value, data.ValueType, false, ConfigGroupRateLimit); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err == nil {
+		s.InvalidateCache()
+	}
+	return err
+}
+
+func (s *SettingsService) GetSecuritySettings() (*SecuritySettings, error) {
+	s.cacheMutex.RLock()
+	if time.Since(s.cacheTime) < s.cacheTTL && s.securityCache != nil {
+		cfg := s.securityCache
+		s.cacheMutex.RUnlock()
+		return cfg, nil
+	}
+	s.cacheMutex.RUnlock()
+
+	cfg := &SecuritySettings{
+		JWTSecret:          "gapi-jwt-secret-key-change-in-production",
+		JWTExpireHours:     168,
+		PasswordMinLength:  8,
+		PasswordExpireDays: 90,
+	}
+
+	configs, err := s.getConfigsByGroup(ConfigGroupSecurity)
+	if err != nil {
+		return cfg, err
+	}
+
+	for _, c := range configs {
+		switch c.ConfigKey {
+		case ConfigKeyJWTSecret:
+			if c.ConfigValue != "" {
+				decrypted, err := crypto.Decrypt(c.ConfigValue)
+				if err == nil {
+					cfg.JWTSecret = decrypted
+				}
+			}
+		case ConfigKeyJWTExpireHours:
+			fmt.Sscanf(c.ConfigValue, "%d", &cfg.JWTExpireHours)
+		case ConfigKeyPasswordMinLength:
+			fmt.Sscanf(c.ConfigValue, "%d", &cfg.PasswordMinLength)
+		case ConfigKeyPasswordExpireDays:
+			fmt.Sscanf(c.ConfigValue, "%d", &cfg.PasswordExpireDays)
+		}
+	}
+
+	s.cacheMutex.Lock()
+	s.securityCache = cfg
+	s.cacheTime = time.Now()
+	s.cacheMutex.Unlock()
+
+	return cfg, nil
+}
+
+func (s *SettingsService) UpdateSecuritySettings(cfg *SecuritySettings) error {
+	updates := map[string]struct {
+		Value       string
+		IsSensitive bool
+	}{
+		ConfigKeyJWTSecret:          {Value: cfg.JWTSecret, IsSensitive: true},
+		ConfigKeyJWTExpireHours:     {Value: fmt.Sprintf("%d", cfg.JWTExpireHours), IsSensitive: false},
+		ConfigKeyPasswordMinLength:  {Value: fmt.Sprintf("%d", cfg.PasswordMinLength), IsSensitive: false},
+		ConfigKeyPasswordExpireDays: {Value: fmt.Sprintf("%d", cfg.PasswordExpireDays), IsSensitive: false},
+	}
+
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		for key, data := range updates {
+			value := data.Value
+
+			if data.IsSensitive && value != "" {
+				encrypted, err := crypto.Encrypt(value)
+				if err != nil {
+					return fmt.Errorf("failed to encrypt %s: %w", key, err)
+				}
+				value = encrypted
+			}
+
+			if key == ConfigKeyJWTSecret && value == "" {
+				continue
+			}
+
+			if err := s.upsertConfigWithGroup(tx, key, value, "string", data.IsSensitive, ConfigGroupSecurity); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err == nil {
+		s.InvalidateCache()
+	}
+	return err
 }
 
 func boolPtr(b bool) *bool {

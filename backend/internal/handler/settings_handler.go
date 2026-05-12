@@ -124,7 +124,6 @@ func (h *SettingsHandler) UpdateRegisterSettings(c *gin.Context) {
 		}
 	}
 
-	// Load current settings first, then override with sent fields
 	current, _ := h.settingsSvc.GetRegisterSettings()
 	settings := &service.RegisterSettings{
 		AllowRegister:      req.AllowRegister,
@@ -207,5 +206,117 @@ func (h *SettingsHandler) UpdatePaymentConfig(c *gin.Context) {
 	if h.alipayService != nil {
 		h.alipayService.ReloadClient()
 	}
+	response.Success(c, nil)
+}
+
+func (h *SettingsHandler) GetGeneralSettings(c *gin.Context) {
+	cfg, err := h.settingsSvc.GetGeneralSettings()
+	if err != nil {
+		response.InternalError(c, "failed to get general settings: "+err.Error())
+		return
+	}
+	response.Success(c, cfg)
+}
+
+func (h *SettingsHandler) UpdateGeneralSettings(c *gin.Context) {
+	var req struct {
+		SiteName        string `json:"site_name"`
+		SiteLogo        string `json:"site_logo"`
+		SiteDescription string `json:"site_description"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, "INVALID_PARAMETER", err.Error())
+		return
+	}
+
+	cfg := &service.GeneralSettings{
+		SiteName:        req.SiteName,
+		SiteLogo:        req.SiteLogo,
+		SiteDescription: req.SiteDescription,
+	}
+
+	if err := h.settingsSvc.UpdateGeneralSettings(cfg); err != nil {
+		response.InternalError(c, "failed to update general settings: "+err.Error())
+		return
+	}
+
+	h.settingsSvc.InvalidateCache()
+	response.Success(c, nil)
+}
+
+func (h *SettingsHandler) GetRateLimitSettings(c *gin.Context) {
+	cfg, err := h.settingsSvc.GetRateLimitSettings()
+	if err != nil {
+		response.InternalError(c, "failed to get rate limit settings: "+err.Error())
+		return
+	}
+	response.Success(c, cfg)
+}
+
+func (h *SettingsHandler) UpdateRateLimitSettings(c *gin.Context) {
+	var req struct {
+		FreeRPM int `json:"free_rpm"`
+		FreeTPM int `json:"free_tpm"`
+		VIPRPM  int `json:"vip_rpm"`
+		VIPTPM  int `json:"vip_tpm"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, "INVALID_PARAMETER", err.Error())
+		return
+	}
+
+	cfg := &service.RateLimitSettings{
+		FreeRPM: req.FreeRPM,
+		FreeTPM: req.FreeTPM,
+		VIPRPM:  req.VIPRPM,
+		VIPTPM:  req.VIPTPM,
+	}
+
+	if err := h.settingsSvc.UpdateRateLimitSettings(cfg); err != nil {
+		response.InternalError(c, "failed to update rate limit settings: "+err.Error())
+		return
+	}
+
+	h.settingsSvc.InvalidateCache()
+	response.Success(c, nil)
+}
+
+func (h *SettingsHandler) GetSecuritySettings(c *gin.Context) {
+	cfg, err := h.settingsSvc.GetSecuritySettings()
+	if err != nil {
+		response.InternalError(c, "failed to get security settings: "+err.Error())
+		return
+	}
+	response.Success(c, cfg)
+}
+
+func (h *SettingsHandler) UpdateSecuritySettings(c *gin.Context) {
+	var req struct {
+		JWTSecret          string `json:"jwt_secret"`
+		JWTExpireHours     int    `json:"jwt_expire_hours"`
+		PasswordMinLength  int    `json:"password_min_length"`
+		PasswordExpireDays int    `json:"password_expire_days"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, "INVALID_PARAMETER", err.Error())
+		return
+	}
+
+	cfg := &service.SecuritySettings{
+		JWTSecret:          req.JWTSecret,
+		JWTExpireHours:     req.JWTExpireHours,
+		PasswordMinLength:  req.PasswordMinLength,
+		PasswordExpireDays: req.PasswordExpireDays,
+	}
+
+	if err := h.settingsSvc.UpdateSecuritySettings(cfg); err != nil {
+		response.InternalError(c, "failed to update security settings: "+err.Error())
+		return
+	}
+
+	h.settingsSvc.InvalidateCache()
 	response.Success(c, nil)
 }

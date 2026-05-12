@@ -56,6 +56,26 @@ export interface UpdatePaymentRequest {
   sandbox: boolean
 }
 
+export interface GeneralSettings {
+  site_name: string
+  site_logo: string
+  site_description: string
+}
+
+export interface RateLimitSettings {
+  free_rpm: number
+  free_tpm: number
+  vip_rpm: number
+  vip_tpm: number
+}
+
+export interface SecuritySettings {
+  jwt_secret: string
+  jwt_expire_hours: number
+  password_min_length: number
+  password_expire_days: number
+}
+
 export const settingsAPI = {
   getSMTPConfig: () => {
     return adminAPI.get<SMTPConfig>('/settings/email')
@@ -83,5 +103,29 @@ export const settingsAPI = {
 
   updatePaymentConfig: (data: UpdatePaymentRequest) => {
     return adminAPI.put('/settings/payment', data)
-  }
+  },
+
+  getGeneralSettings: () => {
+    return adminAPI.get<GeneralSettings>('/settings/general')
+  },
+
+  updateGeneralSettings: (data: GeneralSettings) => {
+    return adminAPI.put('/settings/general', data)
+  },
+
+  getRateLimitSettings: () => {
+    return adminAPI.get<RateLimitSettings>('/settings/rate-limit')
+  },
+
+  updateRateLimitSettings: (data: RateLimitSettings) => {
+    return adminAPI.put('/settings/rate-limit', data)
+  },
+
+  getSecuritySettings: () => {
+    return adminAPI.get<SecuritySettings>('/settings/security')
+  },
+
+  updateSecuritySettings: (data: SecuritySettings) => {
+    return adminAPI.put('/settings/security', data)
+  },
 }

@@ -214,20 +214,6 @@
               <el-switch v-model="paymentForm.alipay_sandbox" />
             </el-form-item>
 
-            <el-divider content-position="left">微信支付</el-divider>
-            <el-form-item label="启用微信支付">
-              <el-switch v-model="paymentForm.wechat_enabled" />
-            </el-form-item>
-            <el-form-item label="APP ID" v-if="paymentForm.wechat_enabled">
-              <el-input v-model="paymentForm.wechat_app_id" placeholder="微信应用 APP ID" />
-            </el-form-item>
-            <el-form-item label="商户号" v-if="paymentForm.wechat_enabled">
-              <el-input v-model="paymentForm.wechat_mch_id" placeholder="微信商户号" />
-            </el-form-item>
-            <el-form-item label="API 密钥" v-if="paymentForm.wechat_enabled">
-              <el-input v-model="paymentForm.wechat_api_key" />
-            </el-form-item>
-
             <el-form-item>
               <el-button type="primary" @click="savePayment" :loading="saving">保存设置</el-button>
             </el-form-item>
@@ -322,10 +308,6 @@ const paymentForm = reactive({
   alipay_private_key: '',
   alipay_public_key: '',
   alipay_sandbox: true,
-  wechat_enabled: false,
-  wechat_app_id: '',
-  wechat_mch_id: '',
-  wechat_api_key: '',
 })
 
 const securityForm = reactive({
@@ -334,6 +316,20 @@ const securityForm = reactive({
   password_min_length: 8,
   password_expire_days: 90,
 })
+
+async function loadGeneralSettings() {
+  try {
+    const res = await settingsAPI.getGeneralSettings()
+    if (res.data.data) {
+      const data = res.data.data
+      generalForm.site_name = data.site_name
+      generalForm.site_logo = data.site_logo
+      generalForm.site_description = data.site_description
+    }
+  } catch (e) {
+    ElMessage.error('加载基本设置失败')
+  }
+}
 
 async function loadEmailConfig() {
   try {
@@ -376,10 +372,72 @@ async function loadRegisterSettings() {
   }
 }
 
+async function loadRateLimitSettings() {
+  try {
+    const res = await settingsAPI.getRateLimitSettings()
+    if (res.data.data) {
+      const data = res.data.data
+      rateForm.free_rpm = data.free_rpm
+      rateForm.free_tpm = data.free_tpm
+      rateForm.vip_rpm = data.vip_rpm
+      rateForm.vip_tpm = data.vip_tpm
+    }
+  } catch (e) {
+    ElMessage.error('加载速率限制设置失败')
+  }
+}
+
+async function loadPaymentConfig() {
+  try {
+    const res = await settingsAPI.getPaymentConfig()
+    if (res.data.data) {
+      const data = res.data.data
+      paymentForm.alipay_enabled = data.enabled
+      paymentForm.alipay_app_id = data.app_id || ''
+      paymentForm.alipay_public_key = data.public_key || ''
+      paymentForm.alipay_sandbox = data.sandbox !== false
+      paymentForm.alipay_private_key = ''
+    }
+  } catch (e) {
+    ElMessage.error('加载支付配置失败')
+  }
+}
+
+async function loadSecuritySettings() {
+  try {
+    const res = await settingsAPI.getSecuritySettings()
+    if (res.data.data) {
+      const data = res.data.data
+      securityForm.jwt_secret = data.jwt_secret
+      securityForm.jwt_expire_hours = data.jwt_expire_hours
+      securityForm.password_min_length = data.password_min_length
+      securityForm.password_expire_days = data.password_expire_days
+    }
+  } catch (e) {
+    ElMessage.error('加载安全设置失败')
+  }
+}
+
 function handleEmailVerifyChange(value: boolean) {
   if (value && !emailForm.enabled) {
     ElMessage.warning('请先在【邮箱设置】中配置并启用邮箱服务')
     registerForm.require_email_verify = false
+  }
+}
+
+async function saveGeneral() {
+  saving.value = true
+  try {
+    await settingsAPI.updateGeneralSettings({
+      site_name: generalForm.site_name,
+      site_logo: generalForm.site_logo,
+      site_description: generalForm.site_description,
+    })
+    ElMessage.success('基本设置已保存')
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.error?.message || '保存失败')
+  } finally {
+    saving.value = false
   }
 }
 
@@ -427,18 +485,6 @@ async function sendTestEmail() {
   }
 }
 
-async function saveGeneral() {
-  saving.value = true
-  try {
-    await new Promise(resolve => setTimeout(resolve, 500))
-    ElMessage.success('基本设置已保存')
-  } catch (e) {
-    ElMessage.error('保存失败')
-  } finally {
-    saving.value = false
-  }
-}
-
 async function saveRegister() {
   if (registerForm.require_email_verify && !emailForm.enabled) {
     ElMessage.error('请先在【邮箱设置】中配置并启用邮箱服务')
@@ -469,28 +515,17 @@ async function saveRegister() {
 async function saveRateLimit() {
   saving.value = true
   try {
-    await new Promise(resolve => setTimeout(resolve, 500))
+    await settingsAPI.updateRateLimitSettings({
+      free_rpm: rateForm.free_rpm,
+      free_tpm: rateForm.free_tpm,
+      vip_rpm: rateForm.vip_rpm,
+      vip_tpm: rateForm.vip_tpm,
+    })
     ElMessage.success('速率限制设置已保存')
-  } catch (e) {
-    ElMessage.error('保存失败')
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.error?.message || '保存失败')
   } finally {
     saving.value = false
-  }
-}
-
-async function loadPaymentConfig() {
-  try {
-    const res = await settingsAPI.getPaymentConfig()
-    if (res.data.data) {
-      const data = res.data.data
-      paymentForm.alipay_enabled = data.enabled
-      paymentForm.alipay_app_id = data.app_id || ''
-      paymentForm.alipay_public_key = data.public_key || ''
-      paymentForm.alipay_sandbox = data.sandbox !== false
-      paymentForm.alipay_private_key = ''
-    }
-  } catch (e) {
-    ElMessage.error('加载支付配置失败')
   }
 }
 
@@ -517,19 +552,27 @@ async function savePayment() {
 async function saveSecurity() {
   saving.value = true
   try {
-    await new Promise(resolve => setTimeout(resolve, 500))
+    await settingsAPI.updateSecuritySettings({
+      jwt_secret: securityForm.jwt_secret,
+      jwt_expire_hours: securityForm.jwt_expire_hours,
+      password_min_length: securityForm.password_min_length,
+      password_expire_days: securityForm.password_expire_days,
+    })
     ElMessage.success('安全设置已保存')
-  } catch (e) {
-    ElMessage.error('保存失败')
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.error?.message || '保存失败')
   } finally {
     saving.value = false
   }
 }
 
 onMounted(() => {
+  loadGeneralSettings()
   loadEmailConfig()
   loadRegisterSettings()
+  loadRateLimitSettings()
   loadPaymentConfig()
+  loadSecuritySettings()
 })
 </script>
 

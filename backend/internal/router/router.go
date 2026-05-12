@@ -302,6 +302,12 @@ func SetupAdminRoutes(
 			adminAuth.PUT("/settings/register", settingsHandler.UpdateRegisterSettings)
 			adminAuth.GET("/settings/payment", settingsHandler.GetPaymentConfig)
 			adminAuth.PUT("/settings/payment", settingsHandler.UpdatePaymentConfig)
+			adminAuth.GET("/settings/general", settingsHandler.GetGeneralSettings)
+			adminAuth.PUT("/settings/general", settingsHandler.UpdateGeneralSettings)
+			adminAuth.GET("/settings/rate-limit", settingsHandler.GetRateLimitSettings)
+			adminAuth.PUT("/settings/rate-limit", settingsHandler.UpdateRateLimitSettings)
+			adminAuth.GET("/settings/security", settingsHandler.GetSecuritySettings)
+			adminAuth.PUT("/settings/security", settingsHandler.UpdateSecuritySettings)
 
 			redemptionCacheService := service.NewRedemptionCacheService(redisClient)
 			redemptionHandler := handler.NewRedemptionHandler(db.GetDB(), userRepo, auditRepo, redemptionCacheService)
