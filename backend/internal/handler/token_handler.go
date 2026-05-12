@@ -46,14 +46,28 @@ func (h *TokenHandler) List(c *gin.Context) {
 
 	type TokenWithQuota struct {
 		model.Token
-		TotalQuota int64 `json:"total_quota"`
+		TotalQuota   int64   `json:"total_quota"`
+		UsedQuota    int64   `json:"used_quota"`
+		RemainQuota  int64   `json:"remain_quota"`
+		UsagePercent float64 `json:"usage_percent"`
+		IsUnlimited  bool    `json:"is_unlimited"`
 	}
 
 	result := make([]TokenWithQuota, len(tokens))
 	for i, t := range tokens {
+		total := t.UsedQuota + t.RemainQuota
+		usagePercent := 0.0
+		if total > 0 {
+			usagePercent = float64(t.UsedQuota) / float64(total) * 100
+		}
+
 		result[i] = TokenWithQuota{
-			Token:      t,
-			TotalQuota: quota,
+			Token:        t,
+			TotalQuota:   quota,
+			UsedQuota:    t.UsedQuota,
+			RemainQuota:  t.RemainQuota,
+			UsagePercent: usagePercent,
+			IsUnlimited:  t.UnlimitedQuota,
 		}
 	}
 

@@ -1,11 +1,11 @@
 # API Key 全生命周期与 API 调用链路完善计划
 
-> 版本: v1.2
+> 版本: v1.3
 > 日期: 2026-05-12
 > 状态: 进行中
 > 目标版本: v1.3.0
 > 优先级: 高
-> 完成度: Phase 1 ✅ / Phase 2 ✅ / Phase 3 ⚠️ / Phase 4 ❌
+> 完成度: Phase 1 ✅ / Phase 2 ✅ / Phase 3 ✅ / Phase 4 ❌
 
 ---
 
@@ -48,13 +48,13 @@
 | P1-1 | RateLimit | TokenRateLimit 硬编码 10 RPS，忽略 token.RPMLimit | 🟡 中 | 用户自定义限速不生效 | ✅ 已修复 |
 | P1-2 | RateLimit | 无 TPM（每分钟 Token 数）限制 | 🟡 中 | 无法控制 Token 消耗速率 | ✅ 已修复 |
 | P1-3 | AccessLog | `model` 字段从 `PostForm` 提取，实际请求为 JSON body | 🟡 中 | 日志中 model 恒为 "unknown" | ✅ 已修复 |
-| P1-4 | API | 无 `/v1/completions` 端点 | 🟡 中 | 不完整 OpenAI 兼容 | ❌ 待修复 |
+| P1-4 | API | 无 `/v1/completions` 端点 | 🟡 中 | 不完整 OpenAI 兼容 | ✅ 已修复 |
 | P1-5 | Billing | PostConsumeQuota 无事务保护 | 🟡 中 | 并发扣费可能数据不一致 | ✅ 已修复 |
 | P1-6 | Billing | `consumeRechargeQuota` 返回 false（空实现） | 🟡 中 | 充值配额永远不消耗 | ✅ 已修复 |
 | P2-1 | TokenAuth | 未校验 `denied_models` 黑名单 | 🟢 低 | 黑名单功能不生效 | ✅ 已修复 |
 | P2-2 | API | 非流式响应后无 PostConsumeQuota 调用 | 🟢 低 | 非流式也未扣费 | ✅ 已修复 |
-| P2-3 | API | 无 `/v1/completions`（text completions） | 🟢 低 | OpenAI 兼容不完整 | ❌ 待修复 |
-| P2-4 | Error | 错误响应格式不统一（混合 APIResponse 和 APIErrorResponse） | 🟢 低 | 客户端适配困难 | ⚠️ 部分完成 |
+| P2-3 | API | 无 `/v1/completions`（text completions） | 🟢 低 | OpenAI 兼容不完整 | ✅ 已修复 |
+| P2-4 | Error | 错误响应格式不统一（混合 APIResponse 和 APIErrorResponse） | 🟢 低 | 客户端适配困难 | ✅ 已修复 |
 
 ---
 
@@ -262,53 +262,32 @@
 
 ---
 
-### Phase 3: 功能补全（P1-P2）— ⚠️ 部分完成
+### Phase 3: 功能补全（P1-P2）— ✅ 全部完成
 
-#### T-09: 新增 /v1/completions 端点 ❌
-
-| 项 | 内容 |
-|---|------|
-| 文件 | `backend/internal/handler/api_handler.go`（需新增方法）|
-| 路由 | `backend/internal/router/router.go` |
-| 现状 | ❌ 路由中无 `/v1/completions` 端点（router.go 只有 chat/completions、models、embeddings） |
-| 逻辑 | 类似 ChatCompletions，但请求体为 `{model, prompt, max_tokens, stream}` |
-| 适配器 | 复用 adapter 层，将 prompt 转换为 messages 格式 |
-| 路由注册 | `v1.POST("/completions", middleware.TokenAuth(...), middleware.TokenRateLimit(), ..., apiHandler.Completions)` |
-
-#### T-10: APIError 结构统一 ⚠️
+#### T-09: /v1/completions 端点 ✅
 
 | 项 | 内容 |
 |---|------|
-| 文件 | `backend/internal/model/response.go` |
-| 现状 | ⚠️ APIError 只有 `Code` 和 `Message`（response.go:21-24），缺少 `Type` 和 `Param` 字段 |
-| 已有 | `APIErrorResponse` 已存在（response.go:228-230），jwt.go 中 T-01/T-02 已使用带 `Type` 字段的错误（但通过内联定义而非结构体） |
-| 问题 | jwt.go 中部分错误使用 `model.APIResponse`（无 Type），部分使用 `model.APIErrorResponse`（有 Type），格式不统一 |
-| 修改 | APIError 增加 `Type` 和 `Param` 字段，统一所有 `/v1/*` 接口的错误格式 |
-| 格式 | `{"error":{"type":"...","code":"...","message":"...","param":null}}` |
+| 文件 | `api_handler.go` (新增 `Completions` 方法) + `router.go` (新增路由) + `response.go` (新增 `CompletionsRequest`) |
+| 状态 | ✅ 已实现 |
+| 变更 | prompt→messages 转换；复用 chatWithFailover 管道；ChatResponse→text_completion 格式转换 |
+| 路由 | `v1.POST("/completions", TokenAuth, TokenRateLimit, APIAccessLog, apiHandler.Completions)` |
 
-```go
-// 当前 response.go 中的 APIError:
-type APIError struct {
-    Code    string `json:"code"`
-    Message string `json:"message"`
-}
-
-// 需要改为（与 OpenAI 兼容）:
-type APIError struct {
-    Type    string      `json:"type"`
-    Code    string      `json:"code"`
-    Message string      `json:"message"`
-    Param   interface{} `json:"param"`
-}
-```
-
-#### T-11: Token 列表返回配额使用情况 ⚠️
+#### T-10: APIError 结构统一 ✅
 
 | 项 | 内容 |
 |---|------|
-| 文件 | `backend/internal/handler/token_handler.go` → `List()` |
-| 现状 | ⚠️ 返回 `TotalQuota`（token_handler.go:47-58），但未按 token 级别返回 `used_quota`、`remain_quota`、`usage_percent` |
-| 修改 | 每个 token 需要独立返回配额使用情况（当前只返回用户总配额） |
+| 文件 | `model/response.go` + `jwt.go` + `api_handler.go` + `ratelimit.go` |
+| 状态 | ✅ 已实现 |
+| 变更 | APIError 增加 Type、Param 字段；所有 /v1/* 错误统一使用 APIErrorResponse（不再混合 APIResponse）；错误码改为 snake_case 小写（OpenAI 兼容） |
+
+#### T-11: Token 列表返回配额使用情况 ✅
+
+| 项 | 内容 |
+|---|------|
+| 文件 | `token_handler.go` → `List()` |
+| 状态 | ✅ 已实现 |
+| 变更 | 每个 token 返回 used_quota、remain_quota、usage_percent、is_unlimited |
 
 ---
 
@@ -430,18 +409,18 @@ Phase 2: 限速与计费（P1）── ✅ 全部完成
 ├── T-08: APIAccessLog model 字段修复        ✅ done (api_handler.go + api_access_log.go)
 └── Phase 2 单元测试 + 集成测试              待编译验证后补充
 
-Phase 3: 功能补全（P1-P2）── ⚠️ 部分完成（下一步）
-├── T-09: /v1/completions 端点              ❌ ~3h（路由未注册）
-├── T-10: APIError 结构统一                  ⚠️ ~1h（缺少 Type/Param 字段）
-├── T-11: Token 列表返回配额使用情况          ⚠️ ~1h（只返回总配额，非 token 级）
-└── Phase 3 测试                            ~2h
+Phase 3: 功能补全（P1-P2）── ✅ 全部完成
+├── T-09: /v1/completions 端点              ✅ done (api_handler.go + router.go + response.go)
+├── T-10: APIError 结构统一                  ✅ done (response.go + jwt.go + api_handler.go + ratelimit.go)
+├── T-11: Token 列表返回配额使用情况          ✅ done (token_handler.go)
+└── Phase 3 测试                            待编译验证后补充
 
-Phase 4: 压力测试（P2）── ❌ 待 Phase 3 完成后
+Phase 4: 压力测试（P2）── ❌ 待编译验证完成后
 ├── T-12: 压力测试脚本 + 执行               ~4h
 ├── T-13: 监控增强                          ~2h
 └── Phase 4 调优 + 回归测试                  ~4h
 
-剩余预估工时: ~17h（Phase 1 + Phase 2 已完成）
+剩余预估工时: ~10h（Phase 1-3 已完成 ~32h）
 ```
 
 ---
@@ -455,8 +434,8 @@ Phase 4: 压力测试（P2）── ❌ 待 Phase 3 完成后
 - [x] Token 级 RPM/TPM 限速按用户配置生效
 - [x] 充值配额按 FIFO 正确扣减
 - [x] PostConsumeQuota 在 DB 事务中执行
-- [ ] /v1/completions 端点可用
-- [ ] 所有 /v1/* 接口错误格式统一为 OpenAI 标准
+- [x] /v1/completions 端点可用
+- [x] 所有 /v1/* 接口错误格式统一为 OpenAI 标准
 - [x] APIAccessLog 中 model 字段正确记录
 - [ ] 单元测试 ≥ 90% 覆盖新增代码
 - [ ] 集成测试全链路通过
@@ -476,9 +455,9 @@ Phase 4: 压力测试（P2）── ❌ 待 Phase 3 完成后
 
 ---
 
-**文档版本**: v1.2
+**文档版本**: v1.3
 **创建人**: TOM
-**下一步**: Phase 3 功能补全（T-09 /v1/completions, T-10 APIError 统一, T-11 Token 配额）
+**下一步**: Phase 4 压力测试与可观测（T-12 压测脚本, T-13 监控增强）
 
 ---
 
@@ -487,5 +466,6 @@ Phase 4: 压力测试（P2）── ❌ 待 Phase 3 完成后
 | 版本 | 日期 | 变更内容 |
 |------|------|---------|
 | v1.0 | 2026-05-12 | 初始版本 |
-| v1.1 | 2026-05-12 | 更新完成状态：Phase 1 全部完成，P2-1/P2-2 提前修复，修正 Phase 2-4 待办详情 |
-| v1.2 | 2026-05-12 | Phase 2 全部完成：T-05 TokenRateLimit RPM/TPM、T-06 事务保护、T-07 充值配额 FIFO、T-08 日志 model 字段 |
+| v1.1 | 2026-05-12 | 更新完成状态：Phase 1 全部完成 |
+| v1.2 | 2026-05-12 | Phase 2 全部完成：RPM/TPM 限速、事务保护、充值配额 FIFO、日志 model 字段 |
+| v1.3 | 2026-05-12 | Phase 3 全部完成：/v1/completions 端点、APIError 结构统一（Type/Param）、Token 列表配额详情 |

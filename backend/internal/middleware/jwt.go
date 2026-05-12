@@ -59,10 +59,10 @@ func TokenAuth(tokenService *service.TokenService) gin.HandlerFunc {
 		// Get token from Authorization header
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, model.APIResponse{
-				Success: false,
+			c.JSON(http.StatusUnauthorized, model.APIErrorResponse{
 				Error: &model.APIError{
-					Code:    "MISSING_API_KEY",
+					Type:    "invalid_request_error",
+					Code:    "invalid_api_key",
 					Message: "Missing API key in Authorization header",
 				},
 			})
@@ -73,10 +73,10 @@ func TokenAuth(tokenService *service.TokenService) gin.HandlerFunc {
 		// Check Bearer prefix
 		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, model.APIResponse{
-				Success: false,
+			c.JSON(http.StatusUnauthorized, model.APIErrorResponse{
 				Error: &model.APIError{
-					Code:    "INVALID_API_KEY",
+					Type:    "invalid_request_error",
+					Code:    "invalid_api_key",
 					Message: "Invalid API key format",
 				},
 			})
@@ -89,10 +89,10 @@ func TokenAuth(tokenService *service.TokenService) gin.HandlerFunc {
 		// Validate API token
 		token, err := tokenService.Validate(tokenKey)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, model.APIResponse{
-				Success: false,
+			c.JSON(http.StatusUnauthorized, model.APIErrorResponse{
 				Error: &model.APIError{
-					Code:    "INVALID_API_KEY",
+					Type:    "invalid_request_error",
+					Code:    "invalid_api_key",
 					Message: "Invalid API key",
 				},
 			})
@@ -101,10 +101,10 @@ func TokenAuth(tokenService *service.TokenService) gin.HandlerFunc {
 		}
 
 		if token == nil {
-			c.JSON(http.StatusUnauthorized, model.APIResponse{
-				Success: false,
+			c.JSON(http.StatusUnauthorized, model.APIErrorResponse{
 				Error: &model.APIError{
-					Code:    "EXPIRED_API_KEY",
+					Type:    "invalid_request_error",
+					Code:    "expired_api_key",
 					Message: "API key has expired or been disabled",
 				},
 			})

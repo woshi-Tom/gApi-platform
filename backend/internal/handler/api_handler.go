@@ -45,7 +45,8 @@ func (h *APIHandler) ChatCompletions(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, model.APIErrorResponse{
 			Error: &model.APIError{
-				Code:    "INVALID_REQUEST",
+				Type:    "invalid_request_error",
+				Code:    "invalid_request",
 				Message: err.Error(),
 			},
 		})
@@ -55,14 +56,15 @@ func (h *APIHandler) ChatCompletions(c *gin.Context) {
 	if req.Model == "" {
 		c.JSON(http.StatusBadRequest, model.APIErrorResponse{
 			Error: &model.APIError{
-				Code:    "MISSING_MODEL",
+				Type:    "invalid_request_error",
+				Code:    "missing_model",
 				Message: "model is required",
 			},
 		})
 		return
 	}
 
-	// T-08: Set model in context for APIAccessLog middleware
+	// Set model in context for APIAccessLog middleware
 	c.Set("request_model", req.Model)
 
 	// Pre-check quota
@@ -75,7 +77,8 @@ func (h *APIHandler) ChatCompletions(c *gin.Context) {
 				if err == service.ErrQuotaInsufficient {
 					c.JSON(http.StatusPaymentRequired, model.APIErrorResponse{
 						Error: &model.APIError{
-							Code:    "QUOTA_INSUFFICIENT",
+							Type:    "invalid_request_error",
+							Code:    "quota_insufficient",
 							Message: "insufficient quota",
 						},
 					})
@@ -84,7 +87,8 @@ func (h *APIHandler) ChatCompletions(c *gin.Context) {
 				if err == service.ErrTokenDisabled || err == service.ErrTokenExpired {
 					c.JSON(http.StatusForbidden, model.APIErrorResponse{
 						Error: &model.APIError{
-							Code:    "TOKEN_INVALID",
+							Type:    "invalid_request_error",
+							Code:    "token_invalid",
 							Message: err.Error(),
 						},
 					})
@@ -116,14 +120,15 @@ func (h *APIHandler) ChatCompletions(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadGateway, model.APIErrorResponse{
 			Error: &model.APIError{
-				Code:    "UPSTREAM_ERROR",
+				Type:    "server_error",
+				Code:    "upstream_error",
 				Message: err.Error(),
 			},
 		})
 		return
 	}
 
-	// T-04: Post-consume quota for non-streaming response
+	// Post-consume quota for non-streaming response
 	if chatResp, ok := resp.(*adapter.ChatResponse); ok && h.billingService != nil {
 		userID := getUserID(c)
 		tokenID := getTokenID(c)
@@ -207,7 +212,8 @@ func (h *APIHandler) handleStreamWithFailover(ctx context.Context, c *gin.Contex
 		if err != nil {
 			c.JSON(http.StatusServiceUnavailable, model.APIErrorResponse{
 				Error: &model.APIError{
-					Code:    "NO_CHANNEL",
+					Type:    "server_error",
+					Code:    "no_available_channel",
 					Message: "no available channel for model: " + chatReq.Model,
 				},
 			})
@@ -258,14 +264,15 @@ func (h *APIHandler) handleStreamWithFailover(ctx context.Context, c *gin.Contex
 		if !ok {
 			c.JSON(http.StatusInternalServerError, model.APIErrorResponse{
 				Error: &model.APIError{
-					Code:    "STREAM_NOT_SUPPORTED",
+					Type:    "server_error",
+					Code:    "internal_error",
 					Message: "streaming not supported",
 				},
 			})
 			return
 		}
 
-		// T-03: Track usage for streaming quota consumption
+		// Track usage for streaming quota consumption
 		var (
 			upstreamPromptTokens     int
 			upstreamCompletionTokens int
@@ -283,7 +290,6 @@ func (h *APIHandler) handleStreamWithFailover(ctx context.Context, c *gin.Contex
 					return false
 				}
 				if chunk.Done {
-					// Capture usage from final usage-only chunk (if upstream sends it)
 					if chunk.Usage != nil {
 						upstreamPromptTokens = chunk.Usage.PromptTokens
 						upstreamCompletionTokens = chunk.Usage.CompletionTokens
@@ -297,7 +303,6 @@ func (h *APIHandler) handleStreamWithFailover(ctx context.Context, c *gin.Contex
 					flusher.Flush()
 					return false
 				}
-				// Accumulate streamed content length for fallback estimation
 				for _, choice := range chunk.Choices {
 					completionContentLen += len(choice.Delta.Content)
 				}
@@ -308,7 +313,7 @@ func (h *APIHandler) handleStreamWithFailover(ctx context.Context, c *gin.Contex
 			}
 		})
 
-		// T-03: Post-consume quota after stream completes
+		// Post-consume quota after stream completes
 		if h.billingService != nil {
 			userID := getUserID(c)
 			tokenID := getTokenID(c)
@@ -318,7 +323,6 @@ func (h *APIHandler) handleStreamWithFailover(ctx context.Context, c *gin.Contex
 					promptTokens = upstreamPromptTokens
 					completionTokens = upstreamCompletionTokens
 				} else {
-					// Fallback: estimate from request content and accumulated output
 					promptTokens = h.estimateChatTokens(chatReq.Messages, 0)
 					completionTokens = completionContentLen/4 + 1
 				}
@@ -341,7 +345,8 @@ func (h *APIHandler) handleStreamWithFailover(ctx context.Context, c *gin.Contex
 
 	c.JSON(http.StatusBadGateway, model.APIErrorResponse{
 		Error: &model.APIError{
-			Code:    "UPSTREAM_ERROR",
+			Type:    "server_error",
+			Code:    "upstream_error",
 			Message: "all channels failed after retries",
 		},
 	})
@@ -357,7 +362,8 @@ func (h *APIHandler) handleStream(ctx context.Context, c *gin.Context, chatAdapt
 	if err != nil {
 		c.JSON(http.StatusBadGateway, model.APIErrorResponse{
 			Error: &model.APIError{
-				Code:    "STREAM_ERROR",
+				Type:    "server_error",
+				Code:    "stream_error",
 				Message: err.Error(),
 			},
 		})
@@ -368,7 +374,8 @@ func (h *APIHandler) handleStream(ctx context.Context, c *gin.Context, chatAdapt
 	if !ok {
 		c.JSON(http.StatusInternalServerError, model.APIErrorResponse{
 			Error: &model.APIError{
-				Code:    "STREAM_NOT_SUPPORTED",
+				Type:    "server_error",
+				Code:    "internal_error",
 				Message: "streaming not supported",
 			},
 		})
@@ -507,12 +514,172 @@ func (h *APIHandler) ListModels(c *gin.Context) {
 	})
 }
 
+// Completions handles OpenAI text completions (legacy API)
+func (h *APIHandler) Completions(c *gin.Context) {
+	var req model.CompletionsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, model.APIErrorResponse{
+			Error: &model.APIError{
+				Type:    "invalid_request_error",
+				Code:    "invalid_request",
+				Message: err.Error(),
+			},
+		})
+		return
+	}
+
+	if req.Model == "" {
+		c.JSON(http.StatusBadRequest, model.APIErrorResponse{
+			Error: &model.APIError{
+				Type:    "invalid_request_error",
+				Code:    "missing_model",
+				Message: "model is required",
+			},
+		})
+		return
+	}
+
+	// Convert prompt to messages format
+	var promptStr string
+	switch p := req.Prompt.(type) {
+	case string:
+		promptStr = p
+	case []interface{}:
+		for _, item := range p {
+			if s, ok := item.(string); ok {
+				promptStr += s
+			}
+		}
+	}
+
+	messages := []map[string]string{
+		{"role": "user", "content": promptStr},
+	}
+
+	// Pre-check quota
+	if h.billingService != nil {
+		userID := getUserID(c)
+		tokenID := getTokenID(c)
+		if userID > 0 && tokenID > 0 {
+			estimatedTokens := h.estimateChatTokens(messages, req.MaxTokens)
+			if err := h.billingService.PreConsumeQuota(userID, tokenID, req.Model, estimatedTokens); err != nil {
+				if err == service.ErrQuotaInsufficient {
+					c.JSON(http.StatusPaymentRequired, model.APIErrorResponse{
+						Error: &model.APIError{
+							Type:    "invalid_request_error",
+							Code:    "quota_insufficient",
+							Message: "insufficient quota",
+						},
+					})
+					return
+				}
+				if err == service.ErrTokenDisabled || err == service.ErrTokenExpired {
+					c.JSON(http.StatusForbidden, model.APIErrorResponse{
+						Error: &model.APIError{
+							Type:    "invalid_request_error",
+							Code:    "token_invalid",
+							Message: err.Error(),
+						},
+					})
+					return
+				}
+			}
+		}
+	}
+
+	chatReq := &adapter.ChatRequest{
+		Model:       req.Model,
+		Messages:    messages,
+		Temperature: req.Temperature,
+		MaxTokens:   req.MaxTokens,
+		TopP:        req.TopP,
+		User:        req.User,
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 120*time.Second)
+	defer cancel()
+
+	resp, err := h.chatWithFailover(ctx, chatReq)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, model.APIErrorResponse{
+			Error: &model.APIError{
+				Type:    "server_error",
+				Code:    "upstream_error",
+				Message: err.Error(),
+			},
+		})
+		return
+	}
+
+	// Convert chat response to completions format
+	chatResp, ok := resp.(*adapter.ChatResponse)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, model.APIErrorResponse{
+			Error: &model.APIError{
+				Type:    "server_error",
+				Code:    "internal_error",
+				Message: "invalid response type",
+			},
+		})
+		return
+	}
+
+	type completionChoice struct {
+		Text         string `json:"text"`
+		Index        int    `json:"index"`
+		Logprobs     *int   `json:"logprobs"`
+		FinishReason string `json:"finish_reason"`
+	}
+
+	choices := make([]completionChoice, len(chatResp.Choices))
+	for i, choice := range chatResp.Choices {
+		choices[i] = completionChoice{
+			Text:         choice.Message.Content,
+			Index:        i,
+			Logprobs:     nil,
+			FinishReason: choice.FinishReason,
+		}
+	}
+
+	completionsResp := map[string]interface{}{
+		"id":      chatResp.ID,
+		"object":  "text_completion",
+		"created": chatResp.Created,
+		"model":   chatResp.Model,
+		"choices": choices,
+	}
+	if chatResp.Usage != nil {
+		completionsResp["usage"] = chatResp.Usage
+	}
+
+	// Post-consume quota
+	if h.billingService != nil {
+		userID := getUserID(c)
+		tokenID := getTokenID(c)
+		if userID > 0 && tokenID > 0 && chatResp.Usage != nil {
+			h.billingService.PostConsumeQuota(userID, tokenID, req.Model,
+				chatResp.Usage.PromptTokens, chatResp.Usage.CompletionTokens)
+			h.billingService.LogUsage(&service.UsageRecord{
+				UserID:           userID,
+				TokenID:          tokenID,
+				Model:            req.Model,
+				PromptTokens:     chatResp.Usage.PromptTokens,
+				CompletionTokens: chatResp.Usage.CompletionTokens,
+				TotalTokens:      chatResp.Usage.TotalTokens,
+			})
+		}
+	}
+
+	c.JSON(http.StatusOK, completionsResp)
+}
+
 func (h *APIHandler) Embeddings(c *gin.Context) {
 	var req model.EmbeddingsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, model.APIErrorResponse{
 			Error: &model.APIError{
-				Code:    "INVALID_REQUEST",
+				Type:    "invalid_request_error",
+				Code:    "invalid_request",
 				Message: err.Error(),
 			},
 		})
@@ -523,7 +690,7 @@ func (h *APIHandler) Embeddings(c *gin.Context) {
 		req.Model = "text-embedding-ada-002"
 	}
 
-	// T-08: Set model in context for APIAccessLog middleware
+	// Set model in context for APIAccessLog middleware
 	c.Set("request_model", req.Model)
 
 	// Pre-check quota
@@ -536,7 +703,8 @@ func (h *APIHandler) Embeddings(c *gin.Context) {
 				if err == service.ErrQuotaInsufficient {
 					c.JSON(http.StatusPaymentRequired, model.APIErrorResponse{
 						Error: &model.APIError{
-							Code:    "QUOTA_INSUFFICIENT",
+							Type:    "invalid_request_error",
+							Code:    "quota_insufficient",
 							Message: "insufficient quota",
 						},
 					})
@@ -545,7 +713,8 @@ func (h *APIHandler) Embeddings(c *gin.Context) {
 				if err == service.ErrTokenDisabled || err == service.ErrTokenExpired {
 					c.JSON(http.StatusForbidden, model.APIErrorResponse{
 						Error: &model.APIError{
-							Code:    "TOKEN_INVALID",
+							Type:    "invalid_request_error",
+							Code:    "token_invalid",
 							Message: err.Error(),
 						},
 					})
@@ -567,7 +736,8 @@ func (h *APIHandler) Embeddings(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadGateway, model.APIErrorResponse{
 			Error: &model.APIError{
-				Code:    "UPSTREAM_ERROR",
+				Type:    "server_error",
+				Code:    "upstream_error",
 				Message: err.Error(),
 			},
 		})
