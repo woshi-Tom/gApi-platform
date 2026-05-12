@@ -37,10 +37,6 @@
           <el-icon><Ticket /></el-icon>
           <span>兑换码</span>
         </el-menu-item>
-        <el-menu-item index="/models">
-          <el-icon><Monitor /></el-icon>
-          <span>模型管理</span>
-        </el-menu-item>
         <el-menu-item index="/profile">
           <el-icon><User /></el-icon>
           <span>个人中心</span>
