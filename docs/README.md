@@ -133,6 +133,8 @@ docs/
 | 002 | [管理后台 Dashboard 502 错误](issues/002-admin-dashboard-502.md) | ✅ 已修复 |
 | 003 | [操作日志显示无数据/数据膨胀](issues/003-operation-logs-empty.md) | ✅ 已修复 |
 | 004 | [Code Review 全面修复](issues/004-code-review-fixes.md) | ✅ 已修复 |
+| 005 | [批量健康检查全异常 — Adapter 代理支持](issues/005-batch-healthcheck-proxy-fix.md) | ✅ 已修复 |
+| 006 | [前端全面修复 16 个 Bug](issues/006-frontend-bug-fixes.md) | ✅ 待编译测试 |
 
 ---
 
