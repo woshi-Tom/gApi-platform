@@ -132,6 +132,7 @@ docs/
 | 001 | [支付成功后 VIP 激活失败](issues/001-payment-vip-activation-failure.md) | ✅ 已修复 |
 | 002 | [管理后台 Dashboard 502 错误](issues/002-admin-dashboard-502.md) | ✅ 已修复 |
 | 003 | [操作日志显示无数据/数据膨胀](issues/003-operation-logs-empty.md) | ✅ 已修复 |
+| 004 | [Code Review 全面修复](issues/004-code-review-fixes.md) | ✅ 已修复 |
 
 ---
 
