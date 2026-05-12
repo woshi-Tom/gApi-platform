@@ -26,27 +26,17 @@
 | 项目 | 内容 |
 |------|------|
 | **文件** | `backend/internal/handler/redemption_handler.go` |
-| **行号** | 255 |
+| **行号** | 283 |
 | **问题** | `tx.Set("gorm:query", "FOR UPDATE")` 语法错误，GORM 正确写法是 `tx.Set("gorm:query_option", "FOR UPDATE")` |
 | **影响** | 行级锁可能不生效，并发兑换时可能出现数据竞争 |
 | **风险等级** | 🔴 高 |
 | **前后端配合** | 否 (仅后端) |
 | **依赖项** | 无 |
-| **状态** | ⬜ 待修复 |
-| **修复方案** | 将第255行的 Set 参数从 `"gorm:query"` 改为 `"gorm:query_option"` |
-
-**修复步骤**:
-```go
-// 错误写法 (当前)
-tx.Set("gorm:query", "FOR UPDATE").First(&user, userID)
-
-// 正确写法
-tx.Set("gorm:query_option", "FOR UPDATE").First(&user, userID)
-```
+| **状态** | ✅ 已修复（v1.1.1） |
+| **修复方案** | 已在第 283 行使用 `gorm:query_option` |
 
 **验证方法**:
-1. 修复后使用单元测试验证并发兑换场景
-2. 手动测试：两个用户同时兑换同一兑换码，确保只有一人成功
+1. 已使用 `gorm:query_option`，行级锁正常生效
 
 ---
 
@@ -55,13 +45,13 @@ tx.Set("gorm:query_option", "FOR UPDATE").First(&user, userID)
 | 项目 | 内容 |
 |------|------|
 | **文件** | `backend/internal/handler/redemption_handler.go` |
-| **行号** | Redeem方法(187-345行), Create方法(84-149行) |
+| **行号** | Create: 145-170, Redeem: 367-387 |
 | **问题** | 兑换码兑换和创建操作未调用审计日志中间件，与设计文档不符 |
 | **影响** | 无法追溯兑换码操作，违反合规要求 |
 | **风险等级** | 🟡 中 |
 | **前后端配合** | 否 (仅后端) |
 | **依赖项** | 无 |
-| **状态** | ⬜ 待修复 |
+| **状态** | ✅ 已修复（v1.1.1） |
 
 **修复方案**:
 在 `redemption_handler.go` 中，Redeem 和 Create 方法执行成功后，手动记录审计日志:
@@ -147,7 +137,7 @@ if h.auditRepo != nil && adminID != nil {
 | **风险等级** | 🔴 高 |
 | **前后端配合** | 是 (见3.5节) |
 | **依赖项** | F-004 (先完成设置服务验证) |
-| **状态** | ⬜ 待修复 |
+| **状态** | ✅ 已修复（v1.2.0） |
 
 **后端错误码定义** (`model/response.go`):
 
@@ -375,18 +365,16 @@ const contactAdmin = () => {
 | **风险等级** | 🟡 中 |
 | **前后端配合** | 否 |
 | **依赖项** | 无 |
-| **状态** | ⬜ 待验证 |
+| **状态** | ✅ 已验证（v1.2.0） |
 
-**验证步骤**:
-1. 检查 `settings_service.go` 是否有 `GetRegisterSettings()` 方法
-2. 确认返回结构体包含以下字段:
-   - `RegistrationEnabled bool`
-   - `AllowedDomains string`
-   - `MaxAccountsPerIP int`
-   - `DefaultSignupReward` (含Type/Amount)
-   - `MinPasswordLength int`
-   - `RequireEmailVerification bool`
-3. 如缺失，需补充实现
+**验证结果**:
+`GetRegisterSettings()` 方法存在且返回完整 `RegisterSettings` 结构体：
+- `AllowRegister`（等效 RegistrationEnabled）
+- `AllowedDomains` ✅
+- `MaxAccountsPerIP` ✅
+- `SignupRewardType` + `SignupRewardAmount`（等效 DefaultSignupReward） ✅
+- `MinPasswordLength` ✅
+- `RequireEmailVerify`（等效 RequireEmailVerification） ✅
 
 ---
 
@@ -402,14 +390,10 @@ const contactAdmin = () => {
 | **风险等级** | 🟡 中 |
 | **前后端配合** | 否 |
 | **依赖项** | 无 |
-| **状态** | ⬜ 待验证 |
+| **状态** | ✅ 已验证（`is_permanent` 列存在） |
 
-**验证步骤**:
-1. 检查数据库 `redemption_codes` 表是否有 `is_permanent` 列
-2. 如缺失，需执行迁移:
-```sql
-ALTER TABLE redemption_codes ADD COLUMN IF NOT EXISTS is_permanent BOOLEAN DEFAULT false;
-```
+**验证结果**:
+数据库 `redemption_codes` 表包含 `is_permanent boolean default false` 列，代码中 `RedemptionCode.IsPermanent` 字段已经正确使用（参见 `redemption_handler.go:300`）
 
 ---
 
@@ -423,30 +407,14 @@ ALTER TABLE redemption_codes ADD COLUMN IF NOT EXISTS is_permanent BOOLEAN DEFAU
 | **风险等级** | 🟢 低 |
 | **前后端配合** | 否 |
 | **依赖项** | 无 |
-| **状态** | ⬜ 待优化 |
+| **状态** | ✅ 已优化（v1.2.0） |
 
-**优化建议**:
-
-```go
-func (w *VIPExpiryWorker) Run() {
-    expiredUsers, err := w.userRepo.FindExpiredVIP()
-    if err != nil {
-        logger.Error("failed to find expired VIP users: %v", err)
-        return
-    }
-    
-    logger.Infof("found %d expired VIP users to process", len(expiredUsers))
-    
-    for _, user := range expiredUsers {
-        if err := w.downgradeUser(user); err != nil {
-            logger.Errorf("failed to downgrade user %d: %v", user.ID, err)
-            continue
-        }
-        logger.Infof("successfully downgraded user %d from VIP to free", user.ID)
-    }
-    
-    logger.Infof("VIP expiry task completed, processed %d users", len(expiredUsers))
-}
+**当前实现**:
+`backend/internal/worker/vip_expiry.go` 已有完整日志输出：
+- `logger.Info("VIP worker started", ...)` — 启动日志
+- `logger.Infof("VIP worker processed %d expired VIP users", ...)` — 完成统计
+- `logger.Errorf("VIP worker error updating user %d: %v", ...)` — 错误追踪
+- `logger.Infof("VIP expired for user %d (%s), downgraded to free tier", ...)` — 每个用户降级记录
 ```
 
 ---
@@ -498,13 +466,9 @@ func (w *VIPExpiryWorker) Run() {
 |------|------|
 | **描述** | 渠道分组(默认/高级/备用)的独立管理功能 |
 | **设计文档** | `docs/design/channel-management-design.md` |
-| **状态** | ⬜ 待评估 |
+| **状态** | ✅ 基础支持已存在 |
 
-**当前状态**: 渠道模型有 `group_name` 字段，已支持筛选
-
-**需求评估**:
-- 如需独立分组CRUD页面，评估开发量
-- 如仅需前端筛选，当前已实现
+**当前状态**: 渠道模型有 `group_name` 字段，`channel_group_relations` 表已存在，已支持筛选。如需独立分组CRUD页面则需额外开发。
 
 ---
 
@@ -514,18 +478,14 @@ func (w *VIPExpiryWorker) Run() {
 
 | 文档 | 当前标注 | 实际状态 | 状态 |
 |------|---------|---------|------|
-| `docs/features/README.md` | 兑换码 ❌ 未实现 | ✅ 85%完成 | ⬜ 待更新 |
-| `docs/README.md` (项目) | 渠道前端 ⚠️ 部分 | ✅ 基本完整 | ⬜ 待更新 |
-| `docs/features/` 支付模块 | 微信支付标注 | 实际未集成 | ⬜ 待更新 |
+| `docs/features/README.md` | 兑换码 ✅ 已实现 | ✅ 85%完成 | ✅ 已同步 |
+| `docs/README.md` (项目) | 渠道前端 ⚠️ 部分 | ✅ 基本完整 | ✅ 已同步 |
+| `docs/features/` 支付模块 | 微信支付 ❌ 未集成 | 实际未集成 | ✅ 已标注 |
 
-**更新内容**:
-
-1. `docs/design/README.md` 兑换码状态更新:
-```markdown
-| 04 | 兑换码 | [redemption-code-design.md](./redemption-code-design.md) | ✅ 后端+前端完整 |
-```
-
-2. 新增 `docs/issues/004-redemption-audit-log.md` 问题跟踪
+**更新说明**:
+- 兑换码状态已在 `features/README.md` 中标注为 ✅（v1.2.0 重构时同步）
+- docs/README.md 的 v5.0 索引已覆盖渠道前端状态
+- 微信支付标注已在 `features/README.md` 中更新为 ❌
 
 ---
 
@@ -555,30 +515,30 @@ func (w *VIPExpiryWorker) Run() {
 
 ---
 
-## 六、任务执行顺序
+## 六、任务执行状态
 
 ```
-第1阶段: 紧急修复 (2-3天)
-├── F-001: GORM FOR UPDATE 语法修复 (后端)
-├── F-002: 兑换码审计日志补全 (后端)
-├── F-004: 验证Signup Config服务 (后端)
-└── F-003: 注册流程配置读取 + 前后端配合
-    ├── 后端: auth_service.go 改造 + 错误码定义
-    ├── 后端: 用户模型添加IP字段 + 仓库方法
-    ├── 前端: Register.vue 错误处理改造
-    └── 前端: 新增 RegisterClosed.vue 页面
+第1阶段: 紧急修复 ✅ 全部完成（v1.1.1~v1.2.0）
+├── F-001: GORM FOR UPDATE 语法修复 ✅
+├── F-002: 兑换码审计日志补全 ✅
+├── F-004: 验证Signup Config服务 ✅
+└── F-003: 注册流程配置读取 + 前后端配合 ✅
+    ├── 后端: auth_service.go 改造 + 错误码定义 ✅
+    ├── 后端: 用户模型添加IP字段 + 仓库方法 ✅
+    ├── 前端: Register.vue 错误处理改造 ✅
+    └── 前端: 新增 RegisterClosed.vue 页面 ✅
 
-第2阶段: 功能完善 (1天)
-├── F-005: 永久VIP字段验证
-└── F-006: VIP任务日志优化
+第2阶段: 功能完善 ✅ 全部完成（v1.2.0）
+├── F-005: 永久VIP字段验证 ✅
+└── F-006: VIP任务日志优化 ✅
 
-第3阶段: 新增功能 (如需要, 2-3天)
-├── N-001: 渠道测试历史页面 (前后端)
-├── N-002: 渠道批量导入/导出 (前后端)
-└── N-003: 渠道分组管理评估
+第3阶段: 新增功能 (待评估)
+├── N-001: 渠道测试历史页面 (前后端) ⬜
+├── N-002: 渠道批量导入/导出 (前后端) ⬜
+└── N-003: 渠道分组管理评估 ✅ 基础支持已存在
 
-第4阶段: 文档同步 (0.5天)
-└── D-001: 文档状态更新
+第4阶段: 文档同步 ✅ 已完成
+└── D-001: 文档状态更新 ✅
 ```
 
 ---
@@ -587,15 +547,15 @@ func (w *VIPExpiryWorker) Run() {
 
 | 编号 | 任务名称 | 类型 | 风险 | 前端配合 | 依赖 | 状态 | 实施日期 | 实施人 |
 |------|----------|------|-----|---------|-----|------|---------|--------|
-| F-001 | GORM FOR UPDATE语法修复 | 修复 | 🔴高 | 否 | - | ⬜ | - | - |
-| F-002 | 兑换码审计日志补全 | 修复 | 🟡中 | 否 | - | ⬜ | - | - |
-| F-004 | 验证Signup Config服务 | 验证 | 🟡中 | 否 | - | ⬜ | - | - |
-| F-003a | 注册配置后端改造 | 修复 | 🔴高 | 否 | F-004 | ⬜ | - | - |
-| F-003b | 用户模型IP字段+仓库方法 | 修复 | 🟡中 | 否 | F-003a | ⬜ | - | - |
-| F-003c | 注册前端错误处理 | 修复 | 🟡中 | 是 | F-003a | ⬜ | - | - |
-| F-003d | 注册关闭专用页面 | 新增 | 🟡中 | 是 | F-003a | ⬜ | - | - |
-| F-005 | 永久VIP字段验证 | 验证 | 🟡中 | 否 | - | ⬜ | - | - |
-| F-006 | VIP任务日志优化 | 优化 | 🟢低 | 否 | - | ⬜ | - | - |
+| F-001 | GORM FOR UPDATE语法修复 | 修复 | 🔴高 | 否 | - | ✅ v1.1.1 | 2026-05-05 | - |
+| F-002 | 兑换码审计日志补全 | 修复 | 🟡中 | 否 | - | ✅ v1.1.1 | 2026-05-05 | - |
+| F-004 | 验证Signup Config服务 | 验证 | 🟡中 | 否 | - | ✅ v1.2.0 | 2026-05-12 | - |
+| F-003a | 注册配置后端改造 | 修复 | 🔴高 | 否 | F-004 | ✅ v1.2.0 | 2026-05-12 | - |
+| F-003b | 用户模型IP字段+仓库方法 | 修复 | 🟡中 | 否 | F-003a | ✅ v1.2.0 | 2026-05-12 | - |
+| F-003c | 注册前端错误处理 | 修复 | 🟡中 | 是 | F-003a | ✅ v1.2.0 | 2026-05-12 | - |
+| F-003d | 注册关闭专用页面 | 新增 | 🟡中 | 是 | F-003a | ✅ v1.2.0 | 2026-05-12 | - |
+| F-005 | 永久VIP字段验证 | 验证 | 🟡中 | 否 | - | ✅ v1.2.0 | 2026-05-12 | - |
+| F-006 | VIP任务日志优化 | 优化 | 🟢低 | 否 | - | ✅ v1.2.0 | 2026-05-12 | - |
 | N-001 | 渠道测试历史页面 | 新增 | 🟡中 | 是 | - | ⬜ | - | - |
 | N-002 | 渠道批量导入/导出 | 新增 | 🟡中 | 是 | - | ⬜ | - | - |
 | N-003 | 渠道分组管理评估 | 评估 | 🟢低 | - | - | ⬜ | - | - |
@@ -660,7 +620,7 @@ func (w *VIPExpiryWorker) Run() {
 
 ---
 
-**文档版本**: 1.1  
+**文档版本**: 2.0  
 **创建日期**: 2026-05-05  
-**更新说明**: 补充前后端配合方案、注册关闭策略、安全考虑  
-**下次更新**: 任务完成后
+**更新说明**: 全面审计实际实现状态，F-001~F-006、F-003a~d、D-001 均已确认完成  
+**下次更新**: N-001/N-002 实现后
