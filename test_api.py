@@ -207,6 +207,229 @@ class APITester:
         print("=" * 50)
 
 
+# ============================================================
+# Phase 4 (T-12): Pressure Test
+# Usage: python test_api.py --pressure
+# ============================================================
+import concurrent.futures
+import statistics
+import argparse
+import time
+import threading
+
+
+class PressureTest:
+    """Concurrent API pressure testing with latency metrics."""
+
+    def __init__(self, base_url="http://localhost:8080", token=None):
+        self.base_url = base_url
+        self.token = token
+        self.results_lock = threading.Lock()
+        self.latencies = []
+        self.errors = 0
+        self.success = 0
+
+    def _do_chat(self, model="gpt-3.5-turbo", stream=False):
+        """Single chat/completions request. Returns (latency_ms, status_code)."""
+        url = f"{self.base_url}/api/v1/chat/completions"
+        headers = {"Content-Type": "application/json"}
+        if self.token:
+            headers["Authorization"] = f"Bearer {self.token}"
+        body = {
+            "model": model,
+            "messages": [{"role": "user", "content": "Say hello in one word."}],
+            "max_tokens": 10,
+            "stream": stream,
+        }
+        start = time.time()
+        try:
+            resp = requests.post(url, json=body, headers=headers, timeout=30)
+            latency = (time.time() - start) * 1000
+            return latency, resp.status_code
+        except Exception as e:
+            latency = (time.time() - start) * 1000
+            return latency, 0  # 0 = connection error
+
+    def _do_completions(self, model="gpt-3.5-turbo"):
+        """Single /v1/completions request."""
+        url = f"{self.base_url}/api/v1/completions"
+        headers = {"Content-Type": "application/json"}
+        if self.token:
+            headers["Authorization"] = f"Bearer {self.token}"
+        body = {"model": model, "prompt": "Hello", "max_tokens": 10}
+        start = time.time()
+        try:
+            resp = requests.post(url, json=body, headers=headers, timeout=30)
+            latency = (time.time() - start) * 1000
+            return latency, resp.status_code
+        except Exception:
+            latency = (time.time() - start) * 1000
+            return latency, 0
+
+    def _do_models(self):
+        """Single /v1/models request."""
+        url = f"{self.base_url}/api/v1/models"
+        headers = {}
+        if self.token:
+            headers["Authorization"] = f"Bearer {self.token}"
+        start = time.time()
+        try:
+            resp = requests.get(url, headers=headers, timeout=30)
+            latency = (time.time() - start) * 1000
+            return latency, resp.status_code
+        except Exception:
+            latency = (time.time() - start) * 1000
+            return latency, 0
+
+    def _worker(self, fn, n):
+        """Worker thread: execute fn n times and record results."""
+        for _ in range(n):
+            lat, code = fn()
+            with self.results_lock:
+                self.latencies.append(lat)
+                if 200 <= code < 300:
+                    self.success += 1
+                else:
+                    self.errors += 1
+
+    def run_scenario(self, name, fn, concurrency, total_requests):
+        """Run a single pressure scenario."""
+        print(f"\n--- {name} ---")
+        print(f"  Concurrency={concurrency}, Total={total_requests}")
+
+        self.latencies = []
+        self.errors = 0
+        self.success = 0
+
+        per_worker = total_requests // concurrency
+        remainder = total_requests % concurrency
+
+        t0 = time.time()
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as executor:
+            futures = []
+            for i in range(concurrency):
+                n = per_worker + (1 if i < remainder else 0)
+                futures.append(executor.submit(self._worker, fn, n))
+            concurrent.futures.wait(futures)
+
+        elapsed = time.time() - t0
+        tps = total_requests / elapsed if elapsed > 0 else 0
+
+        if self.latencies:
+            sorted_lat = sorted(self.latencies)
+            p50 = sorted_lat[int(len(sorted_lat) * 0.50)]
+            p95 = sorted_lat[int(len(sorted_lat) * 0.95)]
+            p99 = sorted_lat[int(len(sorted_lat) * 0.99)]
+            avg_lat = statistics.mean(self.latencies)
+            min_lat = min(self.latencies)
+            max_lat = max(self.latencies)
+        else:
+            p50 = p95 = p99 = avg_lat = min_lat = max_lat = 0
+
+        error_rate = (self.errors / total_requests * 100) if total_requests > 0 else 0
+
+        print(f"  Duration:    {elapsed:.1f}s")
+        print(f"  TPS:         {tps:.1f}")
+        print(f"  Success:     {self.success} / {total_requests}")
+        print(f"  Errors:      {self.errors}")
+        print(f"  Error Rate:  {error_rate:.1f}%")
+        print(f"  P50:         {p50:.0f}ms")
+        print(f"  P95:         {p95:.0f}ms")
+        print(f"  P99:         {p99:.0f}ms")
+        print(f"  Avg:         {avg_lat:.0f}ms")
+        print(f"  Min:         {min_lat:.0f}ms")
+        print(f"  Max:         {max_lat:.0f}ms")
+
+        return {
+            "scenario": name,
+            "duration_s": elapsed,
+            "tps": tps,
+            "success": self.success,
+            "errors": self.errors,
+            "error_rate_pct": error_rate,
+            "p50_ms": p50,
+            "p95_ms": p95,
+            "p99_ms": p99,
+            "avg_ms": avg_lat,
+            "min_ms": min_lat,
+            "max_ms": max_lat,
+        }
+
+    def run_all(self, token=None):
+        """Run all Phase 4 pressure scenarios."""
+        self.token = token
+
+        print("=" * 60)
+        print("Phase 4 (T-12): API Pressure Test Suite")
+        print("=" * 60)
+
+        results = []
+
+        # Scenario 1: Non-streaming Chat API
+        results.append(
+            self.run_scenario(
+                "Non-stream Chat API (50 concurrency)",
+                lambda: self._do_chat(stream=False),
+                concurrency=50,
+                total_requests=500,
+            )
+        )
+
+        # Scenario 2: /v1/models list
+        results.append(
+            self.run_scenario(
+                "/v1/models list (100 concurrency)",
+                self._do_models,
+                concurrency=100,
+                total_requests=500,
+            )
+        )
+
+        # Scenario 3: /v1/completions
+        results.append(
+            self.run_scenario(
+                "/v1/completions (30 concurrency)",
+                self._do_completions,
+                concurrency=30,
+                total_requests=300,
+            )
+        )
+
+        # Scenario 4: Low-concurrency chat (for environments with limited channels)
+        results.append(
+            self.run_scenario(
+                "Chat API low-concurrency (10 concurrent)",
+                lambda: self._do_chat(stream=False),
+                concurrency=10,
+                total_requests=50,
+            )
+        )
+
+        # Summary
+        print("\n" + "=" * 60)
+        print("Pressure Test Summary")
+        print("=" * 60)
+        for r in results:
+            status = "PASS" if r["error_rate_pct"] < 1 and r["p95_ms"] < 3000 else "FAIL"
+            print(f"  [{status}] {r['scenario']}: "
+                  f"TPS={r['tps']:.1f}, P95={r['p95_ms']:.0f}ms, "
+                  f"Err={r['error_rate_pct']:.1f}%")
+
+        return results
+
+
 if __name__ == "__main__":
-    tester = APITester()
-    tester.run_all()
+    parser = argparse.ArgumentParser(description="gAPI Platform API Tester")
+    parser.add_argument("--pressure", action="store_true", help="Run pressure tests")
+    parser.add_argument("--token", type=str, help="API token for authenticated tests")
+    parser.add_argument("--base-url", type=str, default="http://localhost:8080",
+                        help="Base URL (default: http://localhost:8080)")
+    args = parser.parse_args()
+
+    if args.pressure:
+        pt = PressureTest(base_url=args.base_url)
+        pt.run_all(token=args.token)
+    else:
+        tester = APITester()
+        tester.run_all()

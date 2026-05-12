@@ -9,6 +9,7 @@ import (
 )
 
 var loggedEndpoints = map[string]bool{
+	"/api/v1/completions":      true,
 	"/api/v1/chat/completions": true,
 	"/api/v1/embeddings":       true,
 	"/api/v1/models":           true,
@@ -59,6 +60,23 @@ func APIAccessLog(apiAccessLogRepo *repository.APIAccessLogRepository) gin.Handl
 				RequestIP:    c.ClientIP(),
 				UserAgent:    c.Request.UserAgent(),
 				CreatedAt:    startTime,
+			}
+
+			// T-13: Per-stage latency breakdown
+			if v, exists := c.Get("pre_check_duration_ms"); exists {
+				if d, ok := v.(int); ok {
+					log.PreCheckDurationMs = d
+				}
+			}
+			if v, exists := c.Get("channel_select_duration_ms"); exists {
+				if d, ok := v.(int); ok {
+					log.ChannelSelectDurationMs = d
+				}
+			}
+			if v, exists := c.Get("upstream_duration_ms"); exists {
+				if d, ok := v.(int); ok {
+					log.UpstreamDurationMs = d
+				}
 			}
 
 			if tid, ok := tokenID.(uint); ok {

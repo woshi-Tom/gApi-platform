@@ -68,6 +68,7 @@ func (h *APIHandler) ChatCompletions(c *gin.Context) {
 	c.Set("request_model", req.Model)
 
 	// Pre-check quota
+	preCheckStart := time.Now()
 	if h.billingService != nil {
 		userID := getUserID(c)
 		tokenID := getTokenID(c)
@@ -97,6 +98,7 @@ func (h *APIHandler) ChatCompletions(c *gin.Context) {
 			}
 		}
 	}
+	c.Set("pre_check_duration_ms", int(time.Since(preCheckStart).Milliseconds()))
 
 	chatReq := &adapter.ChatRequest{
 		Model:       req.Model,
@@ -116,7 +118,9 @@ func (h *APIHandler) ChatCompletions(c *gin.Context) {
 		return
 	}
 
+	upstreamStart := time.Now()
 	resp, err := h.chatWithFailover(ctx, chatReq)
+	c.Set("upstream_duration_ms", int(time.Since(upstreamStart).Milliseconds()))
 	if err != nil {
 		c.JSON(http.StatusBadGateway, model.APIErrorResponse{
 			Error: &model.APIError{
@@ -516,6 +520,7 @@ func (h *APIHandler) ListModels(c *gin.Context) {
 
 // Completions handles OpenAI text completions (legacy API)
 func (h *APIHandler) Completions(c *gin.Context) {
+	preCheckStart := time.Now()
 	var req model.CompletionsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, model.APIErrorResponse{
@@ -586,6 +591,7 @@ func (h *APIHandler) Completions(c *gin.Context) {
 			}
 		}
 	}
+	c.Set("pre_check_duration_ms", int(time.Since(preCheckStart).Milliseconds()))
 
 	chatReq := &adapter.ChatRequest{
 		Model:       req.Model,
@@ -599,7 +605,9 @@ func (h *APIHandler) Completions(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 120*time.Second)
 	defer cancel()
 
+	upstreamStart := time.Now()
 	resp, err := h.chatWithFailover(ctx, chatReq)
+	c.Set("upstream_duration_ms", int(time.Since(upstreamStart).Milliseconds()))
 	if err != nil {
 		c.JSON(http.StatusBadGateway, model.APIErrorResponse{
 			Error: &model.APIError{
@@ -674,6 +682,7 @@ func (h *APIHandler) Completions(c *gin.Context) {
 }
 
 func (h *APIHandler) Embeddings(c *gin.Context) {
+	preCheckStart := time.Now()
 	var req model.EmbeddingsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, model.APIErrorResponse{
@@ -732,7 +741,9 @@ func (h *APIHandler) Embeddings(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 120*time.Second)
 	defer cancel()
 
+	upstreamStart := time.Now()
 	resp, err := h.embeddingsWithFailover(ctx, embedReq)
+	c.Set("upstream_duration_ms", int(time.Since(upstreamStart).Milliseconds()))
 	if err != nil {
 		c.JSON(http.StatusBadGateway, model.APIErrorResponse{
 			Error: &model.APIError{
