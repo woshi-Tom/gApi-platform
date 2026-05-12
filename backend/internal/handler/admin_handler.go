@@ -1,9 +1,12 @@
 package handler
 
 import (
+	"encoding/csv"
 	"encoding/json"
+	"io"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"gapi-platform/internal/config"
@@ -29,6 +32,7 @@ type AdminHandler struct {
 	apiAccessLogRepo   *repository.APIAccessLogRepository
 	adminUsers         []config.AdminAccount
 	healthCheckService *service.HealthCheckService
+	testHistoryRepo    *repository.ChannelTestHistoryRepository
 }
 
 // NewAdminHandler creates a new admin handler
@@ -42,6 +46,7 @@ func NewAdminHandler(
 	apiAccessLogRepo *repository.APIAccessLogRepository,
 	adminUsers []config.AdminAccount,
 	healthCheckService *service.HealthCheckService,
+	testHistoryRepo *repository.ChannelTestHistoryRepository,
 ) *AdminHandler {
 	return &AdminHandler{
 		authService:        authService,
@@ -53,6 +58,7 @@ func NewAdminHandler(
 		apiAccessLogRepo:   apiAccessLogRepo,
 		adminUsers:         adminUsers,
 		healthCheckService: healthCheckService,
+		testHistoryRepo:    testHistoryRepo,
 	}
 }
 
@@ -375,7 +381,11 @@ func (h *AdminHandler) DisableChannel(c *gin.Context) {
 // TestChannel tests a channel
 func (h *AdminHandler) TestChannel(c *gin.Context) {
 	// Delegate to channel handler
-	(&ChannelHandler{channelService: h.channelSvc}).Test(c)
+	(&ChannelHandler{
+		channelService:  h.channelSvc,
+		auditRepo:       h.auditRepo,
+		testHistoryRepo: h.testHistoryRepo,
+	}).Test(c)
 }
 
 func (h *AdminHandler) TriggerHealthCheck(c *gin.Context) {
@@ -415,6 +425,158 @@ func (h *AdminHandler) TriggerHealthCheck(c *gin.Context) {
 		h.channelSvc.IncrementFailureCount(channelID)
 		response.SuccessWithMessage(c, responseData, "channel connection failed")
 	}
+}
+
+// GetTestHistory returns test history for a channel
+func (h *AdminHandler) GetTestHistory(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		response.Fail(c, "INVALID_PARAMETER", "invalid channel id")
+		return
+	}
+
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	if limit > 200 {
+		limit = 200
+	}
+
+	history, err := h.testHistoryRepo.ListByChannelID(uint(id), limit)
+	if err != nil {
+		response.InternalError(c, "failed to get test history")
+		return
+	}
+
+	response.Success(c, history)
+}
+
+// ImportChannels imports channels from CSV file
+func (h *AdminHandler) ImportChannels(c *gin.Context) {
+	file, err := c.FormFile("file")
+	if err != nil {
+		response.Fail(c, "INVALID_PARAMETER", "请上传CSV文件")
+		return
+	}
+
+	f, err := file.Open()
+	if err != nil {
+		response.InternalError(c, "无法读取文件")
+		return
+	}
+	defer f.Close()
+
+	reader := csv.NewReader(f)
+
+	// Read header
+	header, err := reader.Read()
+	if err != nil {
+		response.Fail(c, "INVALID_CSV", "无法读取CSV表头")
+		return
+	}
+
+	// Build column index map
+	colIndex := make(map[string]int)
+	for i, col := range header {
+		colIndex[strings.TrimSpace(strings.ToLower(col))] = i
+	}
+
+	// Validate required columns
+	for _, required := range []string{"name", "type", "base_url", "api_key"} {
+		if _, ok := colIndex[required]; !ok {
+			response.Fail(c, "INVALID_CSV", "缺少必要列: "+required)
+			return
+		}
+	}
+
+	var successCount, failCount int
+	var errors []string
+	lineNum := 1 // header is line 1
+
+	for {
+		record, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		lineNum++
+		if err != nil {
+			failCount++
+			errors = append(errors, "第"+strconv.Itoa(lineNum)+"行: 读取失败")
+			continue
+		}
+
+		getField := func(name string) string {
+			if idx, ok := colIndex[name]; ok && idx < len(record) {
+				return strings.TrimSpace(record[idx])
+			}
+			return ""
+		}
+
+		name := getField("name")
+		channelType := getField("type")
+		baseURL := getField("base_url")
+		apiKey := getField("api_key")
+
+		if name == "" || channelType == "" || baseURL == "" || apiKey == "" {
+			failCount++
+			errors = append(errors, "第"+strconv.Itoa(lineNum)+"行: 缺少必填字段")
+			continue
+		}
+
+		encryptedKey, err := crypto.Encrypt(apiKey)
+		if err != nil {
+			failCount++
+			errors = append(errors, "第"+strconv.Itoa(lineNum)+"行: API Key加密失败")
+			continue
+		}
+
+		channel := &model.Channel{
+			Name:            name,
+			Type:            channelType,
+			BaseURL:         baseURL,
+			APIKeyEncrypted: encryptedKey,
+			Status:          1,
+			IsHealthy:       true,
+		}
+
+		if w := getField("weight"); w != "" {
+			if v, err := strconv.Atoi(w); err == nil {
+				channel.Weight = v
+			}
+		}
+		if p := getField("priority"); p != "" {
+			if v, err := strconv.Atoi(p); err == nil {
+				channel.Priority = v
+			}
+		}
+		if g := getField("group_name"); g != "" {
+			channel.GroupName = g
+		}
+		if m := getField("models"); m != "" {
+			models := strings.Split(m, "|")
+			for i := range models {
+				models[i] = strings.TrimSpace(models[i])
+			}
+			b, _ := json.Marshal(models)
+			channel.Models = string(b)
+		}
+
+		if err := h.channelSvc.Create(channel); err != nil {
+			failCount++
+			errors = append(errors, "第"+strconv.Itoa(lineNum)+"行: "+err.Error())
+			continue
+		}
+		successCount++
+	}
+
+	result := gin.H{
+		"success_count": successCount,
+		"fail_count":    failCount,
+	}
+	if len(errors) > 0 {
+		result["errors"] = errors
+	}
+
+	response.Success(c, result)
 }
 
 // ListOrders returns all orders

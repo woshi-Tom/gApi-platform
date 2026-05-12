@@ -238,7 +238,8 @@ func SetupAdminRoutes(
 		fmt.Sprintf("%s/api/v1/payment/callback/alipay", cfg.Server.Frontend),
 	)
 
-	adminHandler := handler.NewAdminHandler(authService, userRepo, channelService, orderRepo, auditRepo, loginLogRepo, apiAccessLogRepo, cfg.AdminUsers, healthCheckService)
+	testHistoryRepo := repository.NewChannelTestHistoryRepository(db.GetDB())
+	adminHandler := handler.NewAdminHandler(authService, userRepo, channelService, orderRepo, auditRepo, loginLogRepo, apiAccessLogRepo, cfg.AdminUsers, healthCheckService, testHistoryRepo)
 	productHandler := handler.NewProductHandler(vipRepo, rechargeRepo)
 	settingsHandler := handler.NewSettingsHandler(settingsService, alipayService)
 
@@ -268,6 +269,8 @@ func SetupAdminRoutes(
 			adminAuth.PUT("/channels/:id", adminHandler.UpdateChannel)
 			adminAuth.POST("/channels/:id/test", adminHandler.TestChannel)
 			adminAuth.POST("/channels/:id/health", adminHandler.TriggerHealthCheck)
+			adminAuth.GET("/channels/:id/test-history", adminHandler.GetTestHistory)
+			adminAuth.POST("/channels/import", adminHandler.ImportChannels)
 			adminAuth.DELETE("/channels/:id", adminHandler.DeleteChannel)
 			adminAuth.POST("/channels/:id/enable", adminHandler.EnableChannel)
 			adminAuth.POST("/channels/:id/disable", adminHandler.DisableChannel)

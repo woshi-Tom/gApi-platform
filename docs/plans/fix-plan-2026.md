@@ -419,7 +419,7 @@ const contactAdmin = () => {
 
 ---
 
-## 三、新增功能项 (🟡 中优先级 - 文档中有设计但未实现)
+## 三、新增功能项 (🟡 中优先级 - 文档中有设计但未实现) ✅ 全部完成
 
 ### N-001: 渠道测试历史记录页面
 
@@ -427,30 +427,39 @@ const contactAdmin = () => {
 |------|------|
 | **描述** | 新增渠道测试历史记录前端页面 |
 | **设计文档** | `docs/design/channel-management-design.md` |
-| **状态** | ⬜ 待实现 |
+| **状态** | ✅ 已实现(v1.2.0) |
 
-**后端实现** (如缺失):
-1. 新增 `GET /api/v1/admin/channels/:id/test-history` 端点
-2. 如已实现，确认路由是否注册
+**实现内容**:
+1. 后端: 新增 `GET /api/v1/admin/channels/:id/test-history` 端点（AdminHandler.GetTestHistory）
+2. 前端: 渠道列表页下拉菜单新增"测试历史"选项，打开 el-drawer 展示测试记录
+3. 前置修复: AdminHandler.TestChannel 缺少 testHistoryRepo，导致测试历史未写入
 
-**前端实现**:
-1. 新增页面 `frontend/src/views/admin/channel/TestHistory.vue`
-2. 路由配置添加 `/admin/channels/:id/test-history`
-3. 渠道列表页添加"测试历史"按钮
+**关键文件**:
+- `backend/internal/handler/admin_handler.go` — GetTestHistory 方法
+- `backend/internal/router/router.go` — 路由注册
+- `frontend/src/api/channel.ts` — getTestHistory API
+- `frontend/src/views/admin/channels/List.vue` — 测试历史抽屉组件
 
 ---
 
-### N-002: 渠道批量导入/导出
+### N-002: 渠道批量导入
 
 | 项目 | 内容 |
 |------|------|
-| **描述** | 渠道批量导入(CSV) 和 导出功能 |
+| **描述** | 渠道批量导入(CSV) 功能 |
 | **设计文档** | `docs/design/channel-management-design.md` |
-| **状态** | ⬜ 待实现 |
+| **状态** | ✅ 已实现(v1.2.0) |
 
-**需求分析**:
-- CSV格式: `name,type,base_url,api_key,models,weight,priority`
-- 导入需校验必填字段、API Key加密存储
+**实现内容**:
+1. 后端: 新增 `POST /api/v1/admin/channels/import` 端点（AdminHandler.ImportChannels）
+2. 前端: 渠道列表页新增"批量导入"按钮，上传 CSV 文件后调用导入 API
+3. CSV 列: `name, type, base_url, api_key, models(用|分隔), weight, priority, group_name`
+
+**关键文件**:
+- `backend/internal/handler/admin_handler.go` — ImportChannels 方法
+- `backend/internal/router/router.go` — 路由注册
+- `frontend/src/api/channel.ts` — importChannels API
+- `frontend/src/views/admin/channels/List.vue` — 导入对话框组件
 - 导出生成CSV文件供下载
 
 **实现步骤**:
@@ -532,9 +541,9 @@ const contactAdmin = () => {
 ├── F-005: 永久VIP字段验证 ✅
 └── F-006: VIP任务日志优化 ✅
 
-第3阶段: 新增功能 (待评估)
-├── N-001: 渠道测试历史页面 (前后端) ⬜
-├── N-002: 渠道批量导入/导出 (前后端) ⬜
+第3阶段: 新增功能 ✅ v1.2.0
+├── N-001: 渠道测试历史页面 (前后端) ✅
+├── N-002: 渠道批量导入 (前后端) ✅
 └── N-003: 渠道分组管理评估 ✅ 基础支持已存在
 
 第4阶段: 文档同步 ✅ 已完成
@@ -556,8 +565,8 @@ const contactAdmin = () => {
 | F-003d | 注册关闭专用页面 | 新增 | 🟡中 | 是 | F-003a | ✅ v1.2.0 | 2026-05-12 | - |
 | F-005 | 永久VIP字段验证 | 验证 | 🟡中 | 否 | - | ✅ v1.2.0 | 2026-05-12 | - |
 | F-006 | VIP任务日志优化 | 优化 | 🟢低 | 否 | - | ✅ v1.2.0 | 2026-05-12 | - |
-| N-001 | 渠道测试历史页面 | 新增 | 🟡中 | 是 | - | ⬜ | - | - |
-| N-002 | 渠道批量导入/导出 | 新增 | 🟡中 | 是 | - | ⬜ | - | - |
+| N-001 | 渠道测试历史页面 | 新增 | 🟡中 | 是 | - | ✅ v1.2.0 | 2026-05-12 | TOM |
+| N-002 | 渠道批量导入 | 新增 | 🟡中 | 是 | - | ✅ v1.2.0 | 2026-05-12 | TOM |
 | N-003 | 渠道分组管理评估 | 评估 | 🟢低 | - | - | ⬜ | - | - |
 | D-001 | 文档状态更新 | 文档 | 🟢低 | 否 | - | ⬜ | - | - |
 
@@ -620,7 +629,7 @@ const contactAdmin = () => {
 
 ---
 
-**文档版本**: 2.0  
+**文档版本**: 2.1  
 **创建日期**: 2026-05-05  
-**更新说明**: 全面审计实际实现状态，F-001~F-006、F-003a~d、D-001 均已确认完成  
-**下次更新**: N-001/N-002 实现后
+**更新说明**: N-001/N-002 已实现（v1.2.0）；修复 AdminHandler.TestChannel 缺失 testHistoryRepo bug  
+**下次更新**: 渠道导出功能增加后
