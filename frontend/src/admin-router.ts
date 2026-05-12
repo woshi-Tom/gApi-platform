@@ -38,15 +38,17 @@ adminRouter.beforeEach(async (to, from, next) => {
   const path = to.path
   const adminToken = localStorage.getItem('admin_token')
   
-  if (path === '/init') {
-    if (!initStatusChecked) {
-      const initialized = await checkInitStatus()
-      initStatusChecked = true
-      if (initialized) {
-        next('/login')
-        return
-      }
+  // Check init status on first navigation
+  if (!initStatusChecked) {
+    const initialized = await checkInitStatus()
+    initStatusChecked = true
+    if (!initialized && path !== '/init') {
+      next('/init')
+      return
     }
+  }
+  
+  if (path === '/init') {
     next()
     return
   }
