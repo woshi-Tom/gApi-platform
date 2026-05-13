@@ -54,6 +54,13 @@ jobs:
           CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
             go build -ldflags="-w -s" -o ${{ matrix.binary_name }} ./cmd/server
 
+      - name: Smoke Test (binary runs)
+        if: matrix.goos == 'linux'
+        run: |
+          file ./${{ matrix.binary_name }}
+          test -s ./${{ matrix.binary_name }}
+          echo "Smoke test passed: binary is valid and non-empty"
+
       - name: Upload Artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
