@@ -547,7 +547,7 @@ PENDING → (payment success) → PAID → (admin process) → COMPLETED
 
 - [ ] 支付集成 — 微信支付（当前决定：暂不接入）
 - [ ] Phase 4 压测回归（`api-key-lifecycle-test-plan.md`，推迟到后续 Sprint）
-- [ ] 压测自动化断言（`test_api.py` 脚本存在但无自动化断言）
+- [x] 压测自动化断言（`test_api.py` 已加入 assert_eq/assert_true + sys.exit 退出码）
 
 ### 10.2 已完成摘要
 
@@ -621,8 +621,9 @@ PENDING → (payment success) → PAID → (admin process) → COMPLETED
 ### 12.3 待办事项
 
 - [ ] 微信支付接入（当前决定：暂不接入）
-- [ ] Phase 2/3/4 测试补充（`api-key-lifecycle-test-plan.md`）
-- [ ] 压测自动化断言（`test_api.py`）
+- [ ] Phase 4 压测回归（`api-key-lifecycle-test-plan.md`，推迟到后续 Sprint）
+- [x] Phase 2/3 单元测试补充（BillingService 级联扣减 + TokenRateLimit 隔离 + Anthropic 端点）
+- [x] 压测自动化断言（`test_api.py` assert_eq/assert_true + sys.exit 退出码）
 
 ### 12.4 部署文件
 
