@@ -151,7 +151,7 @@ type Usage struct {
 // OrderCreateRequest represents order creation request
 type OrderCreateRequest struct {
 	PackageID     uint   `json:"package_id" binding:"required"`
-	PaymentMethod string `json:"payment_method" binding:"required"` // alipay|wechat
+	PaymentMethod string `json:"payment_method" binding:"required"` // alipay
 }
 
 // Product represents a product (for frontend compatibility)
