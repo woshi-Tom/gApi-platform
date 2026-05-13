@@ -210,7 +210,7 @@ type DateCount struct {
 
 // ChatCompletionsRequest represents OpenAI chat completions request
 type ChatCompletionsRequest struct {
-	Model       string                   `json:"model" binding:"required"`
+	Model       string                   `json:"model"` // handler 显式校验，返回 missing_model
 	Messages    []map[string]interface{} `json:"messages" binding:"required"`
 	Temperature float64                  `json:"temperature"`
 	MaxTokens   int                      `json:"max_tokens"`
@@ -222,7 +222,7 @@ type ChatCompletionsRequest struct {
 
 // CompletionsRequest represents OpenAI text completions request
 type CompletionsRequest struct {
-	Model       string  `json:"model" binding:"required"`
+	Model       string  `json:"model"` // handler 显式校验，返回 missing_model
 	Prompt      interface{} `json:"prompt" binding:"required"` // string or []string
 	MaxTokens   int     `json:"max_tokens"`
 	Temperature float64 `json:"temperature"`
