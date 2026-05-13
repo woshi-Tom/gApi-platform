@@ -243,16 +243,35 @@ jobs:
           VERSION=${{ env.VERSION }}
           DIR=${{ env.DIR }}
 
-          # Linux (tar.gz)
-          tar -czvf "gapi-platform-${VERSION}-linux-amd64.tar.gz" "${DIR}"
+          # Platform-specific packages: each only contains its own binary
+          LINUX_DIR="gapi-platform-${VERSION}-linux"
+          WIN_DIR="gapi-platform-${VERSION}-windows"
 
-          # Windows (zip)
+          # Shared assets (docs, frontend, admin, deploy files)
+          for PLAT_DIR in "${LINUX_DIR}" "${WIN_DIR}"; do
+            cp -r "${DIR}/docs" "${PLAT_DIR}/"
+            cp -r "${DIR}/frontend" "${PLAT_DIR}/"
+            cp -r "${DIR}/admin" "${PLAT_DIR}/"
+            cp "${DIR}"/*.yml "${DIR}"/*.conf "${DIR}"/*.example "${DIR}"/*.sh "${DIR}"/*.bat "${DIR}"/*.md "${DIR}"/*.txt "${PLAT_DIR}/" 2>/dev/null || true
+          done
+
+          # Linux: only linux binary
+          mkdir -p "${LINUX_DIR}/bin/linux/amd64"
+          cp "${DIR}/bin/linux/amd64/gapi-server" "${LINUX_DIR}/bin/linux/amd64/"
+          tar -czvf "gapi-platform-${VERSION}-linux-amd64.tar.gz" "${LINUX_DIR}"
+
+          # Windows: only windows binary
+          mkdir -p "${WIN_DIR}/bin/windows/amd64"
+          cp "${DIR}/bin/windows/amd64/gapi-server.exe" "${WIN_DIR}/bin/windows/amd64/"
           if command -v zip &>/dev/null; then
-            zip -r "gapi-platform-${VERSION}-windows-amd64.zip" "${DIR}"
+            zip -r "gapi-platform-${VERSION}-windows-amd64.zip" "${WIN_DIR}"
           else
             apt-get update -qq && apt-get install -y -qq zip
-            zip -r "gapi-platform-${VERSION}-windows-amd64.zip" "${DIR}"
+            zip -r "gapi-platform-${VERSION}-windows-amd64.zip" "${WIN_DIR}"
           fi
+
+          # Cleanup
+          rm -rf "${DIR}" "${LINUX_DIR}" "${WIN_DIR}"
 
       - name: Verify Release Archives
         if: startsWith(github.ref, 'refs/tags/v')
