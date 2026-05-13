@@ -22,6 +22,9 @@
 | `backend/internal/router/router.go` | 修改 | 注册 `POST /api/v1/messages` 路由；CORS 增加 `X-Api-Key` |
 | `backend/internal/handler/api_handler.go` | 修改 | 新增 `Messages` handler + `handleMessagesStream` 流式处理 |
 | `backend/internal/pkg/adapter/claude.go` | 修改 | 修复 system 消息 bug（提取到顶层 `system` 字段）；实现 `ChatStream` 流式 |
+| `backend/internal/handler/anthropic_convert_test.go` | 新建 | 20 个用例：请求/响应转换、stop_reason 映射、content 提取 |
+| `backend/internal/pkg/adapter/claude_test.go` | 新建 | system 消息提取 + Anthropic SSE 流式解析 + 空 body |
+| `backend/internal/middleware/middleware_test.go` | 修改 | x-api-key header 认证 + Bearer 回归测试（+4 用例） |
 
 ---
 
@@ -98,9 +101,22 @@ go test ./... -count=1 -timeout 120s
 > 测试时间: 2026-05-13
 > 测试人: 远程编译测试 agent
 
+### 第一轮（Anthropic 入站功能）
+
 | 检查项 | 结果 | 说明 |
 |--------|------|------|
 | `go build ./...` | ✅ 通过 | 无编译错误 |
 | `go vet ./...` | ✅ 通过 | 无警告 |
 | `go test ./...` | ✅ 全部通过 | handler 1.402s / middleware 0.023s / model 0.018s / repository 0.171s / service 0.034s |
-| 新增 normalize 测试 | ✅ 4/4 通过 | `TestNormalizeMessages_StringContent`, `_ArrayContent`, `_MixedMessages`, `_EmptyInput` |
+| 新增 normalize 测试 | ✅ 4/4 通过 | `TestNormalizeMessages_*` |
+
+### 第二轮（补充测试）
+
+| 检查项 | 结果 | 说明 |
+|--------|------|------|
+| `go build ./...` | ⬜ 待测试 | |
+| `go vet ./...` | ⬜ 待测试 | |
+| `go test ./...` | ⬜ 待测试 | |
+| anthropic_convert_test.go | ⬜ 20 用例 | 请求转换、响应转换、stop_reason 映射、content 提取 |
+| claude_test.go | ⬜ 6 用例 | system 提取、SSE 流式解析、空 body |
+| middleware_test.go 新增 | ⬜ 4 用例 | x-api-key 认证、Bearer 回归 |
