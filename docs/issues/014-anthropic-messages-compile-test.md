@@ -114,9 +114,11 @@ go test ./... -count=1 -timeout 120s
 
 | 检查项 | 结果 | 说明 |
 |--------|------|------|
-| `go build ./...` | ⬜ 待测试 | |
-| `go vet ./...` | ⬜ 待测试 | |
-| `go test ./...` | ⬜ 待测试 | |
-| anthropic_convert_test.go | ⬜ 20 用例 | 请求转换、响应转换、stop_reason 映射、content 提取 |
-| claude_test.go | ⬜ 6 用例 | system 提取、SSE 流式解析、空 body |
-| middleware_test.go 新增 | ⬜ 4 用例 | x-api-key 认证、Bearer 回归 |
+| `go build ./...` | ✅ 通过 | 无编译错误 |
+| `go vet ./...` | ✅ 通过 | 无警告 |
+| `go test ./...` | ⚠️ 1 个失败 | `TestTokenAuth_XApiKeyHeader_Present` — nil tokenService 导致 panic |
+| anthropic_convert_test.go | ✅ 24/24 通过 | 请求转换、响应转换、stop_reason 映射、content 提取、normalize |
+| claude_test.go | ✅ 6/6 通过 | system 提取、SSE 流式解析、空 body |
+| middleware_test.go 新增 | ❌ 1/4 失败 | `TestTokenAuth_XApiKeyHeader_Present` — 测试传入 nil tokenService，`Validate()` 空指针 |
+
+**失败详情**: `TestTokenAuth_XApiKeyHeader_Present` 在 `middleware_test.go:218` 未初始化 TokenService，导致 `tokenService.Validate()` nil pointer dereference。不属于本轮 Anthropic 功能回归，是测试用例本身缺失 mock/service 初始化。
