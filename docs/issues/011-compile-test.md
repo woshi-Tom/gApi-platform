@@ -14,6 +14,9 @@
 | `backend/internal/handler/model_pricing_handler.go` | 新增 `parseAbilityTypes()`；Create/Update 中 `AbilityTypes` 从 `[]string` 改为 `interface{}`，兼容字符串和数组 |
 | `backend/internal/model/response.go` | `ChatCompletionsRequest.Messages` 从 `[]map[string]string` 改为 `[]map[string]interface{}`，兼容 OpenAI content 数组格式 |
 | `backend/internal/handler/api_handler.go` | 新增 `normalizeMessages()` + `extractTextContent()`；ChatCompletions 入口处 normalize 后传给 adapter；删除 6 个死代码函数；`ListModels` 断言安全化；清理无用 import |
+| `backend/internal/middleware/ratelimit_test.go` | **新建** — TokenRateLimit RPM/TPM/Default/NoTokenID 测试（T-P2-01~02） |
+| `backend/internal/service/billing_service_test.go` | **新建** — PostConsumeQuota 事务/FIFO 扣减/余额不足/耗尽测试（T-P2-03~06） |
+| `backend/internal/handler/api_handler_phase3_test.go` | **新建** — Completions 端点 + 数组 content + APIError 格式测试（T-P3-01~04） |
 
 ---
 
@@ -156,6 +159,18 @@ go test ./... -count=1 -timeout 120s
   预期: 200，返回可用模型列表（降级为全量），不 panic
 ```
 
+### 3.5 T-TEST: 单元测试执行
+
+```bash
+cd backend
+go test ./internal/middleware/... -run TestTokenRateLimit -v -count=1 -timeout 120s
+go test ./internal/service/... -run TestPostConsume -v -count=1 -timeout 120s
+go test ./internal/service/... -run TestConsumeRecharge -v -count=1 -timeout 120s
+go test ./internal/handler/... -run "TestCompletions|TestChatCompletions_Array|TestAPIError" -v -count=1 -timeout 120s
+```
+
+**预期结果**: 所有测试通过。
+
 ---
 
 ## 四、验证结论模板
@@ -176,5 +191,15 @@ T-CONTENT 非text:  ✅ / ❌
 T-CONTENT 流式:    ✅ / ❌
 T-CLEAN:           ✅ / ❌
 T-SAFE:            ✅ / ❌
+T-P2-01 RPM:       ✅ / ❌
+T-P2-02 TPM:       ✅ / ❌
+T-P2-03 事务原子:   ✅ / ❌
+T-P2-04 余额不足:   ✅ / ❌
+T-P2-05 FIFO:      ✅ / ❌
+T-P2-06 耗尽:      ✅ / ❌
+T-P3-01 字符串prompt: ✅ / ❌
+T-P3-02 数组prompt:   ✅ / ❌
+T-P3-03 缺少model:    ✅ / ❌
+T-P3-04 APIError格式: ✅ / ❌
 结论:     可合入 / 需修复后重新验证
 ```
