@@ -1,0 +1,25 @@
+# gAPI Platform Configuration Template
+# Copy this file to config.yaml and fill in your values
+# In Docker environment, these values are overridden by environment variables (GAPI_*)
+
+server:
+  port: "8080"
+  mode: "debug"
+
+database:
+  host: "postgres"
+  port: 5432
+  user: "gapi"
+  password: "CHANGE_ME"
+  database: "gapi"
+
+redis:
+  host: "redis"
+  port: 6379
+
+security:
+  encrypt_key: "CHANGE_ME_min_32_characters"
+
+jwt:
+  secret: "CHANGE_ME_min_32_characters"
+  expire_hour: 24
