@@ -7,7 +7,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"gapi-platform/internal/config"
 	"gapi-platform/internal/middleware"
 	"gapi-platform/internal/model"
 	"gapi-platform/internal/repository"
@@ -43,11 +42,6 @@ func setupPhase3Test(t *testing.T) (*gin.Engine, *gorm.DB) {
 	tokenRepo := repository.NewTokenRepository(db)
 	channelRepo := repository.NewChannelRepository(db)
 
-	jwtCfg := &config.JWTConfig{
-		Secret:     "test-secret-key-for-phase3",
-		ExpireHour: 24,
-	}
-	authService := service.NewAuthService(userRepo, tokenRepo, jwtCfg)
 	tokenService := service.NewTokenService(tokenRepo)
 	tokenService.SetUserRepo(userRepo, nil)
 	channelService := service.NewChannelService(channelRepo)

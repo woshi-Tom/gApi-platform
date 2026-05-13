@@ -2,7 +2,7 @@
 
 > 日期: 2026-05-13
 > 关联: [010-ability-types-type-mismatch.md](010-ability-types-type-mismatch.md) K13 + [chat-completions-content-format-fix.md](../plans/chat-completions-content-format-fix.md) content 兼容
-> 状态: 待编译验证
+> 状态: ✅ 编译测试通过
 > 目标: 验证 K13 后端兼容、Chat Completions content 格式兼容、死代码清理、不安全类型断言修复
 
 ---
