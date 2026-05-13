@@ -275,6 +275,47 @@ func (h *APIHandler) Messages(c *gin.Context) {
 
 // handleMessagesStream handles streaming for Anthropic Messages API.
 func (h *APIHandler) handleMessagesStream(ctx context.Context, c *gin.Context, chatReq *adapter.ChatRequest) {
+	// Phase 1: Send SSE headers and initial events immediately
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+
+	flusher, ok := c.Writer.(http.Flusher)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, model.AnthropicErrorResponse{
+			Type: "error",
+			Error: model.AnthropicErrorBody{
+				Type:    "api_error",
+				Message: "streaming not supported",
+			},
+		})
+		return
+	}
+
+	msgID := fmt.Sprintf("msg_%016x", time.Now().UnixNano())
+	estimatedInput := h.estimateChatTokens(chatReq.Messages, 0)
+	writeAnthropicSSEvent(c.Writer, "message_start", model.AnthropicStreamEvent{
+		Type: "message_start",
+		Message: &model.AnthropicMessagesResponse{
+			ID:      msgID,
+			Type:    "message",
+			Role:    "assistant",
+			Content: []model.AnthropicResponseContent{},
+			Model:   chatReq.Model,
+			Usage:   model.AnthropicUsage{InputTokens: estimatedInput},
+		},
+	})
+	writeAnthropicSSEvent(c.Writer, "content_block_start", model.AnthropicStreamEvent{
+		Type:  "content_block_start",
+		Index: 0,
+		ContentBlock: &model.AnthropicResponseContent{
+			Type: "text",
+			Text: "",
+		},
+	})
+	flusher.Flush()
+
+	// Phase 2: Retry loop with channel failover
 	attemptedChannels := make(map[uint]bool)
 
 	for attempt := 0; attempt < maxChannelRetries; attempt++ {
@@ -322,51 +363,6 @@ func (h *APIHandler) handleMessagesStream(ctx context.Context, c *gin.Context, c
 			h.channelService.IncrementFailureCount(selectedChannel.ID)
 			continue
 		}
-
-		// Channel works, set SSE headers
-		c.Header("Content-Type", "text/event-stream")
-		c.Header("Cache-Control", "no-cache")
-		c.Header("Connection", "keep-alive")
-		c.Header("Transfer-Encoding", "chunked")
-
-		flusher, ok := c.Writer.(http.Flusher)
-		if !ok {
-			c.JSON(http.StatusInternalServerError, model.AnthropicErrorResponse{
-				Type: "error",
-				Error: model.AnthropicErrorBody{
-					Type:    "api_error",
-					Message: "streaming not supported",
-				},
-			})
-			return
-		}
-
-		// Emit Anthropic SSE: message_start
-		msgID := fmt.Sprintf("msg_%016x", time.Now().UnixNano())
-		estimatedInput := h.estimateChatTokens(chatReq.Messages, 0)
-		writeAnthropicSSEvent(c.Writer, "message_start", model.AnthropicStreamEvent{
-			Type: "message_start",
-			Message: &model.AnthropicMessagesResponse{
-				ID:      msgID,
-				Type:    "message",
-				Role:    "assistant",
-				Content: []model.AnthropicResponseContent{},
-				Model:   chatReq.Model,
-				Usage:   model.AnthropicUsage{InputTokens: estimatedInput},
-			},
-		})
-		flusher.Flush()
-
-		// Emit Anthropic SSE: content_block_start
-		writeAnthropicSSEvent(c.Writer, "content_block_start", model.AnthropicStreamEvent{
-			Type:  "content_block_start",
-			Index: 0,
-			ContentBlock: &model.AnthropicResponseContent{
-				Type: "text",
-				Text: "",
-			},
-		})
-		flusher.Flush()
 
 		// Track usage
 		var (
@@ -473,13 +469,12 @@ func (h *APIHandler) handleMessagesStream(ctx context.Context, c *gin.Context, c
 		return
 	}
 
-	c.JSON(http.StatusBadGateway, model.AnthropicErrorResponse{
-		Type: "error",
-		Error: model.AnthropicErrorBody{
-			Type:    "api_error",
-			Message: "all channels failed after retries",
-		},
+	// All channels failed — notify via SSE since headers are already sent
+	writeAnthropicSSEvent(c.Writer, "error", model.AnthropicErrorBody{
+		Type:    "api_error",
+		Message: "all channels failed after retries",
 	})
+	flusher.Flush()
 }
 
 func (h *APIHandler) chatWithFailover(ctx context.Context, chatReq *adapter.ChatRequest) (interface{}, error) {
@@ -538,6 +533,28 @@ func (h *APIHandler) chatWithFailover(ctx context.Context, chatReq *adapter.Chat
 }
 
 func (h *APIHandler) handleStreamWithFailover(ctx context.Context, c *gin.Context, chatReq *adapter.ChatRequest) {
+	// Phase 1: Send SSE headers immediately
+	c.Header("Content-Type", "text/event-stream")
+	c.Header("Cache-Control", "no-cache")
+	c.Header("Connection", "keep-alive")
+
+	flusher, ok := c.Writer.(http.Flusher)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, model.APIErrorResponse{
+			Error: &model.APIError{
+				Type:    "server_error",
+				Code:    "internal_error",
+				Message: "streaming not supported",
+			},
+		})
+		return
+	}
+
+	// SSE comment triggers header flush so client knows connection is established
+	fmt.Fprintf(c.Writer, ":ok\n\n")
+	flusher.Flush()
+
+	// Phase 2: Retry loop with channel failover
 	attemptedChannels := make(map[uint]bool)
 
 	for attempt := 0; attempt < maxChannelRetries; attempt++ {
@@ -585,24 +602,6 @@ func (h *APIHandler) handleStreamWithFailover(ctx context.Context, c *gin.Contex
 		if err != nil {
 			h.channelService.IncrementFailureCount(selectedChannel.ID)
 			continue
-		}
-
-		// Channel works, set headers and stream
-		c.Header("Content-Type", "text/event-stream")
-		c.Header("Cache-Control", "no-cache")
-		c.Header("Connection", "keep-alive")
-		c.Header("Transfer-Encoding", "chunked")
-
-		flusher, ok := c.Writer.(http.Flusher)
-		if !ok {
-			c.JSON(http.StatusInternalServerError, model.APIErrorResponse{
-				Error: &model.APIError{
-					Type:    "server_error",
-					Code:    "internal_error",
-					Message: "streaming not supported",
-				},
-			})
-			return
 		}
 
 		// Track usage for streaming quota consumption
@@ -674,13 +673,9 @@ func (h *APIHandler) handleStreamWithFailover(ctx context.Context, c *gin.Contex
 		return
 	}
 
-	c.JSON(http.StatusBadGateway, model.APIErrorResponse{
-		Error: &model.APIError{
-			Type:    "server_error",
-			Code:    "upstream_error",
-			Message: "all channels failed after retries",
-		},
-	})
+	// All channels failed — notify via SSE since headers are already sent
+	c.SSEvent("error", "all channels failed after retries")
+	flusher.Flush()
 }
 
 func (h *APIHandler) ListModels(c *gin.Context) {
