@@ -1,7 +1,16 @@
 #!/usr/bin/env python3
 """
 gAPI Platform API Test Script
-Tests key API endpoints
+=============================
+功能测试 + 压力测试 一体化脚本。
+
+用法:
+  # 运行功能测试（健康检查、渠道管理、兑换码等）
+  python test_api.py
+
+  # 运行压力测试（需要先创建 API Token）
+  python test_api.py --pressure --token sk-xxx
+  python test_api.py --pressure --token sk-xxx --base-url http://localhost:8080
 """
 import requests
 import json
@@ -9,27 +18,39 @@ import sys
 
 BASE_URL = "http://localhost:8080/api/v1"
 
+
 class APITester:
+    """
+    功能测试类。
+    覆盖管理后台的核心 API：健康检查、登录、渠道管理、兑换码等。
+    """
+
     def __init__(self):
-        self.session = requests.Session()
-        self.token = None
+        self.session = requests.Session()  # 复用 TCP 连接，提高测试效率
+        self.token = None                  # 登录后保存 JWT token
         self.user_id = None
-    
+
     def request(self, method, path, **kwargs):
+        """
+        统一的 HTTP 请求方法。
+        - 自动拼接 BASE_URL + path
+        - 如果有 token 自动带上 Authorization header
+        - 连接失败时直接退出（fail-fast）
+        """
         url = f"{BASE_URL}{path}"
         if self.token:
             kwargs.setdefault('headers', {})['Authorization'] = f'Bearer {self.token}'
         kwargs.setdefault('headers', {}).setdefault('Content-Type', 'application/json')
-        
+
         try:
             response = self.session.request(method, url, **kwargs)
             return response
         except requests.exceptions.ConnectionError:
             print(f"❌ Failed to connect to {url}")
             sys.exit(1)
-    
+
     def test_health(self):
-        """Test health endpoint"""
+        """测试服务健康检查端点（无需认证）"""
         print("\n=== Test 1: Health Check ===")
         try:
             resp = requests.get("http://localhost:8080/health")
@@ -38,55 +59,58 @@ class APITester:
         except Exception as e:
             print(f"❌ Health check failed: {e}")
             return False
-    
+
     def test_register(self):
-        """Test user registration"""
+        """
+        测试用户注册端点。
+        注意：生产环境需要邮箱验证码，此测试仅探测 init 状态。
+        """
         print("\n=== Test 2: User Registration ===")
-        # Use a unique email with timestamp
         import time
         email = f"test{int(time.time())}@example.com"
-        
+
         data = {
             "username": f"testuser{int(time.time())}",
             "email": email,
             "password": "Test123456"
         }
-        
-        # First, verify email code (we'll skip this for now and test login directly)
-        # Let's test the init endpoint to see what's available
+
+        # 探测系统初始化状态
         resp = self.request('GET', '/init/status')
         print(f"Init status: {resp.status_code} - {resp.text[:200]}")
-        
-        # Try to register without email verification - should fail or require verification
-        # Let's check what the error looks like
+
         return True
-    
+
     def test_login(self):
-        """Test user login"""
+        """
+        测试管理员登录。
+        - 先验证未认证时访问受保护端点返回 401
+        - 再用 admin/admin123 登录获取 JWT token
+        - 管理后台登录路径是 /admin/login，不是 /login
+        """
         print("\n=== Test 3: User Login ===")
-        
-        # Try login with a test user (need to create one first or use existing)
-        # Let's first check if we can get user info without auth
+
+        # 验证未认证请求被拒绝
         resp = self.request('GET', '/user/info')
         print(f"Get info without auth: {resp.status_code}")
-        
+
         if resp.status_code == 401:
             print("✅ Auth required (expected)")
-        
-        # Try admin login - check both paths
+
+        # 管理员登录
         admin_data = {
             "username": "admin",
             "password": "admin123"
         }
-        
-        # Try /admin/login
+
+        # /admin/login 是管理后台正确路径
         resp = self.request('POST', '/admin/login', json=admin_data)
         print(f"Admin login (/admin/login): {resp.status_code}")
-        
-        # Try /login (admin group)
+
+        # /login 是错误路径，用来验证返回 404
         resp2 = self.request('POST', '/login', json=admin_data)
         print(f"Admin login (/login): {resp2.status_code} - {resp2.text[:200] if resp2.text else 'empty'}")
-        
+
         if resp.status_code == 200:
             try:
                 result = resp.json()
@@ -99,44 +123,42 @@ class APITester:
                 print(f"Response: {resp.text}")
         else:
             print(f"❌ Admin login failed: {resp.text}")
-        
+
         return self.token is not None
-    
+
     def test_channels(self):
-        """Test channel management (admin)"""
+        """测试渠道管理 API — 列出前 3 个渠道的信息"""
         print("\n=== Test 4: Channel Management ===")
-        
+
         if not self.token:
             print("❌ No auth token, skipping channel test")
             return False
-        
-        # List channels
+
         resp = self.request('GET', '/admin/channels')
         print(f"List channels: {resp.status_code}")
-        
+
         if resp.status_code == 200:
             try:
                 result = resp.json()
                 channels = result.get('data', {}).get('list', [])
                 print(f"✅ Found {len(channels)} channels")
-                
+
                 for ch in channels[:3]:
                     print(f"  - {ch.get('name')} ({ch.get('type')}) @ {ch.get('base_url')}")
-                
+
                 return True
             except:
                 print(f"Response: {resp.text}")
-        
+
         return False
-    
+
     def test_register_settings(self):
-        """Test registration settings"""
+        """测试注册设置 API — 获取系统是否开放注册、默认配额等"""
         print("\n=== Test 5: Register Settings ===")
-        
-        # This might require admin auth
+
         resp = self.request('GET', '/admin/settings/register')
         print(f"Register settings: {resp.status_code}")
-        
+
         if resp.status_code == 200:
             try:
                 result = resp.json()
@@ -144,17 +166,17 @@ class APITester:
                 return True
             except:
                 print(f"Response: {resp.text}")
-        
+
         return False
-    
+
     def test_redemption_codes(self):
-        """Test redemption code creation (admin)"""
+        """测试兑换码创建 — 使用 admin token 批量生成兑换码"""
         print("\n=== Test 6: Create Redemption Code ===")
-        
+
         if not self.token:
             print("❌ No auth token, skipping")
             return False
-        
+
         data = {
             "code_type": "quota",
             "prefix": "TEST",
@@ -162,10 +184,10 @@ class APITester:
             "count": 5,
             "note": "Test batch"
         }
-        
+
         resp = self.request('POST', '/admin/redemption/codes', json=data)
         print(f"Create codes: {resp.status_code}")
-        
+
         if resp.status_code == 200:
             try:
                 result = resp.json()
@@ -175,62 +197,69 @@ class APITester:
                 print(f"Response: {resp.text}")
         else:
             print(f"Response: {resp.text[:200]}")
-        
+
         return False
-    
+
     def run_all(self):
-        """Run all tests"""
+        """按顺序执行所有功能测试"""
         print("=" * 50)
         print("gAPI Platform API Test Suite")
         print("=" * 50)
-        
-        # Test 1: Health
+
         self.test_health()
-        
-        # Test 2: Register
         self.test_register()
-        
-        # Test 3: Login (get token)
         self.test_login()
-        
-        # Test 4: Channels
         self.test_channels()
-        
-        # Test 5: Register settings
         self.test_register_settings()
-        
-        # Test 6: Create redemption codes
         self.test_redemption_codes()
-        
+
         print("\n" + "=" * 50)
         print("Test Complete")
         print("=" * 50)
 
 
 # ============================================================
-# Phase 4 (T-12): Pressure Test
-# Usage: python test_api.py --pressure
+# Phase 4 (T-12): Pressure Test（压力测试）
+# 测试目的：验证平台在高并发下的吞吐量（TPS）和延迟分布（P50/P95/P99）
+# 用法：python test_api.py --pressure --token <api_key>
+# 注意：需要先在用户中心创建 API Token，否则请求会被 401 拒绝
 # ============================================================
-import concurrent.futures
-import statistics
-import argparse
-import time
-import threading
+import concurrent.futures  # 线程池，实现并发请求
+import statistics          # 计算延迟统计值
+import argparse            # 命令行参数解析
+import time                # 计时
+import threading           # 线程锁，保护共享计数器
 
 
 class PressureTest:
-    """Concurrent API pressure testing with latency metrics."""
+    """
+    压力测试类。
+
+    核心指标:
+      - TPS（Transactions Per Second）: 吞吐量
+      - P50 / P95 / P99: 百分位延迟，反映大多数用户的体验
+      - Error Rate: 错误率，反映系统稳定性
+
+    线程模型:
+      - 使用 ThreadPoolExecutor 控制并发数
+      - 每个 worker 线程执行 N 次请求
+      - 用 threading.Lock 保护共享的 latencies/success/errors 计数器
+    """
 
     def __init__(self, base_url="http://localhost:8080", token=None):
         self.base_url = base_url
-        self.token = token
-        self.results_lock = threading.Lock()
-        self.latencies = []
-        self.errors = 0
-        self.success = 0
+        self.token = token                          # API Token（Bearer Auth）
+        self.results_lock = threading.Lock()        # 保护共享数据
+        self.latencies = []                         # 所有请求的延迟（毫秒）
+        self.errors = 0                             # 失败请求数
+        self.success = 0                            # 成功请求数
 
     def _do_chat(self, model="gpt-3.5-turbo", stream=False):
-        """Single chat/completions request. Returns (latency_ms, status_code)."""
+        """
+        发送一次 chat/completions 请求。
+        Returns (latency_ms, status_code)。
+        - status_code=0 表示网络错误（如连接超时、DNS 解析失败）
+        """
         url = f"{self.base_url}/api/v1/chat/completions"
         headers = {"Content-Type": "application/json"}
         if self.token:
@@ -251,7 +280,10 @@ class PressureTest:
             return latency, 0  # 0 = connection error
 
     def _do_completions(self, model="gpt-3.5-turbo"):
-        """Single /v1/completions request."""
+        """
+        发送一次 /v1/completions 请求。
+        这是 OpenAI 兼容的文本补全端点（与 chat/completions 不同）。
+        """
         url = f"{self.base_url}/api/v1/completions"
         headers = {"Content-Type": "application/json"}
         if self.token:
@@ -267,7 +299,10 @@ class PressureTest:
             return latency, 0
 
     def _do_models(self):
-        """Single /v1/models request."""
+        """
+        发送一次 /v1/models 请求（获取可用模型列表）。
+        这是最轻量的端点，不需要上游渠道，适合测试基础吞吐能力。
+        """
         url = f"{self.base_url}/api/v1/models"
         headers = {}
         if self.token:
@@ -282,7 +317,13 @@ class PressureTest:
             return latency, 0
 
     def _worker(self, fn, n):
-        """Worker thread: execute fn n times and record results."""
+        """
+        单个 worker 线程的执行逻辑。
+        连续执行 n 次 fn() 调用，并将结果记录到共享计数器。
+
+        注意: 访问共享数据（self.latencies / self.success / self.errors）时必须加锁，
+        否则多个线程同时写入会导致数据竞态（data race）。
+        """
         for _ in range(n):
             lat, code = fn()
             with self.results_lock:
@@ -293,29 +334,52 @@ class PressureTest:
                     self.errors += 1
 
     def run_scenario(self, name, fn, concurrency, total_requests):
-        """Run a single pressure scenario."""
+        """
+        运行一个压力测试场景。
+
+        Parameters
+        ----------
+        name : str
+            场景名称（用于输出）
+        fn : callable
+            要压测的函数（_do_chat / _do_models / _do_completions）
+        concurrency : int
+            并发数（线程池大小）
+        total_requests : int
+            总请求数
+
+        输出指标:
+          Duration  — 总耗时（秒）
+          TPS       — 每秒处理请求数
+          P50/P95/P99 — 百分位延迟（毫秒）
+          Error Rate — 错误百分比
+        """
         print(f"\n--- {name} ---")
         print(f"  Concurrency={concurrency}, Total={total_requests}")
 
+        # 重置计数器
         self.latencies = []
         self.errors = 0
         self.success = 0
 
+        # 计算每个 worker 分配的任务数（尽量平均）
         per_worker = total_requests // concurrency
         remainder = total_requests % concurrency
 
         t0 = time.time()
 
+        # 用线程池并发执行
         with concurrent.futures.ThreadPoolExecutor(max_workers=concurrency) as executor:
             futures = []
             for i in range(concurrency):
                 n = per_worker + (1 if i < remainder else 0)
                 futures.append(executor.submit(self._worker, fn, n))
-            concurrent.futures.wait(futures)
+            concurrent.futures.wait(futures)  # 等待所有线程完成
 
         elapsed = time.time() - t0
         tps = total_requests / elapsed if elapsed > 0 else 0
 
+        # 计算延迟百分位
         if self.latencies:
             sorted_lat = sorted(self.latencies)
             p50 = sorted_lat[int(len(sorted_lat) * 0.50)]
@@ -357,7 +421,17 @@ class PressureTest:
         }
 
     def run_all(self, token=None):
-        """Run all Phase 4 pressure scenarios."""
+        """
+        运行所有预设的压力测试场景。
+
+        场景列表:
+          1. chat/completions — 50 并发，500 请求（高并发 Chat）
+          2. /v1/models       — 100 并发，500 请求（纯平台吞吐）
+          3. /v1/completions  — 30 并发，300 请求（文本补全）
+          4. chat (低并发)    — 10 并发，50 请求（保底测试）
+
+        PASS 条件: 错误率 < 1% 且 P95 < 3000ms
+        """
         self.token = token
 
         print("=" * 60)
@@ -366,7 +440,7 @@ class PressureTest:
 
         results = []
 
-        # Scenario 1: Non-streaming Chat API
+        # 场景 1: 非流式 Chat API（高并发）
         results.append(
             self.run_scenario(
                 "Non-stream Chat API (50 concurrency)",
@@ -376,7 +450,7 @@ class PressureTest:
             )
         )
 
-        # Scenario 2: /v1/models list
+        # 场景 2: 模型列表 API（最适合测纯平台吞吐）
         results.append(
             self.run_scenario(
                 "/v1/models list (100 concurrency)",
@@ -386,7 +460,7 @@ class PressureTest:
             )
         )
 
-        # Scenario 3: /v1/completions
+        # 场景 3: 文本补全 API
         results.append(
             self.run_scenario(
                 "/v1/completions (30 concurrency)",
@@ -396,7 +470,7 @@ class PressureTest:
             )
         )
 
-        # Scenario 4: Low-concurrency chat (for environments with limited channels)
+        # 场景 4: 低并发 Chat（给没有上游渠道的环境保底测试）
         results.append(
             self.run_scenario(
                 "Chat API low-concurrency (10 concurrent)",
@@ -406,7 +480,7 @@ class PressureTest:
             )
         )
 
-        # Summary
+        # 汇总输出
         print("\n" + "=" * 60)
         print("Pressure Test Summary")
         print("=" * 60)
@@ -421,15 +495,17 @@ class PressureTest:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="gAPI Platform API Tester")
-    parser.add_argument("--pressure", action="store_true", help="Run pressure tests")
-    parser.add_argument("--token", type=str, help="API token for authenticated tests")
+    parser.add_argument("--pressure", action="store_true", help="运行压力测试（代替功能测试）")
+    parser.add_argument("--token", type=str, help="API Token（压力测试需要传入）")
     parser.add_argument("--base-url", type=str, default="http://localhost:8080",
-                        help="Base URL (default: http://localhost:8080)")
+                        help="API 基础地址（默认: http://localhost:8080）")
     args = parser.parse_args()
 
     if args.pressure:
+        # 压力测试模式
         pt = PressureTest(base_url=args.base_url)
         pt.run_all(token=args.token)
     else:
+        # 功能测试模式（默认）
         tester = APITester()
         tester.run_all()

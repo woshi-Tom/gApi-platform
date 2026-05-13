@@ -97,6 +97,7 @@ docs/
 |------|------|------|
 | [current-sprint.md](plans/current-sprint.md) | v1.2.0 迭代工作项（5 个 P0） | ✅ 已完成 |
 | [api-key-lifecycle-plan.md](plans/api-key-lifecycle-plan.md) | API Key 全生命周期与调用链路完善（v1.3.0） | ✅ 全部完成（4 Phase / 13 任务） |
+| [api-key-lifecycle-test-plan.md](plans/api-key-lifecycle-test-plan.md) | Phase 2/3 测试补充方案 | ⬜ 待评审 |
 | [fix-plan-2026.md](plans/fix-plan-2026.md) | 2026 修复计划与技术债追踪 | ⬜ 待审核 |
 | [roadmap.md](plans/roadmap.md) | 产品路线图与里程碑 | ⬜ 待完善 |
 
@@ -139,6 +140,7 @@ docs/
 | 007 | [P0 API 调用链路修复](issues/007-p0-api-chain-fixes.md) | ✅ 已修复 |
 | 008 | [Phase 2 限速与计费完善](issues/008-phase2-compile-test.md) | ✅ 已修复 |
 | 009 | [Phase 3 功能补全](issues/009-phase3-compile-test.md) | ✅ 已修复 |
+| 010 | [模型定价 ability_types 类型不匹配](issues/010-ability-types-type-mismatch.md) | ⬜ 待修复 |
 
 ---
 

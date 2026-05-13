@@ -95,7 +95,7 @@ func (r *ChannelRepository) GetActiveChannelsByIDs(ids []uint) ([]model.Channel,
 func (r *ChannelRepository) GetByModel(modelName string) ([]model.Channel, error) {
 	var channels []model.Channel
 	err := r.db.Where("status = ? AND is_healthy = ?", 1, true).
-		Where("LOWER(models) LIKE LOWER(?)", "%"+modelName+"%").
+		Where("LOWER(models::text) LIKE LOWER(?)", "%"+modelName+"%").
 		Order("priority DESC, weight DESC").
 		Find(&channels).Error
 	return channels, err

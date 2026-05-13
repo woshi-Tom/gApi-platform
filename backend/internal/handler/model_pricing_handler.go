@@ -2,12 +2,52 @@ package handler
 
 import (
 	"strconv"
+	"strings"
 
 	"gapi-platform/internal/model"
 	"gapi-platform/internal/pkg/response"
 	"gapi-platform/internal/service"
 	"github.com/gin-gonic/gin"
 )
+
+// parseAbilityTypes 兼容前端发送的字符串格式 ("chat,completion") 和标准 JSON 数组格式 (["chat","completion"])
+func parseAbilityTypes(v interface{}) []string {
+	if v == nil {
+		return []string{"chat"}
+	}
+	switch t := v.(type) {
+	case []interface{}:
+		result := make([]string, 0, len(t))
+		for _, item := range t {
+			if s, ok := item.(string); ok && s != "" {
+				result = append(result, s)
+			}
+		}
+		if len(result) == 0 {
+			return []string{"chat"}
+		}
+		return result
+	case string:
+		t = strings.TrimSpace(t)
+		if t == "" {
+			return []string{"chat"}
+		}
+		parts := strings.Split(t, ",")
+		result := make([]string, 0, len(parts))
+		for _, p := range parts {
+			s := strings.TrimSpace(p)
+			if s != "" {
+				result = append(result, s)
+			}
+		}
+		if len(result) == 0 {
+			return []string{"chat"}
+		}
+		return result
+	default:
+		return []string{"chat"}
+	}
+}
 
 type ModelPricingHandler struct {
 	svc *service.ModelGroupService
@@ -40,18 +80,18 @@ func (h *ModelPricingHandler) List(c *gin.Context) {
 
 func (h *ModelPricingHandler) Create(c *gin.Context) {
 	var req struct {
-		Model         string   `json:"model" binding:"required"`
-		Provider      string   `json:"provider"`
-		DisplayName   string   `json:"display_name"`
-		PriceInput    float64  `json:"price_input"`
-		PriceOutput   float64  `json:"price_output"`
-		AbilityTypes  []string `json:"ability_types"`
-		ContextLength int      `json:"context_length"`
-		MaxOutput     int      `json:"max_output"`
-		GroupID       *uint    `json:"group_id"`
-		IsEnabled     bool     `json:"is_enabled"`
-		IsFeatured    bool     `json:"is_featured"`
-		SortOrder     int      `json:"sort_order"`
+		Model         string      `json:"model" binding:"required"`
+		Provider      string      `json:"provider"`
+		DisplayName   string      `json:"display_name"`
+		PriceInput    float64     `json:"price_input"`
+		PriceOutput   float64     `json:"price_output"`
+		AbilityTypes  interface{} `json:"ability_types"`
+		ContextLength int         `json:"context_length"`
+		MaxOutput     int         `json:"max_output"`
+		GroupID       *uint       `json:"group_id"`
+		IsEnabled     bool        `json:"is_enabled"`
+		IsFeatured    bool        `json:"is_featured"`
+		SortOrder     int         `json:"sort_order"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, "INVALID_REQUEST", err.Error())
@@ -71,11 +111,7 @@ func (h *ModelPricingHandler) Create(c *gin.Context) {
 		IsFeatured:    req.IsFeatured,
 		SortOrder:     req.SortOrder,
 	}
-	if len(req.AbilityTypes) > 0 {
-		p.SetAbilityTypes(req.AbilityTypes)
-	} else {
-		p.SetAbilityTypes([]string{"chat"})
-	}
+	p.SetAbilityTypes(parseAbilityTypes(req.AbilityTypes))
 
 	if err := h.svc.CreatePricing(p); err != nil {
 		response.InternalError(c, "创建定价失败")
@@ -99,17 +135,17 @@ func (h *ModelPricingHandler) Update(c *gin.Context) {
 	}
 
 	var req struct {
-		Provider      string   `json:"provider"`
-		DisplayName   string   `json:"display_name"`
-		PriceInput    float64  `json:"price_input"`
-		PriceOutput   float64  `json:"price_output"`
-		AbilityTypes  []string `json:"ability_types"`
-		ContextLength int      `json:"context_length"`
-		MaxOutput     int      `json:"max_output"`
-		GroupID       *uint    `json:"group_id"`
-		IsEnabled     *bool    `json:"is_enabled"`
-		IsFeatured    *bool    `json:"is_featured"`
-		SortOrder     int      `json:"sort_order"`
+		Provider      string      `json:"provider"`
+		DisplayName   string      `json:"display_name"`
+		PriceInput    float64     `json:"price_input"`
+		PriceOutput   float64     `json:"price_output"`
+		AbilityTypes  interface{} `json:"ability_types"`
+		ContextLength int         `json:"context_length"`
+		MaxOutput     int         `json:"max_output"`
+		GroupID       *uint       `json:"group_id"`
+		IsEnabled     *bool       `json:"is_enabled"`
+		IsFeatured    *bool       `json:"is_featured"`
+		SortOrder     int         `json:"sort_order"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, "INVALID_REQUEST", err.Error())
@@ -128,8 +164,8 @@ func (h *ModelPricingHandler) Update(c *gin.Context) {
 	if req.PriceOutput > 0 {
 		existing.PriceOutput = req.PriceOutput
 	}
-	if len(req.AbilityTypes) > 0 {
-		existing.SetAbilityTypes(req.AbilityTypes)
+	if req.AbilityTypes != nil {
+		existing.SetAbilityTypes(parseAbilityTypes(req.AbilityTypes))
 	}
 	if req.ContextLength > 0 {
 		existing.ContextLength = req.ContextLength

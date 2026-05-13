@@ -13,8 +13,8 @@
 | # | 问题 | 来源 | 说明 | 状态 |
 |---|------|------|------|------|
 | K01 | 微信支付 UI 字段待移除 | v1.2.0 审查 | settings 页面有微信支付表单但后端不接入，需清理 | ⬜ |
-| K02 | AES 密钥长度未校验 | v1.2.0 审查 | `crypto/aes.go` 弱密钥被静默填充 | ⬜ |
-| K03 | Dockerfile 以 root 运行 | v1.2.0 审查 | 容器逃逸风险 | ⬜ |
+| K02 | AES 密钥长度未校验 | v1.2.0 审查 | `crypto/aes.go` 弱密钥被静默填充 | ✅ 已修复 (a235b95) |
+| K03 | Dockerfile 以 root 运行 | v1.2.0 审查 | 容器逃逸风险 | ✅ 已修复 (a235b95) |
 | K04 | Release 命名与实际内容不匹配 | v1.2.0 审查 | linux-amd64 包内含 windows 二进制 | ⬜ |
 | K05 | Audit skipPaths 精确匹配 | v1.2.0 审查 | 审计日志详情页仍会记日志 | ⬜ |
 | K06 | settings_handler 忽略 error | v1.2.0 审查 | 忽略 DB error 存在数据丢失风险 | ⬜ |
@@ -29,6 +29,7 @@
 |---|------|------|------|------|
 | K11 | Redis 密码泄露于进程列表 | v1.2.0 审查 | docker-compose.yml 命令行传密码 | ⬜ |
 | K12 | AutoMigrate 约束操作非幂等 | #005 部署 | GORM AutoMigrate 对已迁移数据库重跑时，尝试 DROP 不存在的约束（`uni_model_groups_name`）导致启动失败 | ⬜ |
+| K13 | 模型定价 ability_types 类型不匹配 | 用户测试 | 编辑模型定价保存时，前端用 `<el-input>` 以字符串发送 `ability_types`（如 `"chat,completion"`），但后端 handler（`model_pricing_handler.go:48`）用 `[]string` 接收期望 JSON 数组（如 `["chat","completion"]`）。报错 `json: cannot unmarshal string into Go struct field .ability_types of type []string` | ⬜ |
 
 ---
 

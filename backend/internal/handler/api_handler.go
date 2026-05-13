@@ -1,14 +1,11 @@
 package handler
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
-	"strings"
 	"time"
 
 	"gapi-platform/internal/model"
@@ -67,13 +64,16 @@ func (h *APIHandler) ChatCompletions(c *gin.Context) {
 	// Set model in context for APIAccessLog middleware
 	c.Set("request_model", req.Model)
 
+	// Normalize messages: convert content arrays to strings (OpenAI spec compatibility)
+	normalizedMessages := normalizeMessages(req.Messages)
+
 	// Pre-check quota
 	preCheckStart := time.Now()
 	if h.billingService != nil {
 		userID := getUserID(c)
 		tokenID := getTokenID(c)
 		if userID > 0 && tokenID > 0 {
-			estimatedTokens := h.estimateChatTokens(req.Messages, req.MaxTokens)
+			estimatedTokens := h.estimateChatTokens(normalizedMessages, req.MaxTokens)
 			if err := h.billingService.PreConsumeQuota(userID, tokenID, req.Model, estimatedTokens); err != nil {
 				if err == service.ErrQuotaInsufficient {
 					c.JSON(http.StatusPaymentRequired, model.APIErrorResponse{
@@ -102,7 +102,7 @@ func (h *APIHandler) ChatCompletions(c *gin.Context) {
 
 	chatReq := &adapter.ChatRequest{
 		Model:       req.Model,
-		Messages:    req.Messages,
+		Messages:    normalizedMessages,
 		Temperature: req.Temperature,
 		MaxTokens:   req.MaxTokens,
 		TopP:        req.TopP,
@@ -354,73 +354,23 @@ func (h *APIHandler) handleStreamWithFailover(ctx context.Context, c *gin.Contex
 	})
 }
 
-func (h *APIHandler) handleStream(ctx context.Context, c *gin.Context, chatAdapter adapter.Adapter, channel *adapter.Channel, chatReq *adapter.ChatRequest, channelID uint) {
-	c.Header("Content-Type", "text/event-stream")
-	c.Header("Cache-Control", "no-cache")
-	c.Header("Connection", "keep-alive")
-	c.Header("Transfer-Encoding", "chunked")
-
-	streamCh, err := chatAdapter.ChatStream(ctx, channel, chatReq)
-	if err != nil {
-		c.JSON(http.StatusBadGateway, model.APIErrorResponse{
-			Error: &model.APIError{
-				Type:    "server_error",
-				Code:    "stream_error",
-				Message: err.Error(),
-			},
-		})
-		return
-	}
-
-	flusher, ok := c.Writer.(http.Flusher)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, model.APIErrorResponse{
-			Error: &model.APIError{
-				Type:    "server_error",
-				Code:    "internal_error",
-				Message: "streaming not supported",
-			},
-		})
-		return
-	}
-
-	c.Stream(func(w io.Writer) bool {
-		select {
-		case <-ctx.Done():
-			return false
-		case chunk, ok := <-streamCh:
-			if !ok {
-				return false
-			}
-			if chunk.Done {
-				return false
-			}
-			if chunk.Error != nil {
-				c.SSEvent("error", chunk.Error.Message)
-				flusher.Flush()
-				return false
-			}
-			data, _ := json.Marshal(chunk)
-			c.SSEvent("message", string(data))
-			flusher.Flush()
-			return true
-		}
-	})
-}
-
 func (h *APIHandler) ListModels(c *gin.Context) {
 	userID, _ := c.Get("user_id")
 	var channels []model.Channel
 	var err error
 
 	if h.modelGroupSvc != nil && userID != nil {
-		uid := userID.(uint)
-		channelIDs, err := h.modelGroupSvc.GetAvailableChannelIDsForUser(uid)
-		if err != nil || len(channelIDs) == 0 {
-			c.JSON(http.StatusOK, gin.H{"object": "list", "data": []interface{}{}})
-			return
+		uid, ok := userID.(uint)
+		if !ok || uid == 0 {
+			channels, err = h.channelService.GetActiveChannels()
+		} else {
+			channelIDs, err := h.modelGroupSvc.GetAvailableChannelIDsForUser(uid)
+			if err != nil || len(channelIDs) == 0 {
+				c.JSON(http.StatusOK, gin.H{"object": "list", "data": []interface{}{}})
+				return
+			}
+			channels, err = h.channelService.GetActiveChannelsByIDs(channelIDs)
 		}
-		channels, err = h.channelService.GetActiveChannelsByIDs(channelIDs)
 		if err != nil || len(channels) == 0 {
 			c.JSON(http.StatusOK, gin.H{"object": "list", "data": []interface{}{}})
 			return
@@ -825,62 +775,49 @@ func (h *APIHandler) embeddingsWithFailover(ctx context.Context, embedReq *adapt
 	return nil, fmt.Errorf("no available channel")
 }
 
-func (h *APIHandler) logUsage(c *gin.Context, modelName string, channelID uint, resp *http.Response) {
-	var usage struct {
-		Usage struct {
-			PromptTokens     int `json:"prompt_tokens"`
-			CompletionTokens int `json:"completion_tokens"`
-			TotalTokens      int `json:"total_tokens"`
-		} `json:"usage"`
-	}
-
-	body, _ := io.ReadAll(resp.Body)
-	if err := json.Unmarshal(body, &usage); err != nil {
-		logger.Warnf("Failed to parse usage from response: %v", err)
-		return
-	}
-
-	logger.Infof("API usage logged: model=%s channel_id=%d prompt_tokens=%d completion_tokens=%d total_tokens=%d",
-		modelName, channelID, usage.Usage.PromptTokens, usage.Usage.CompletionTokens, usage.Usage.TotalTokens)
-}
-
-func parseSSEStream(body io.Reader, handler func(string)) error {
-	scanner := bufio.NewScanner(body)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.HasPrefix(line, "data: ") {
-			data := strings.TrimPrefix(line, "data: ")
-			if data == "[DONE]" {
-				handler(data)
-				return nil
+// normalizeMessages converts OpenAI content format (string or content block array)
+// to the flat string format used internally by adapters.
+func normalizeMessages(msgs []map[string]interface{}) []map[string]string {
+	result := make([]map[string]string, 0, len(msgs))
+	for _, m := range msgs {
+		normalized := make(map[string]string)
+		for k, v := range m {
+			if k == "content" {
+				normalized[k] = extractTextContent(v)
+			} else if s, ok := v.(string); ok {
+				normalized[k] = s
+			} else {
+				normalized[k] = fmt.Sprintf("%v", v)
 			}
-			handler(data)
 		}
+		result = append(result, normalized)
 	}
-	return scanner.Err()
+	return result
 }
 
-func getChannelID(c *gin.Context) uint {
-	if id, exists := c.Get("channel_id"); exists {
-		return id.(uint)
-	}
-	return 0
-}
-
-func setChannelID(c *gin.Context, id uint) {
-	c.Set("channel_id", id)
-}
-
-func getModelName(req interface{}) string {
-	switch v := req.(type) {
-	case *model.ChatCompletionsRequest:
-		return v.Model
-	case map[string]interface{}:
-		if model, ok := v["model"].(string); ok {
-			return model
+// extractTextContent extracts text from either a string or an OpenAI content block array.
+func extractTextContent(v interface{}) string {
+	switch val := v.(type) {
+	case string:
+		return val
+	case []interface{}:
+		text := ""
+		for _, part := range val {
+			if block, ok := part.(map[string]interface{}); ok {
+				if block["type"] == "text" {
+					if t, ok := block["text"].(string); ok {
+						if text != "" {
+							text += "\n"
+						}
+						text += t
+					}
+				}
+			}
 		}
+		return text
+	default:
+		return fmt.Sprintf("%v", v)
 	}
-	return ""
 }
 
 func getUserID(c *gin.Context) uint {
@@ -895,15 +832,6 @@ func getTokenID(c *gin.Context) uint {
 		return id.(uint)
 	}
 	return 0
-}
-
-func parseIntParam(params map[string]string, key string, defaultVal int) int {
-	if val, exists := params[key]; exists {
-		if intVal, err := strconv.Atoi(val); err == nil {
-			return intVal
-		}
-	}
-	return defaultVal
 }
 
 func (h *APIHandler) estimateChatTokens(messages []map[string]string, maxTokens int) int {

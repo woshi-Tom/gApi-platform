@@ -84,4 +84,4 @@ deploy/local/
 scripts/
 
 # review report
-CODE_REVIEW_REPORT.md
+CODE_REVIEW_REPORT.md__pycache__/
