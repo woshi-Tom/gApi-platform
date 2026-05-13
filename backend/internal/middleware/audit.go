@@ -69,7 +69,10 @@ func AuditLog(auditRepo *repository.AuditRepository) gin.HandlerFunc {
 		// Read and restore request body
 		var requestBody string
 		if c.Request.Body != nil {
-			bodyBytes, _ := io.ReadAll(c.Request.Body)
+			bodyBytes, err := io.ReadAll(c.Request.Body)
+			if err != nil {
+				log.Printf("[audit] failed to read request body: %v", err)
+			}
 			requestBody = string(bodyBytes)
 			c.Request.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 		}

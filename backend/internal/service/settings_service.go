@@ -8,6 +8,7 @@ import (
 
 	"gapi-platform/internal/model"
 	"gapi-platform/internal/pkg/crypto"
+	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
 
@@ -146,7 +147,9 @@ func (s *SettingsService) GetSMTPConfig() (*SMTPConfig, error) {
 		case ConfigKeySMTPPassword:
 			if c.ConfigValue != "" {
 				decrypted, err := crypto.Decrypt(c.ConfigValue)
-				if err == nil {
+				if err != nil {
+					log.Warn().Err(err).Str("key", c.ConfigKey).Msg("failed to decrypt config value")
+				} else {
 					cfg.Password = decrypted
 				}
 			}
@@ -449,7 +452,9 @@ func (s *SettingsService) GetAlipayConfig() (*AlipayConfig, error) {
 		case ConfigKeyAlipayPrivateKey:
 			if c.ConfigValue != "" {
 				decrypted, err := crypto.Decrypt(c.ConfigValue)
-				if err == nil {
+				if err != nil {
+					log.Warn().Err(err).Str("key", c.ConfigKey).Msg("failed to decrypt config value")
+				} else {
 					cfg.PrivateKey = decrypted
 				}
 			}
@@ -458,7 +463,9 @@ func (s *SettingsService) GetAlipayConfig() (*AlipayConfig, error) {
 		case ConfigKeyAlipayEncryptKey:
 			if c.ConfigValue != "" {
 				decrypted, err := crypto.Decrypt(c.ConfigValue)
-				if err == nil {
+				if err != nil {
+					log.Warn().Err(err).Str("key", c.ConfigKey).Msg("failed to decrypt config value")
+				} else {
 					cfg.EncryptKey = decrypted
 				}
 			}
@@ -710,7 +717,9 @@ func (s *SettingsService) GetSecuritySettings() (*SecuritySettings, error) {
 		case ConfigKeyJWTSecret:
 			if c.ConfigValue != "" {
 				decrypted, err := crypto.Decrypt(c.ConfigValue)
-				if err == nil {
+				if err != nil {
+					log.Warn().Err(err).Str("key", c.ConfigKey).Msg("failed to decrypt config value")
+				} else {
 					cfg.JWTSecret = decrypted
 				}
 			}
