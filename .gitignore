@@ -68,6 +68,8 @@ test-results/
 # OpenCode (project-specific config)
 .opencode/
 .sisyphus/
+.claude
+memory
 
 # Development documentation (internal only)
 
