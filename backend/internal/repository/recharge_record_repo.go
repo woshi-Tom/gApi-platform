@@ -15,11 +15,6 @@ func NewUserRechargeRecordRepository(db *gorm.DB) *UserRechargeRecordRepository 
 	return &UserRechargeRecordRepository{db: db}
 }
 
-// WithTx returns a new repository that uses the given transaction.
-func (r *UserRechargeRecordRepository) WithTx(tx *gorm.DB) *UserRechargeRecordRepository {
-	return &UserRechargeRecordRepository{db: tx}
-}
-
 // GetActiveByUser returns active (non-expired, non-used) recharge records for a user,
 // ordered by expiration time ascending (FIFO).
 func (r *UserRechargeRecordRepository) GetActiveByUser(userID uint) ([]model.UserRechargeRecord, error) {
