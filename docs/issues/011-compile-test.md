@@ -175,7 +175,7 @@ go test ./internal/handler/... -run "TestCompletions|TestChatCompletions_Array|T
 
 ## 四、测试发现的问题
 
-### P1: 模型绑定拦截导致错误码不一致
+### P1: 模型绑定拦截导致错误码不一致 ✅ 已修复 (c11fe13)
 
 **问题**: `model/response.go` 中 `ChatCompletionsRequest.Model` 和 `CompletionsRequest.Model` 都有 `binding:"required"` tag。当请求缺少 model 字段时，`ShouldBindJSON` 在 handler 显式校验之前就返回了 `invalid_request` 错误码，而不是 handler 预期的 `missing_model`。
 
@@ -183,17 +183,11 @@ go test ./internal/handler/... -run "TestCompletions|TestChatCompletions_Array|T
 - `TestCompletions_MissingModel` — 期望 `missing_model`，实际得到 `invalid_request`
 - `TestAPIError_Format/missing_model` — 同上
 
-**建议修复**: 移除 `Model` 字段的 `binding:"required"`，让 handler 中的显式 `if req.Model == ""` 校验生效：
-
-```go
-// 改前
-Model string `json:"model" binding:"required"`
-
-// 改后
-Model string `json:"model"`  // handler 中显式校验返回 missing_model
-```
+**修复**: 移除 `Model` 字段的 `binding:"required"`，让 handler 中的显式 `if req.Model == ""` 校验生效。
 
 **涉及文件**: `backend/internal/model/response.go`（2 处：ChatCompletionsRequest + CompletionsRequest）
+
+**待验证**: 远程智能体重新执行 `go test ./...` 确认 2 个失败用例通过。
 
 ---
 
@@ -202,7 +196,7 @@ Model string `json:"model"`  // handler 中显式校验返回 missing_model
 ```
 编译结果:       ✅ 通过
 Go Vet:         ✅ 通过
-现有测试:       ⚠️ 2 个失败（见第四章 P1）
+现有测试:       ⚠️ 2 个失败（P1 已修复 c11fe13，待重新验证）
 T-K13 字符串:   ✅
 T-K13 数组:     ✅
 T-CONTENT 字符串:  ✅
@@ -220,7 +214,7 @@ T-P2-05 FIFO:      ✅
 T-P2-06 耗尽:      ✅
 T-P3-01 字符串prompt: ✅
 T-P3-02 数组prompt:   ✅
-T-P3-03 缺少model:    ❌（见 P1）
-T-P3-04 APIError格式: ❌（见 P1）
-结论:     需修复 P1 后重新验证
+T-P3-03 缺少model:    ⬜ 待验证（P1 已修复）
+T-P3-04 APIError格式: ⬜ 待验证（P1 已修复）
+结论:     P1 已修复，需远程智能体重新验证 T-P3-03/T-P3-04
 ```
