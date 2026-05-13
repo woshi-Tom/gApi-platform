@@ -40,16 +40,25 @@ func (a *ClaudeAdapter) Chat(ctx context.Context, channel *Channel, req *ChatReq
 	}
 
 	payload := map[string]interface{}{
-		"model":       req.Model,
+		"model":      req.Model,
 		"max_tokens": maxTokens,
 	}
 
-	messages := make([]map[string]string, len(req.Messages))
-	for i, m := range req.Messages {
-		messages[i] = map[string]string{
-			"role":    m["role"],
-			"content": m["content"],
+	// Extract system messages — Anthropic requires system as a top-level field, not in messages
+	var systemParts []string
+	messages := make([]map[string]string, 0, len(req.Messages))
+	for _, m := range req.Messages {
+		if m["role"] == "system" {
+			systemParts = append(systemParts, m["content"])
+		} else {
+			messages = append(messages, map[string]string{
+				"role":    m["role"],
+				"content": m["content"],
+			})
 		}
+	}
+	if len(systemParts) > 0 {
+		payload["system"] = strings.Join(systemParts, "\n")
 	}
 	payload["messages"] = messages
 
@@ -159,7 +168,213 @@ func (a *ClaudeAdapter) Chat(ctx context.Context, channel *Channel, req *ChatReq
 }
 
 func (a *ClaudeAdapter) ChatStream(ctx context.Context, channel *Channel, req *ChatRequest) (<-chan ChatStreamResponse, error) {
-	return nil, fmt.Errorf("Claude streaming not implemented yet")
+	baseURL := channel.BaseURL
+	if baseURL == "" {
+		baseURL = "https://api.anthropic.com"
+	}
+	baseURL = strings.TrimSuffix(baseURL, "/")
+	url := fmt.Sprintf("%s/v1/messages", baseURL)
+
+	maxTokens := req.MaxTokens
+	if maxTokens == 0 {
+		maxTokens = 1024
+	}
+
+	payload := map[string]interface{}{
+		"model":      req.Model,
+		"max_tokens": maxTokens,
+		"stream":     true,
+	}
+
+	// Extract system messages (same as Chat method)
+	var systemParts []string
+	messages := make([]map[string]string, 0, len(req.Messages))
+	for _, m := range req.Messages {
+		if m["role"] == "system" {
+			systemParts = append(systemParts, m["content"])
+		} else {
+			messages = append(messages, map[string]string{
+				"role":    m["role"],
+				"content": m["content"],
+			})
+		}
+	}
+	if len(systemParts) > 0 {
+		payload["system"] = strings.Join(systemParts, "\n")
+	}
+	payload["messages"] = messages
+
+	if req.Temperature > 0 {
+		payload["temperature"] = req.Temperature
+	}
+
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(jsonPayload))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("x-api-key", channel.APIKey)
+	httpReq.Header.Set("anthropic-version", "2023-06-01")
+	httpReq.Header.Set("Accept", "text/event-stream")
+
+	resp, err := DoChannelRequest(a.client, httpReq, channel)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return nil, fmt.Errorf("Claude API error: status %d, body: %s", resp.StatusCode, string(body))
+	}
+
+	ch := make(chan ChatStreamResponse, 100)
+	go a.readStream(resp.Body, ch, resp)
+	return ch, nil
+}
+
+func (a *ClaudeAdapter) readStream(body io.Reader, ch chan<- ChatStreamResponse, resp *http.Response) {
+	defer close(ch)
+	defer resp.Body.Close()
+
+	reader := NewSSEReader(body)
+	var currentEvent string
+
+	for {
+		line, err := reader.Read()
+		if err != nil {
+			if err != io.EOF {
+				ch <- ChatStreamResponse{
+					Error: &StreamError{Message: fmt.Sprintf("stream error: %v", err)},
+				}
+			}
+			return
+		}
+
+		trimmed := strings.TrimSpace(line)
+
+		// Parse event type
+		if strings.HasPrefix(trimmed, "event: ") {
+			currentEvent = strings.TrimPrefix(trimmed, "event: ")
+			continue
+		}
+
+		// Parse data
+		if strings.HasPrefix(trimmed, "data: ") {
+			data := strings.TrimPrefix(trimmed, "data: ")
+
+			switch currentEvent {
+			case "content_block_delta":
+				var event struct {
+					Delta struct {
+						Type string `json:"type"`
+						Text string `json:"text"`
+					} `json:"delta"`
+				}
+				if err := json.Unmarshal([]byte(data), &event); err == nil {
+					if event.Delta.Type == "text_delta" && event.Delta.Text != "" {
+						ch <- ChatStreamResponse{
+							Choices: []struct {
+								Index        int    `json:"index"`
+								Delta        struct {
+									Role    string `json:"role,omitempty"`
+									Content string `json:"content,omitempty"`
+								} `json:"delta"`
+								FinishReason string `json:"finish_reason,omitempty"`
+							}{
+								{
+									Delta: struct {
+										Role    string `json:"role,omitempty"`
+										Content string `json:"content,omitempty"`
+									}{
+										Content: event.Delta.Text,
+									},
+								},
+							},
+						}
+					}
+				}
+
+			case "message_delta":
+				var event struct {
+					Delta struct {
+						StopReason string `json:"stop_reason"`
+					} `json:"delta"`
+					Usage struct {
+						OutputTokens int `json:"output_tokens"`
+					} `json:"usage"`
+				}
+				if err := json.Unmarshal([]byte(data), &event); err == nil {
+					finishReason := mapStopReasonReverseStream(event.Delta.StopReason)
+					ch <- ChatStreamResponse{
+						Choices: []struct {
+							Index        int    `json:"index"`
+							Delta        struct {
+								Role    string `json:"role,omitempty"`
+								Content string `json:"content,omitempty"`
+							} `json:"delta"`
+							FinishReason string `json:"finish_reason,omitempty"`
+						}{
+							{
+								FinishReason: finishReason,
+							},
+						},
+						Usage: &struct {
+							PromptTokens     int `json:"prompt_tokens"`
+							CompletionTokens int `json:"completion_tokens"`
+							TotalTokens      int `json:"total_tokens"`
+						}{
+							CompletionTokens: event.Usage.OutputTokens,
+						},
+					}
+				}
+
+			case "message_stop":
+				ch <- ChatStreamResponse{Done: true}
+				return
+
+			case "error":
+				var errBody struct {
+					Type    string `json:"type"`
+					Message string `json:"message"`
+				}
+				if err := json.Unmarshal([]byte(data), &errBody); err == nil {
+					ch <- ChatStreamResponse{
+						Error: &StreamError{Message: errBody.Message},
+					}
+				}
+				return
+			}
+
+			// Reset event type after processing data
+			currentEvent = ""
+		}
+
+		// Empty line signals end of an SSE event block
+		if trimmed == "" {
+			currentEvent = ""
+		}
+	}
+}
+
+func mapStopReasonReverseStream(anthropicReason string) string {
+	switch anthropicReason {
+	case "end_turn":
+		return "stop"
+	case "max_tokens":
+		return "length"
+	case "stop_sequence":
+		return "stop"
+	case "tool_use":
+		return "tool_calls"
+	default:
+		return "stop"
+	}
 }
 
 func (a *ClaudeAdapter) Embeddings(ctx context.Context, channel *Channel, req *EmbeddingsRequest) (*EmbeddingsResponse, error) {

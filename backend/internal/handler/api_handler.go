@@ -153,6 +153,335 @@ func (h *APIHandler) ChatCompletions(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+// Messages handles Anthropic Messages API requests (POST /api/v1/messages)
+func (h *APIHandler) Messages(c *gin.Context) {
+	var req model.AnthropicMessagesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, model.AnthropicErrorResponse{
+			Type: "error",
+			Error: model.AnthropicErrorBody{
+				Type:    "invalid_request_error",
+				Message: err.Error(),
+			},
+		})
+		return
+	}
+
+	if req.Model == "" {
+		c.JSON(http.StatusBadRequest, model.AnthropicErrorResponse{
+			Type: "error",
+			Error: model.AnthropicErrorBody{
+				Type:    "invalid_request_error",
+				Message: "model is required",
+			},
+		})
+		return
+	}
+
+	// Set model in context for APIAccessLog middleware
+	c.Set("request_model", req.Model)
+
+	// Convert Anthropic request to internal ChatRequest
+	chatReq := anthropicToOpenAIChatRequest(&req)
+
+	// Pre-check quota
+	preCheckStart := time.Now()
+	if h.billingService != nil {
+		userID := getUserID(c)
+		tokenID := getTokenID(c)
+		if userID > 0 && tokenID > 0 {
+			estimatedTokens := h.estimateChatTokens(chatReq.Messages, req.MaxTokens)
+			if err := h.billingService.PreConsumeQuota(userID, tokenID, req.Model, estimatedTokens); err != nil {
+				if err == service.ErrQuotaInsufficient {
+					c.JSON(http.StatusPaymentRequired, model.AnthropicErrorResponse{
+						Type: "error",
+						Error: model.AnthropicErrorBody{
+							Type:    "invalid_request_error",
+							Message: "insufficient quota",
+						},
+					})
+					return
+				}
+				if err == service.ErrTokenDisabled || err == service.ErrTokenExpired {
+					c.JSON(http.StatusForbidden, model.AnthropicErrorResponse{
+						Type: "error",
+						Error: model.AnthropicErrorBody{
+							Type:    "authentication_error",
+							Message: err.Error(),
+						},
+					})
+					return
+				}
+			}
+		}
+	}
+	c.Set("pre_check_duration_ms", int(time.Since(preCheckStart).Milliseconds()))
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 120*time.Second)
+	defer cancel()
+
+	if req.Stream {
+		h.handleMessagesStream(ctx, c, chatReq)
+		return
+	}
+
+	// Non-streaming: reuse chatWithFailover
+	upstreamStart := time.Now()
+	resp, err := h.chatWithFailover(ctx, chatReq)
+	c.Set("upstream_duration_ms", int(time.Since(upstreamStart).Milliseconds()))
+	if err != nil {
+		c.JSON(http.StatusBadGateway, model.AnthropicErrorResponse{
+			Type: "error",
+			Error: model.AnthropicErrorBody{
+				Type:    "api_error",
+				Message: err.Error(),
+			},
+		})
+		return
+	}
+
+	chatResp, ok := resp.(*adapter.ChatResponse)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, model.AnthropicErrorResponse{
+			Type: "error",
+			Error: model.AnthropicErrorBody{
+				Type:    "api_error",
+				Message: "invalid response type",
+			},
+		})
+		return
+	}
+
+	// Post-consume quota
+	if h.billingService != nil {
+		userID := getUserID(c)
+		tokenID := getTokenID(c)
+		if userID > 0 && tokenID > 0 {
+			h.billingService.PostConsumeQuota(userID, tokenID, req.Model,
+				chatResp.Usage.PromptTokens, chatResp.Usage.CompletionTokens)
+			h.billingService.LogUsage(&service.UsageRecord{
+				UserID:           userID,
+				TokenID:          tokenID,
+				Model:            req.Model,
+				PromptTokens:     chatResp.Usage.PromptTokens,
+				CompletionTokens: chatResp.Usage.CompletionTokens,
+				TotalTokens:      chatResp.Usage.TotalTokens,
+			})
+		}
+	}
+
+	c.JSON(http.StatusOK, openAIToAnthropicResponse(chatResp))
+}
+
+// handleMessagesStream handles streaming for Anthropic Messages API.
+func (h *APIHandler) handleMessagesStream(ctx context.Context, c *gin.Context, chatReq *adapter.ChatRequest) {
+	attemptedChannels := make(map[uint]bool)
+
+	for attempt := 0; attempt < maxChannelRetries; attempt++ {
+		selectedChannel, err := h.channelService.SelectChannel(chatReq.Model)
+		if err != nil {
+			c.JSON(http.StatusServiceUnavailable, model.AnthropicErrorResponse{
+				Type: "error",
+				Error: model.AnthropicErrorBody{
+					Type:    "api_error",
+					Message: "no available channel for model: " + chatReq.Model,
+				},
+			})
+			return
+		}
+
+		if attemptedChannels[selectedChannel.ID] {
+			continue
+		}
+		attemptedChannels[selectedChannel.ID] = true
+
+		apiKey, err := crypto.Decrypt(selectedChannel.APIKeyEncrypted)
+		if err != nil {
+			logger.Errorf("failed to decrypt API key for channel %d: %v", selectedChannel.ID, err)
+			continue
+		}
+
+		channel := &adapter.Channel{
+			ID:           selectedChannel.ID,
+			Type:         selectedChannel.Type,
+			Name:         selectedChannel.Name,
+			BaseURL:      selectedChannel.BaseURL,
+			APIKey:       apiKey,
+			Models:       selectedChannel.GetModels(),
+			ModelMapping: selectedChannel.GetModelMapping(),
+			Timeout:      120,
+		}
+
+		chatAdapter, err := adapter.GetAdapter(selectedChannel.Type)
+		if err != nil {
+			continue
+		}
+
+		streamCh, err := chatAdapter.ChatStream(ctx, channel, chatReq)
+		if err != nil {
+			h.channelService.IncrementFailureCount(selectedChannel.ID)
+			continue
+		}
+
+		// Channel works, set SSE headers
+		c.Header("Content-Type", "text/event-stream")
+		c.Header("Cache-Control", "no-cache")
+		c.Header("Connection", "keep-alive")
+		c.Header("Transfer-Encoding", "chunked")
+
+		flusher, ok := c.Writer.(http.Flusher)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, model.AnthropicErrorResponse{
+				Type: "error",
+				Error: model.AnthropicErrorBody{
+					Type:    "api_error",
+					Message: "streaming not supported",
+				},
+			})
+			return
+		}
+
+		// Emit Anthropic SSE: message_start
+		msgID := fmt.Sprintf("msg_%016x", time.Now().UnixNano())
+		estimatedInput := h.estimateChatTokens(chatReq.Messages, 0)
+		writeAnthropicSSEvent(c.Writer, "message_start", model.AnthropicStreamEvent{
+			Type: "message_start",
+			Message: &model.AnthropicMessagesResponse{
+				ID:      msgID,
+				Type:    "message",
+				Role:    "assistant",
+				Content: []model.AnthropicResponseContent{},
+				Model:   chatReq.Model,
+				Usage:   model.AnthropicUsage{InputTokens: estimatedInput},
+			},
+		})
+		flusher.Flush()
+
+		// Emit Anthropic SSE: content_block_start
+		writeAnthropicSSEvent(c.Writer, "content_block_start", model.AnthropicStreamEvent{
+			Type:  "content_block_start",
+			Index: 0,
+			ContentBlock: &model.AnthropicResponseContent{
+				Type: "text",
+				Text: "",
+			},
+		})
+		flusher.Flush()
+
+		// Track usage
+		var (
+			upstreamPromptTokens     int
+			upstreamCompletionTokens int
+			hasUpstreamUsage         bool
+			completionContentLen     int
+		)
+
+		c.Stream(func(w io.Writer) bool {
+			select {
+			case <-ctx.Done():
+				return false
+			case chunk, ok := <-streamCh:
+				if !ok {
+					return false
+				}
+				if chunk.Done {
+					if chunk.Usage != nil {
+						upstreamPromptTokens = chunk.Usage.PromptTokens
+						upstreamCompletionTokens = chunk.Usage.CompletionTokens
+						hasUpstreamUsage = true
+					}
+					return false
+				}
+				if chunk.Error != nil {
+					writeAnthropicSSEvent(w, "error", model.AnthropicErrorBody{
+						Type:    "api_error",
+						Message: chunk.Error.Message,
+					})
+					flusher.Flush()
+					return false
+				}
+				for _, choice := range chunk.Choices {
+					if choice.Delta.Content != "" {
+						completionContentLen += len(choice.Delta.Content)
+						writeAnthropicSSEvent(w, "content_block_delta", model.AnthropicStreamEvent{
+							Type:  "content_block_delta",
+							Index: 0,
+							Delta: &model.AnthropicStreamDelta{
+								Type: "text_delta",
+								Text: choice.Delta.Content,
+							},
+						})
+						flusher.Flush()
+					}
+					if choice.FinishReason != "" {
+						stopReason := mapStopReason(choice.FinishReason)
+						writeAnthropicSSEvent(w, "content_block_stop", model.AnthropicStreamEvent{
+							Type:  "content_block_stop",
+							Index: 0,
+						})
+						outputTokens := upstreamCompletionTokens
+						if !hasUpstreamUsage {
+							outputTokens = completionContentLen/4 + 1
+						}
+						writeAnthropicSSEvent(w, "message_delta", model.AnthropicStreamEvent{
+							Type: "message_delta",
+							Delta: &model.AnthropicStreamDelta{
+								Type:       "message_delta",
+								StopReason: &stopReason,
+							},
+							Usage: &model.AnthropicUsage{
+								OutputTokens: outputTokens,
+							},
+						})
+						flusher.Flush()
+					}
+				}
+				return true
+			}
+		})
+
+		// Emit message_stop
+		writeAnthropicSSEvent(c.Writer, "message_stop", model.AnthropicStreamEvent{Type: "message_stop"})
+
+		// Post-consume quota after stream completes
+		if h.billingService != nil {
+			userID := getUserID(c)
+			tokenID := getTokenID(c)
+			if userID > 0 && tokenID > 0 {
+				var promptTokens, completionTokens int
+				if hasUpstreamUsage {
+					promptTokens = upstreamPromptTokens
+					completionTokens = upstreamCompletionTokens
+				} else {
+					promptTokens = h.estimateChatTokens(chatReq.Messages, 0)
+					completionTokens = completionContentLen/4 + 1
+				}
+				h.billingService.PostConsumeQuota(userID, tokenID, chatReq.Model, promptTokens, completionTokens)
+				h.billingService.LogUsage(&service.UsageRecord{
+					UserID:           userID,
+					TokenID:          tokenID,
+					ChannelID:        selectedChannel.ID,
+					Model:            chatReq.Model,
+					PromptTokens:     promptTokens,
+					CompletionTokens: completionTokens,
+					TotalTokens:      promptTokens + completionTokens,
+				})
+			}
+		}
+
+		h.channelService.ResetFailureCount(selectedChannel.ID)
+		return
+	}
+
+	c.JSON(http.StatusBadGateway, model.AnthropicErrorResponse{
+		Type: "error",
+		Error: model.AnthropicErrorBody{
+			Type:    "api_error",
+			Message: "all channels failed after retries",
+		},
+	})
+}
+
 func (h *APIHandler) chatWithFailover(ctx context.Context, chatReq *adapter.ChatRequest) (interface{}, error) {
 	var lastErr error
 	attemptedChannels := make(map[uint]bool)

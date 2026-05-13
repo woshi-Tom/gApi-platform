@@ -56,35 +56,42 @@ func JWTAuth(authService *service.AuthService) gin.HandlerFunc {
 // TokenAuth creates an API token authentication middleware (for OpenAI-compatible endpoints)
 func TokenAuth(tokenService *service.TokenService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get token from Authorization header
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, model.APIErrorResponse{
-				Error: &model.APIError{
-					Type:    "invalid_request_error",
-					Code:    "invalid_api_key",
-					Message: "Missing API key in Authorization header",
-				},
-			})
-			c.Abort()
-			return
+		var tokenKey string
+
+		// Try x-api-key header first (Anthropic API style)
+		if apiKey := c.GetHeader("x-api-key"); apiKey != "" {
+			tokenKey = apiKey
 		}
 
-		// Check Bearer prefix
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, model.APIErrorResponse{
-				Error: &model.APIError{
-					Type:    "invalid_request_error",
-					Code:    "invalid_api_key",
-					Message: "Invalid API key format",
-				},
-			})
-			c.Abort()
-			return
-		}
+		// Fall back to Authorization: Bearer header (OpenAI style)
+		if tokenKey == "" {
+			authHeader := c.GetHeader("Authorization")
+			if authHeader == "" {
+				c.JSON(http.StatusUnauthorized, model.APIErrorResponse{
+					Error: &model.APIError{
+						Type:    "invalid_request_error",
+						Code:    "invalid_api_key",
+						Message: "Missing API key in Authorization header",
+					},
+				})
+				c.Abort()
+				return
+			}
 
-		tokenKey := parts[1]
+			parts := strings.SplitN(authHeader, " ", 2)
+			if len(parts) != 2 || parts[0] != "Bearer" {
+				c.JSON(http.StatusUnauthorized, model.APIErrorResponse{
+					Error: &model.APIError{
+						Type:    "invalid_request_error",
+						Code:    "invalid_api_key",
+						Message: "Invalid API key format",
+					},
+				})
+				c.Abort()
+				return
+			}
+			tokenKey = parts[1]
+		}
 
 		// Validate API token
 		token, err := tokenService.Validate(tokenKey)
@@ -207,7 +214,7 @@ func isIPAllowed(clientIP string, allowedIPs []string) bool {
 // downstream handlers can read it again.
 func extractModelFromRequest(c *gin.Context) string {
 	path := c.Request.URL.Path
-	if !strings.Contains(path, "/completions") && !strings.Contains(path, "/embeddings") {
+	if !strings.Contains(path, "/completions") && !strings.Contains(path, "/embeddings") && !strings.Contains(path, "/messages") {
 		return ""
 	}
 
