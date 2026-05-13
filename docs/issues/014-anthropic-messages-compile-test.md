@@ -86,19 +86,21 @@ go test ./... -count=1 -timeout 120s
 
 ## 验证完成后
 
-- [ ] `go build ./...` 通过
-- [ ] `go vet ./...` 无警告
-- [ ] `go test ./... -count=1 -timeout 120s` 全部通过
-- [ ] 将结果更新到本文档下方的 **测试报告** 章节
+- [x] `go build ./...` 通过
+- [x] `go vet ./...` 无警告
+- [x] `go test ./... -count=1 -timeout 120s` 全部通过
+- [x] 将结果更新到本文档下方的 **测试报告** 章节
 
 ---
 
 ## 测试报告
 
-> 由远程编译测试 agent 填写
+> 测试时间: 2026-05-13
+> 测试人: 远程编译测试 agent
 
 | 检查项 | 结果 | 说明 |
 |--------|------|------|
-| `go build ./...` | ⬜ 待测试 | |
-| `go vet ./...` | ⬜ 待测试 | |
-| `go test ./...` | ⬜ 待测试 | |
+| `go build ./...` | ✅ 通过 | 无编译错误 |
+| `go vet ./...` | ✅ 通过 | 无警告 |
+| `go test ./...` | ✅ 全部通过 | handler 1.402s / middleware 0.023s / model 0.018s / repository 0.171s / service 0.034s |
+| 新增 normalize 测试 | ✅ 4/4 通过 | `TestNormalizeMessages_StringContent`, `_ArrayContent`, `_MixedMessages`, `_EmptyInput` |
