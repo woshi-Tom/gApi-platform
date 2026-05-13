@@ -1,7 +1,7 @@
 # gAPI Platform
 
-**版本**: 1.2.0  
-**日期**: 2026-05-12  
+**版本**: 1.3.0
+**日期**: 2026-05-14
 **状态**: 已发布
 
 > ⚠️ **免责声明**: 本项目仅供学习交流使用，禁止用于任何非法用途。使用者需自行承担一切风险和责任。
@@ -15,13 +15,15 @@
 gAPI Platform 是一个类似 OneAPI/NewAPI 的 API 代理平台，专为学习和研究 AI API 集成技术而设计。
 
 **主要功能**：
-- 🤖 多渠道管理 - 支持 OpenAI、Claude、DeepSeek、NVIDIA 等多种 AI API
+- 🤖 多渠道管理 - 支持 OpenAI、Claude、DeepSeek、NVIDIA、Gemini、Azure 等多种 AI API
 - 🔄 智能负载均衡 - 多渠道自动负载均衡和故障转移
 - 🌐 SOCKS5/HTTP 代理支持 - 突破网络限制访问海外 API
 - 💳 用户体系 - VIP 会员、套餐充值、支付宝支付
 - 🎁 兑换码系统 - 兑换码生成、兑换、禁用、批次管理
 - 📊 模型管理 - 模型分组、定价、用户组权限控制
 - 🔒 安全设计 - API Key 加密存储、滑块验证码、完整权限控制
+- 🔌 Anthropic Messages API 兼容 - 支持 `/v1/messages` 端点，可直接对接 Claude SDK
+- ⚡ SSE 流式优化 - 首包延迟修复，保留 channel failover 能力
 
 ---
 
@@ -126,8 +128,8 @@ gapi-platform/
 ```bash
 # 在 main 分支上打 tag 并推送
 git checkout main
-git tag v1.2.0
-git push origin v1.2.0
+git tag v1.3.0
+git push origin v1.3.0
 ```
 
 ### 下载产物

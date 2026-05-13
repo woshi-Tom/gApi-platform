@@ -1,9 +1,9 @@
 # gAPI Platform - Development Notes & Implementation Checklist
 
-> Last Updated: 2026-05-12
+> Last Updated: 2026-05-14
 > Purpose: Capture all detail issues and pending items for development session
 >
-> ⚠️ 距上次更新已超过 1 个月。v1.2.0 涉及注册配置、审计日志、设置页等变更，建议通读全文确认环境变量、接口清单等内容是否仍与当前代码一致。
+> API 接口清单（第 3 节）已于 2026-05-14 与 router.go 逐行核对。
 
 ---
 
@@ -154,82 +154,153 @@
 
 ## 3. API Implementation Details
 
+> 状态标记：✅ 已实现 | ⬜ 未实现（按设计规划）
+> 最后核对日期: 2026-05-14（与 router.go 逐行比对）
+
 ### 3.1 Northbound API (User-Facing)
 
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/api/v1/user/register` | POST | No | User registration |
-| `/api/v1/user/login` | POST | No | User login |
-| `/api/v1/user/profile` | GET | JWT | Get profile |
-| `/api/v1/user/profile` | PUT | JWT | Update profile |
-| `/api/v1/user/change-password` | POST | JWT | Change password |
-| `/api/v1/tokens` | GET | JWT | List tokens |
-| `/api/v1/tokens` | POST | JWT | Create token |
-| `/api/v1/tokens/:id` | DELETE | JWT | Delete token |
-| `/api/v1/products` | GET | No | List products |
-| `/api/v1/products/:id` | GET | No | Product detail |
-| `/api/v1/orders` | GET | JWT | List orders |
-| `/api/v1/orders` | POST | JWT | Create order |
-| `/api/v1/orders/:id` | GET | JWT | Order detail |
-| `/api/v1/payment/alipay` | POST | JWT | Alipay payment |
-| `/api/v1/payment/wechat` | POST | JWT | WeChat payment |
-| `/api/v1/payment/callback/alipay` | POST | No | Alipay webhook |
-| `/api/v1/payment/callback/wechat` | POST | No | WeChat webhook |
-| `/api/v1/vip/status` | GET | JWT | VIP status |
-| `/api/v1/quota` | GET | JWT | Quota info |
-| `/api/v1/chat/completions` | POST | Token | OpenAI-compatible |
-| `/api/v1/models` | GET | Token | List models |
-| `/api/v1/embeddings` | POST | Token | Embeddings API |
+| Endpoint | Method | Auth | Description | Status |
+|----------|--------|------|-------------|--------|
+| `/api/v1/user/register` | POST | No | User registration | ✅ |
+| `/api/v1/user/login` | POST | No | User login | ✅ |
+| `/api/v1/user/profile` | GET | JWT | Get profile | ✅ |
+| `/api/v1/user/profile` | PUT | JWT | Update profile | ✅ |
+| `/api/v1/user/change-password` | POST | JWT | Change password | ✅ |
+| `/api/v1/tokens` | GET | JWT | List tokens | ✅ |
+| `/api/v1/tokens` | POST | JWT | Create token | ✅ |
+| `/api/v1/tokens/:id` | DELETE | JWT | Delete token | ✅ |
+| `/api/v1/products` | GET | No | List products | ✅ |
+| `/api/v1/products/:id` | GET | No | Product detail | ✅ |
+| `/api/v1/orders` | GET | JWT | List orders | ✅ |
+| `/api/v1/orders` | POST | JWT | Create order | ✅ |
+| `/api/v1/orders/:id` | GET | JWT | Order detail | ✅ |
+| `/api/v1/payment/alipay` | POST | JWT | Alipay payment | ✅ |
+| `/api/v1/payment/wechat` | POST | JWT | WeChat payment | ⬜ |
+| `/api/v1/payment/callback/alipay` | POST | No | Alipay webhook | ✅ |
+| `/api/v1/payment/callback/wechat` | POST | No | WeChat webhook | ⬜ |
+| `/api/v1/vip/status` | GET | JWT | VIP status | ✅（实际路径 `/user/vip/status`） |
+| `/api/v1/quota` | GET | JWT | Quota info | ✅（实际路径 `/user/quota`） |
+| `/api/v1/chat/completions` | POST | Token | OpenAI Chat Completions | ✅ |
+| `/api/v1/models` | GET | Token | List models | ✅ |
+| `/api/v1/embeddings` | POST | Token | Embeddings API | ✅ |
+| `/api/v1/completions` | POST | Token | Text Completions | ✅ v1.3.0 |
+| `/api/v1/messages` | POST | Token | Anthropic Messages API | ✅ v1.3.0 |
+| `/api/v1/user/stats/usage` | GET | JWT | Usage stats | ✅ v1.2.0 |
+| `/api/v1/user/activities` | GET | JWT | Recent activities | ✅ v1.2.0 |
+| `/api/v1/orders/no/:order_no` | GET | JWT | Order by order number | ✅ |
+| `/api/v1/payment/alipay/query/:order_no` | GET | JWT | Query Alipay order | ✅ |
+| `/api/v1/payment/alipay/cancel/:order_no` | POST | JWT | Cancel Alipay order | ✅ |
+| `/api/v1/payment/refund/:order_no` | POST | JWT | Refund order | ✅ |
+| `/api/v1/payment/config` | GET | JWT | Payment config | ✅ |
+| `/api/v1/redemption/redeem` | POST | JWT | Redeem code | ✅ v1.0.0 |
+| `/api/v1/redemption/history` | GET | JWT | Redemption history | ✅ v1.0.0 |
+| `/api/v1/logs` | GET | JWT | User API access logs | ✅ |
+| `/api/v1/email/send-code` | POST | No | Send verification code | ✅ v1.0.0 |
+| `/api/v1/email/verify-code` | POST | No | Verify code | ✅ v1.0.0 |
+| `/api/v1/auth/forgot-password` | POST | No | Request password reset | ✅ v1.0.0 |
+| `/api/v1/auth/reset-password` | GET | No | Verify reset token | ✅ v1.0.0 |
+| `/api/v1/auth/reset-password` | POST | No | Reset password | ✅ v1.0.0 |
+| `/api/v1/captcha/generate` | GET | No | Generate captcha | ✅ v1.0.0 |
+| `/api/v1/captcha/verify` | POST | No | Verify captcha | ✅ v1.0.0 |
+| `/api/v1/captcha/validate` | GET | No | Validate captcha token | ✅ v1.0.0 |
+| `/api/v1/init/status` | GET | No | Init status | ✅ |
+| `/api/v1/init/test-db` | POST | No | Test database | ✅ |
+| `/api/v1/init/test-db-with-config` | POST | No | Test DB with config | ✅ |
+| `/api/v1/init/init-db` | POST | No | Initialize database | ✅ |
+| `/api/v1/init/test-redis` | POST | No | Test Redis | ✅ |
+| `/api/v1/init/create-admin` | POST | No | Create admin | ✅ |
 
 ### 3.2 Southbound API (Internal)
 
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/api/v1/internal/channels` | GET | Internal | List channels |
-| `/api/v1/internal/channels` | POST | Internal | Create channel |
-| `/api/v1/internal/channels/:id` | PUT | Internal | Update channel |
-| `/api/v1/internal/channels/:id` | DELETE | Internal | Delete channel |
-| `/api/v1/internal/channels/:id/test` | POST | Internal | Test channel |
-| `/api/v1/internal/models` | GET | Internal | List models |
-| `/api/v1/internal/models/sync` | POST | Internal | Sync models |
-| `/api/v1/internal/health` | GET | Internal | Health check |
-| `/api/v1/internal/balance/:channel_id` | GET | Internal | Get balance |
+> 需要 AdminSecret 认证。`internal/channels` 实际挂在 router v1 group 下。
 
-### 3.3 Admin API (Intranet Only)
+| Endpoint | Method | Auth | Description | Status |
+|----------|--------|------|-------------|--------|
+| `/api/v1/internal/channels` | GET | Internal | List channels | ✅ |
+| `/api/v1/internal/channels` | POST | Internal | Create channel | ✅ |
+| `/api/v1/internal/channels/:id` | PUT | Internal | Update channel | ✅ |
+| `/api/v1/internal/channels/:id` | DELETE | Internal | Delete channel | ✅ |
+| `/api/v1/internal/channels/:id/test` | POST | Internal | Test channel | ✅ |
+| `/api/v1/internal/models` | GET | Internal | List models | ⬜ |
+| `/api/v1/internal/models/sync` | POST | Internal | Sync models | ⬜ |
+| `/api/v1/internal/health` | GET | Internal | Health check | ✅ |
+| `/api/v1/internal/balance/:channel_id` | GET | Internal | Get balance | ⬜ |
 
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/api/v1/admin/login` | POST | No | Admin login |
-| `/api/v1/admin/users` | GET | Admin | User list |
-| `/api/v1/admin/users/:id` | PUT | Admin | Update user |
-| `/api/v1/admin/users/:id/quota` | POST | Admin | Adjust quota |
-| `/api/v1/admin/tokens` | GET | Admin | Token list |
-| `/api/v1/admin/tokens/:id` | DELETE | Admin | Revoke token |
-| `/api/v1/admin/products` | GET | Admin | Product list |
-| `/api/v1/admin/products` | POST | Admin | Create product |
-| `/api/v1/admin/products/:id` | PUT | Admin | Update product |
-| `/api/v1/admin/products/:id/publish` | POST | Admin | Publish product |
-| `/api/v1/admin/products/:id/unpublish` | POST | Admin | Unpublish product |
-| `/api/v1/admin/orders` | GET | Admin | Order list |
-| `/api/v1/admin/orders/:id` | GET | Admin | Order detail |
-| `/api/v1/admin/orders/:id/process` | POST | Admin | Process order |
-| `/api/v1/admin/channels` | GET | Admin | Channel list |
-| `/api/v1/admin/channels` | POST | Admin | Create channel |
-| `/api/v1/admin/channels/:id` | PUT | Admin | Update channel |
-| `/api/v1/admin/channels/:id/test` | POST | Admin | Test channel |
-| `/api/v1/admin/channels/batch-import` | POST | Admin | Batch import |
-| `/api/v1/admin/vip-subscriptions` | GET | Admin | VIP list |
-| `/api/v1/admin/vip-subscriptions/:id` | PUT | Admin | Update VIP |
-| `/api/v1/admin/logs/operation` | GET | Admin | Operation logs |
-| `/api/v1/admin/logs/api` | GET | Admin | API logs |
-| `/api/v1/admin/logs/login` | GET | Admin | Login logs |
-| `/api/v1/admin/logs/payment` | GET | Admin | Payment logs |
-| `/api/v1/admin/logs/stats` | GET | Admin | Log statistics |
-| `/api/v1/admin/settings` | GET | Admin | System settings |
-| `/api/v1/admin/settings` | PUT | Admin | Update settings |
-| `/api/v1/admin/stats/overview` | GET | Admin | Dashboard stats |
-| `/api/v1/admin/stats/trends` | GET | Admin | API request trends for charts |
-| `/api/v1/user/stats/usage` | GET | JWT | User usage stats for charts |
+### 3.3 Admin API
+
+> 所有 Admin 端点需要 JWT + X-Admin-Secret 双重认证（login 除外）。
+
+| Endpoint | Method | Description | Status |
+|----------|--------|-------------|--------|
+| `/api/v1/admin/login` | POST | Admin login | ✅ |
+| `/api/v1/admin/users` | GET | User list | ✅ |
+| `/api/v1/admin/users/:id` | PUT | Update user | ✅ |
+| `/api/v1/admin/users/:id/quota` | POST | Adjust quota | ⬜ |
+| `/api/v1/admin/tokens` | GET | Token list | ⬜ |
+| `/api/v1/admin/tokens/:id` | DELETE | Revoke token | ⬜ |
+| `/api/v1/admin/products` | GET | Product list | ✅ |
+| `/api/v1/admin/products` | POST | Create product | ✅ |
+| `/api/v1/admin/products/:id` | PUT | Update product | ✅ |
+| `/api/v1/admin/products/:id` | DELETE | Delete product | ✅ |
+| `/api/v1/admin/orders` | GET | Order list | ✅ |
+| `/api/v1/admin/orders/:id` | GET | Order detail | ⬜ |
+| `/api/v1/admin/orders/:id/process` | POST | Process order | ⬜ |
+| `/api/v1/admin/channels` | GET | Channel list | ✅ |
+| `/api/v1/admin/channels` | POST | Create channel | ✅ |
+| `/api/v1/admin/channels/:id` | PUT | Update channel | ✅ |
+| `/api/v1/admin/channels/:id` | DELETE | Delete channel | ✅ |
+| `/api/v1/admin/channels/:id/test` | POST | Test channel | ✅ |
+| `/api/v1/admin/channels/batch-import` | POST | Batch import | ✅ |
+| `/api/v1/admin/channels/:id/health` | POST | Trigger health check | ✅ v1.1.0 |
+| `/api/v1/admin/channels/:id/test-history` | GET | Test history | ✅ v1.1.0 |
+| `/api/v1/admin/channels/import` | POST | Batch import (alias) | ✅ |
+| `/api/v1/admin/channels/:id/enable` | POST | Enable channel | ✅ |
+| `/api/v1/admin/channels/:id/disable` | POST | Disable channel | ✅ |
+| `/api/v1/admin/vip-subscriptions` | GET | VIP list | ⬜ |
+| `/api/v1/admin/vip-subscriptions/:id` | PUT | Update VIP | ⬜ |
+| `/api/v1/admin/logs/operation` | GET | Operation logs | ✅ |
+| `/api/v1/admin/logs/operation/:id` | GET | Audit log detail | ✅ |
+| `/api/v1/admin/logs/api` | GET | API logs | ⬜ |
+| `/api/v1/admin/logs/login` | GET | Login logs | ✅ |
+| `/api/v1/admin/logs/payment` | GET | Payment logs | ⬜ |
+| `/api/v1/admin/logs/stats` | GET | Log statistics | ⬜ |
+| `/api/v1/admin/stats/overview` | GET | Dashboard stats | ✅ |
+| `/api/v1/admin/stats/trends` | GET | API request trends | ✅ |
+| `/api/v1/admin/stats/user-overview` | GET | User stats overview | ✅ v1.2.0 |
+| `/api/v1/admin/stats/user-ranking` | GET | User ranking | ✅ v1.2.0 |
+| `/api/v1/admin/stats/user-list` | GET | User list for stats | ✅ v1.2.0 |
+| `/api/v1/admin/stats/abnormal-users` | GET | Abnormal users | ✅ v1.2.0 |
+| `/api/v1/admin/stats/user/:id/detail` | GET | User detail stats | ✅ v1.2.0 |
+| `/api/v1/admin/change-password` | POST | Change admin password | ✅ |
+| `/api/v1/admin/settings/email` | GET/PUT | SMTP config | ✅ v1.2.0 |
+| `/api/v1/admin/settings/email/test` | POST | Test SMTP | ✅ v1.2.0 |
+| `/api/v1/admin/settings/register` | GET/PUT | Registration settings | ✅ v1.2.0 |
+| `/api/v1/admin/settings/payment` | GET/PUT | Payment settings | ✅ v1.2.0 |
+| `/api/v1/admin/settings/general` | GET/PUT | General settings | ✅ v1.2.0 |
+| `/api/v1/admin/settings/rate-limit` | GET/PUT | Rate limit settings | ✅ v1.2.0 |
+| `/api/v1/admin/settings/security` | GET/PUT | Security settings | ✅ v1.2.0 |
+| `/api/v1/admin/redemption/codes` | GET | List codes | ✅ v1.0.0 |
+| `/api/v1/admin/redemption/codes` | POST | Create codes | ✅ v1.0.0 |
+| `/api/v1/admin/redemption/codes/:id/disable` | POST | Disable code | ✅ v1.0.0 |
+| `/api/v1/admin/redemption/codes/:id/usage` | GET | Code usage | ✅ v1.0.0 |
+| `/api/v1/admin/model-groups` | GET | List model groups | ✅ v1.2.0 |
+| `/api/v1/admin/model-groups/all` | GET | List all groups | ✅ v1.2.0 |
+| `/api/v1/admin/model-groups` | POST | Create group | ✅ v1.2.0 |
+| `/api/v1/admin/model-groups/:id` | PUT | Update group | ✅ v1.2.0 |
+| `/api/v1/admin/model-groups/:id` | DELETE | Delete group | ✅ v1.2.0 |
+| `/api/v1/admin/model-groups/:id/channels` | GET | Group channels | ✅ v1.2.0 |
+| `/api/v1/admin/model-groups/:id/channels` | POST | Add channel | ✅ v1.2.0 |
+| `/api/v1/admin/model-groups/:id/channels/:cid` | DELETE | Remove channel | ✅ v1.2.0 |
+| `/api/v1/admin/model-pricing` | GET | List pricing | ✅ v1.2.0 |
+| `/api/v1/admin/model-pricing/all` | GET | List all pricing | ✅ v1.2.0 |
+| `/api/v1/admin/model-pricing/model/:model` | GET | Pricing by model | ✅ v1.2.0 |
+| `/api/v1/admin/model-pricing` | POST | Create pricing | ✅ v1.2.0 |
+| `/api/v1/admin/model-pricing/:id` | PUT | Update pricing | ✅ v1.2.0 |
+| `/api/v1/admin/model-pricing/:id` | DELETE | Delete pricing | ✅ v1.2.0 |
+| `/api/v1/admin/users/:id/groups` | GET | User groups | ✅ v1.2.0 |
+| `/api/v1/admin/users/:id/groups` | PUT | Set user groups | ✅ v1.2.0 |
+
+> **Settings 端点说明**: 原始设计为单一 `/api/v1/admin/settings` GET/PUT，v1.2.0 拆分为上述 7 个独立粒度端点。旧版单一端点不再存在。
 
 ### 3.4 Response Formats
 
@@ -470,66 +541,32 @@ PENDING → (payment success) → PAID → (admin process) → COMPLETED
 
 ## 10. Implementation Checklist
 
-### 10.1 Backend (Go)
+> 全部已完成（v1.0.0 ~ v1.3.0）。仅列出未完成项。
 
-- [ ] Project initialization (go.mod, main.go)
-- [ ] Config loading (environment variables)
-- [ ] Database connection (GORM)
-- [ ] Redis connection
-- [ ] RabbitMQ connection
-- [ ] Logging setup (zap + rotation)
-- [ ] JWT middleware
-- [ ] Rate limiting middleware
-- [ ] Admin auth middleware
-- [ ] User CRUD
-- [ ] Token management
-- [ ] Channel CRUD
-- [ ] Model sync
-- [ ] Product CRUD
-- [ ] Order management
-- [ ] Payment integration (Alipay, WeChat)
-- [ ] VIP subscription
-- [ ] Quota management
-- [ ] API proxy (Chat, Embeddings)
-- [ ] Channel testing
-- [ ] Health check worker
-- [ ] Operation logging
-- [ ] API logging
-- [ ] Login logging
-- [ ] Admin APIs
-- [ ] First-run initialization
+### 10.1 未完成
 
-### 10.2 Frontend (Vue 3)
+- [ ] 支付集成 — 微信支付（当前决定：暂不接入）
+- [ ] Phase 2/3/4 测试补充（`api-key-lifecycle-test-plan.md`，待评审）
+- [ ] 压测自动化断言（`test_api.py` 脚本存在但无自动化断言）
 
-- [ ] Project initialization
-- [ ] Vue Router setup
-- [ ] Pinia store
-- [ ] Element Plus integration
-- [ ] Login page (user)
-- [ ] Register page
-- [ ] Dashboard (user)
-- [ ] Token management page
-- [ ] Product list page
-- [ ] Order history page
-- [ ] VIP purchase page
-- [ ] Profile page
-- [ ] Admin login page
-- [ ] Admin dashboard
-- [ ] User management (admin)
-- [ ] Product management (admin)
-- [ ] Channel management (admin)
-- [ ] Order management (admin)
-- [ ] Log viewer (admin)
-- [ ] Settings page (admin)
-- [ ] Initialization wizard
+### 10.2 已完成摘要
 
-### 10.3 Testing
+<details>
+<summary>后端 (Go)</summary>
 
-- [ ] Unit tests (services)
-- [ ] Integration tests (API endpoints)
-- [ ] E2E tests (critical flows)
-- [ ] Load testing (10K concurrent users)
-- [ ] Security testing (penetration)
+- ✅ Config / DB / Redis / RabbitMQ / JWT / Rate Limit / Admin Auth
+- ✅ User CRUD / Token / Channel / Product / Order / Payment (Alipay)
+- ✅ VIP / Quota / API Proxy / Health Check / Logging / Init Wizard
+- ✅ Anthropic Messages API / SSE Streaming / Provider Adapters (6)
+- ✅ 兑换码 / 模型管理 / 邮箱验证 / 滑块验证码 / 幂等性
+</details>
+
+<details>
+<summary>前端 (Vue 3)</summary>
+
+- ✅ 用户端：注册/登录/Profile/Token/商品/订单/VIP/日志/Dashboard
+- ✅ 管理后台：用户/渠道/商品/订单/日志/设置/兑换码/模型管理/Dashboard
+</details>
 
 ---
 
@@ -562,218 +599,41 @@ PENDING → (payment success) → PAID → (admin process) → COMPLETED
 
 ## 12. Project Status
 
-### 12.1 Completed Features (2026-03-27)
-- ✅ Go 后端核心服务 (端口 8080)
-- ✅ Vue 3 管理后台 (端口 5173/5174)
-- ✅ PostgreSQL / Redis / RabbitMQ Docker 容器
-- ✅ 用户注册/登录/Token 管理
-- ✅ 渠道管理与健康检查
-- ✅ 商品管理 (VIP套餐/充值套餐)
-- ✅ 操作日志 (审计中间件 + 登录日志)
-- ✅ 登录日志 API (`/api/v1/admin/logs/login`)
-- ✅ 管理后台布局修复 (无刷新重复)
-- ✅ 限流功能 (RPM/TPM 限制)
-- ✅ 局域网访问支持 (绑定 0.0.0.0)
+### 12.1 版本历史
+
+| 版本 | 日期 | 关键变更 |
+|------|------|---------|
+| v1.0.0 | 2026-03-23 | 核心功能：多租户/VIP/支付/渠道/审计/兑换码 |
+| v1.1.0 | 2026-04-13 | SOCKS 代理 / 测试历史 / 健康检测 |
+| v1.1.1 | 2026-05-05 | 注册配置增强 / GORM 修复 / 审计日志补全 |
+| v1.2.0 | 2026-05-12 | CI/CD / 设置页 / 模型管理前端 / 审计增强 |
+| v1.2.1 | 2026-05-12 | CORS / AutoMigrate / 死代码清理 |
+| v1.3.0 | 2026-05-14 | Anthropic Messages API / SSE 流式优化 / K01~K13 修复 |
 
 ### 12.2 Running Services
+
 | Service | Port | Command |
 |---------|------|---------|
 | Consumer Frontend | 5173 | `npm run dev` |
 | Admin Frontend | 5174 | `npm run preview:admin` |
 | Go Backend | 8080 | `./gapi-server -config config.yaml` |
 
-### 12.3 Test Accounts
-| Type | Username | Password |
-|------|----------|----------|
-| Admin | `admin` | `admin123` |
-| User | `admin@example.com` | `admin123` |
+### 12.3 待办事项
 
-### 12.4 API Endpoints (Implemented)
-- `POST /api/v1/user/login` - 用户登录
-- `POST /api/v1/user/register` - 用户注册
-- `GET /api/v1/products` - 商品列表
-- `GET /api/v1/admin/login` - 管理员登录
-- `GET /api/v1/admin/logs/login` - 登录日志
-- `GET /api/v1/admin/logs/operation` - 操作日志
-- `GET /api/v1/admin/stats/overview` - 仪表盘统计
-- `GET /api/v1/admin/stats/trends` - 图表趋势数据
-- `GET /api/v1/user/stats/usage` - 用户使用统计
-- `GET /api/v1/admin/users` - 用户列表
-- `GET /api/v1/admin/channels` - 渠道列表
-- `GET /api/v1/admin/orders` - 订单列表
-- `GET /api/v1/admin/products` - 商品列表
-- `POST /api/v1/admin/products` - 创建商品
-- `PUT /api/v1/admin/products/:id` - 更新商品
-- `POST /api/v1/admin/products/:id/enable` - 启用商品
-- `POST /api/v1/admin/products/:id/disable` - 禁用商品
+- [ ] 微信支付接入（当前决定：暂不接入）
+- [ ] Phase 2/3/4 测试补充（`api-key-lifecycle-test-plan.md`）
+- [ ] 压测自动化断言（`test_api.py`）
 
-### 12.5 Remaining Tasks
-- [ ] 支付集成 (支付宝/微信)
+### 12.4 部署文件
 
-### 12.6 Recently Fixed (2026-03-28)
-- [x] 商品管理 RPM/TPM 限制显示 bug
-- [x] 用户 API 密钥复制显示不完整
-- [x] 用户 VIP 配额显示为 0
-- [x] 用户控制台"最近活动"跳转错误
-
-### 12.7 Recently Added (2026-03-28)
-- [x] 用户 API 调用日志功能
-  - 后端中间件记录 API 调用
-  - 前端 /logs 页面查看 API 调用记录
-  - Dashboard "查看全部" 链接到日志页面
-- [x] VIP 过期处理后台任务
-  - 每分钟检查过期 VIP 用户
-  - 自动降级为 free 等级
-- [x] 部署文档
-  - docker-compose.prod.yml 生产环境配置
-  - nginx 配置 (反向代理 + SSL)
-  - Dockerfile (后端、前端、管理后台)
-  - 环境变量模板 .env.example
-  - 备份脚本 scripts/backup.sh
-  - 详细部署指南 docs/deployment.md
-
-### 12.8 Bug Fixes & Improvements (2026-03-28)
-- [x] 管理后台商品管理：显示所有状态商品（包括下架）
-  - 后端添加 ListAll 方法返回所有商品
-  - 前端移除前端过滤逻辑
-- [x] 充值套餐添加 RPM/TPM 限制字段
-  - RechargePackage 模型添加 rpm_limit、tpm_limit 字段
-  - 前端表单和列表添加对应字段
-- [x] 操作日志表格布局优化
-  - 统一列宽和样式
-  - 修复边框不一致问题
-- [x] 用户右上角显示名修复
-  - 持久化用户信息到 localStorage
-  - 页面刷新后正确显示用户名
-- [x] API 密钥创建限制
-  - 普通用户：最多 1 个密钥
-  - VIP 用户：根据套餐并发限制（默认5个）
-  - 企业用户：最多 10 个
-  - 超限时显示友好错误提示
-
-### 12.9 Dashboard Charts (2026-03-28)
-- [x] 管理后台仪表盘添加图表
-  - API请求趋势折线图 (近7天成功/失败/Token消耗)
-  - 今日请求状态分布饼图 (成功/失败比例)
-- [x] 用户控制台仪表盘添加图表
-  - Token消耗趋势折线图 (近7天)
-  - API调用统计柱状图 (近7天)
-- [x] 新增后端统计API
-  - `GET /api/v1/admin/stats/trends` - 管理后台图表数据
-  - `GET /api/v1/user/stats/usage` - 用户图表数据
-
-### 12.10 Bug Fixes & Optimizations (2026-03-28)
-- [x] 修复 echarts 版本依赖问题
-  - echarts: `^6.0.0` → `^5.5.0` (6.0.0 不存在)
-  - vue-echarts: `^8.0.1` → `^6.7.3` (兼容 echarts 5.x)
-- [x] 用户页面图表优化
-  - Token Y轴使用 "k" 单位格式
-  - API调用 Y轴使用 "k" 单位格式
-  - 修复 "调用次数" Y轴标签显示不全问题
-- [x] 数据降级处理
-  - API返回全零数据时显示演示数据
-  - 确保图表始终有数据可展示
-
-### 12.11 Known Issues (Resolved)
-- [x] 管理后台布局重复 - 已修复
-- [x] 局域网访问 502 - 已修复
-- [x] 登录日志 API 404 - 已添加
-- [x] 数据库 jsonb 类型错误 - 已修复为 text
-
-### 12.12 ECharts Y轴渲染问题修复 (2026-03-29)
-
-#### 问题描述
-- 用户仪表盘图表Y轴刻度不显示
-- Y轴标签被遮挡
-- X轴与卡片底部间距过大
-
-#### 根本原因
-1. ECharts柱状图默认`boundaryGap: true`，与折线图配置冲突
-2. Y轴max值未设置，数据为0时无法计算刻度
-3. Grid百分比配置在某些情况下空间不足
-
-#### 解决方案
-1. **动态计算Y轴max值**
-   ```typescript
-   const maxValue = Math.max(...data, 30)
-   max: Math.ceil(maxValue / 5) * 5 + 5
-   ```
-
-2. **固定像素值替代百分比**
-   ```typescript
-   grid: {
-     left: 50,
-     right: 20,
-     bottom: 25,
-     top: 30,
-     containLabel: true
-   }
-   ```
-
-3. **Y轴名称位置调整**
-   ```typescript
-   yAxis: {
-     name: '调用次数',
-     nameLocation: 'middle',
-     nameGap: 30,
-     nameTextStyle: {
-       align: 'center',
-       verticalAlign: 'bottom'
-     }
-   }
-   ```
-
-4. **数据回退机制**
-   ```typescript
-   if (!hasData) {
-     dailyUsage.value = [...demoData]
-   }
-   ```
-
-#### 相关文件
-- `frontend/src/views/Dashboard.vue` - 用户端图表配置
-- `frontend/src/views/admin/Dashboard.vue` - 管理端图表配置
-- `docs/echarts-yaxis-issue.md` - 详细问题记录
-
-### 12.13 Nginx IPv6 部署配置 (2026-03-29)
-
-#### 部署架构
-```
-Client (IPv4/IPv6) → Nginx Reverse Proxy → Backend Services
-```
-
-#### 端口配置
-| 端口 | 服务 | 说明 |
-|------|------|------|
-| 5173 | 用户端前端 | HTTP |
-| 5174 | 管理后台前端 | HTTP |
-| 8080 | 后端API | Go/Gin |
-
-#### 部署文件
-- `deploy/nginx/gapi-platform.conf` - Nginx配置
-- `deploy/nginx/deploy-nginx.sh` - 部署脚本
-- `deploy/nginx/README.md` - 部署文档
-
-#### 使用方法
-```bash
-cd deploy/nginx
-chmod +x deploy-nginx.sh
-sudo ./deploy-nginx.sh --install
-```
-
-### 12.14 E2E 测试配置 (2026-03-29)
-
-#### 测试文件
-- `frontend/tests/e2e/user-dashboard.spec.ts` - 用户仪表盘测试
-- `frontend/tests/e2e/admin-dashboard.spec.ts` - 管理后台测试
-
-#### 运行测试
-```bash
-cd frontend
-npx playwright test
-```
+- `deploy/docker/docker-compose.yml` — 开发环境
+- `deploy/docker/docker-compose.prod.yml` — 生产环境
+- `deploy/docker/nginx/nginx.conf` — Nginx SSL + 反向代理（Docker 生产）
+- `deploy/nginx/gapi-platform.conf` — Nginx 裸机部署配置
+- `deploy/nginx/deploy-nginx.sh` — 裸机部署脚本
+- `deploy/release/` — Release 打包模板
 
 ---
 
-*Document Version: 1.3*
-*Last Updated: 2026-03-29*
+*Document Version: 1.4*
+*Last Updated: 2026-05-14*

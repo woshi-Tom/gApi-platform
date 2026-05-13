@@ -4,6 +4,32 @@
 
 ---
 
+## [v1.3.0] - 2026-05-14
+
+### Features
+- **Anthropic Messages API 兼容**: 新增 `POST /v1/messages` 端点，支持 Claude SDK 直接对接；x-api-key 认证中间件兼容 Anthropic 格式；Claude 流式 SSE 响应完整支持
+- **SSE 流式首包延迟修复**: 优化流式响应首包时间，保留 channel failover 能力
+- **Provider Adapter 扩展**: 新增 Gemini、Azure adapter，factory 模式统一管理 6 种 AI 提供商（OpenAI/Claude/DeepSeek/NVIDIA/Gemini/Azure）
+
+### Fixes
+- **K01 微信支付死代码清理**: 移除 settings 页面微信支付表单和后端 WechatConfig 残留
+- **K04 Release 分平台打包**: linux-amd64 包不再包含 windows 二进制
+- **K05 审计日志 skipPaths**: 改为前缀匹配，避免详情页重复记录
+- **K06 settings_handler 错误处理**: 修复忽略 DB error 的问题
+- **K07~K10 文档补全**: 审计日志状态同步、升级指南、发布检查清单、回滚策略
+- **K11 Redis 密码泄露**: docker-compose 改用 redis.conf 配置文件
+- **K12 AutoMigrate 约束**: 已迁移数据库不再报约束错误（日志降级）
+- **K13 ability_types 类型不匹配**: `parseAbilityTypes()` 兼容字符串和数组两种格式
+- **TokenAuth nil panic**: x-api-key 测试中 tokenService 为 nil 时添加 recover 保护
+
+### License
+- 添加 GPLv3 许可证
+
+### Tests
+- Anthropic 兼容测试：转换函数 + SSE 流式 + x-api-key 认证（#014 两轮全部通过）
+
+---
+
 ## [v1.2.1] - 2026-05-12
 
 ### Fixes

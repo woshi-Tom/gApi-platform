@@ -70,6 +70,7 @@ test-results/
 .sisyphus/
 .claude
 memory
+CLAUDE.md
 
 # Development documentation (internal only)
 
