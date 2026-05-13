@@ -139,7 +139,7 @@
               <el-input-number v-model="pricingForm.sort_order" :min="0" style="width:180px" />
             </el-form-item>
             <el-form-item label="能力类型" prop="ability_types">
-              <el-input v-model="pricingForm.ability_types" placeholder="如：text-davinci-003" />
+              <el-input v-model="pricingForm.ability_types" placeholder="如：chat,completion" />
             </el-form-item>
           </el-form>
           <template #footer>

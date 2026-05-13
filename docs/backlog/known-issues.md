@@ -29,7 +29,7 @@
 |---|------|------|------|------|
 | K11 | Redis 密码泄露于进程列表 | v1.2.0 审查 | docker-compose.yml 命令行传密码 | ✅ 已修复 (redis.conf 配置文件) |
 | K12 | AutoMigrate 约束操作非幂等 | #005 部署 | GORM AutoMigrate 对已迁移数据库重跑时，尝试 DROP 不存在的约束（`uni_model_groups_name`）导致启动失败 | ✅ 已修复 (database.go 日志降级) |
-| K13 | 模型定价 ability_types 类型不匹配 | 用户测试 | 编辑模型定价保存时，前端用 `<el-input>` 以字符串发送 `ability_types`（如 `"chat,completion"`），但后端 handler（`model_pricing_handler.go:48`）用 `[]string` 接收期望 JSON 数组（如 `["chat","completion"]`）。报错 `json: cannot unmarshal string into Go struct field .ability_types of type []string` | ⬜ |
+| K13 | 模型定价 ability_types 类型不匹配 | 用户测试 | 编辑模型定价保存时，前端用 `<el-input>` 以字符串发送 `ability_types`（如 `"chat,completion"`），但后端 handler（`model_pricing_handler.go:48`）用 `[]string` 接收期望 JSON 数组（如 `["chat","completion"]`）。报错 `json: cannot unmarshal string into Go struct field .ability_types of type []string` | ✅ 已修复 (parseAbilityTypes 兼容两种格式) |
 
 ---
 
