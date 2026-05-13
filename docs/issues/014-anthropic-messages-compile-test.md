@@ -116,9 +116,7 @@ go test ./... -count=1 -timeout 120s
 |--------|------|------|
 | `go build ./...` | ✅ 通过 | 无编译错误 |
 | `go vet ./...` | ✅ 通过 | 无警告 |
-| `go test ./...` | ⚠️ 1 个失败 | `TestTokenAuth_XApiKeyHeader_Present` — nil tokenService 导致 panic |
+| `go test ./...` | ✅ 全部通过 | handler 1.312s / middleware 0.039s / model 0.016s / adapter 0.007s / repository 0.143s / service 0.031s |
 | anthropic_convert_test.go | ✅ 24/24 通过 | 请求转换、响应转换、stop_reason 映射、content 提取、normalize |
 | claude_test.go | ✅ 6/6 通过 | system 提取、SSE 流式解析、空 body |
-| middleware_test.go 新增 | ❌ 1/4 失败 | `TestTokenAuth_XApiKeyHeader_Present` — 测试传入 nil tokenService，`Validate()` 空指针 |
-
-**失败详情**: `TestTokenAuth_XApiKeyHeader_Present` 在 `middleware_test.go:218` 未初始化 TokenService，导致 `tokenService.Validate()` nil pointer dereference。不属于本轮 Anthropic 功能回归，是测试用例本身缺失 mock/service 初始化。
+| middleware_test.go 新增 | ✅ 4/4 通过 | x-api-key 认证、Bearer 回归（已修复 `5ee1003`） |
