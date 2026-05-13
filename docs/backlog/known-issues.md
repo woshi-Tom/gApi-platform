@@ -12,10 +12,10 @@
 
 | # | 问题 | 来源 | 说明 | 状态 |
 |---|------|------|------|------|
-| K01 | 微信支付 UI 字段待移除 | v1.2.0 审查 | settings 页面有微信支付表单但后端不接入，需清理 | ⬜ |
+| K01 | 微信支付 UI 字段待移除 | v1.2.0 审查 | settings 页面有微信支付表单但后端不接入，需清理 | ✅ 已修复 (清理 WechatConfig/死代码) |
 | K02 | AES 密钥长度未校验 | v1.2.0 审查 | `crypto/aes.go` 弱密钥被静默填充 | ✅ 已修复 (a235b95) |
 | K03 | Dockerfile 以 root 运行 | v1.2.0 审查 | 容器逃逸风险 | ✅ 已修复 (a235b95) |
-| K04 | Release 命名与实际内容不匹配 | v1.2.0 审查 | linux-amd64 包内含 windows 二进制 | ⬜ |
+| K04 | Release 命名与实际内容不匹配 | v1.2.0 审查 | linux-amd64 包内含 windows 二进制 | ✅ 已修复 (分平台打包) |
 | K05 | Audit skipPaths 精确匹配 | v1.2.0 审查 | 审计日志详情页仍会记日志 | ✅ 已修复 (前缀匹配) |
 | K06 | settings_handler 忽略 error | v1.2.0 审查 | 忽略 DB error 存在数据丢失风险 | ✅ 已修复 (e28396c) |
 | K07 | 审计日志状态标注矛盾 | v1.2.0 审查 | features/README 与 CHANGELOG 不一致 | ✅ 已修复 |
