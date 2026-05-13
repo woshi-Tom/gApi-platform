@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"net/http"
 	"strconv"
 
 	"gapi-platform/internal/repository"
@@ -16,7 +17,11 @@ func NewAPIAccessLogHandler(apiAccessLogRepo *repository.APIAccessLogRepository)
 }
 
 func (h *APIAccessLogHandler) List(c *gin.Context) {
-	userID := c.MustGet("user_id").(uint)
+	userID, ok := extractUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": gin.H{"code": "unauthorized", "message": "user not authenticated"}})
+		return
+	}
 
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))

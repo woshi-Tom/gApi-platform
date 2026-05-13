@@ -154,7 +154,11 @@ func (h *UserHandler) Login(c *gin.Context) {
 // @Failure 401 {object} map[string]interface{}
 // @Router /api/v1/user/profile [get]
 func (h *UserHandler) GetProfile(c *gin.Context) {
-	userID := c.MustGet("user_id").(uint)
+	userID, ok := extractUserID(c)
+	if !ok {
+		response.Fail(c, "UNAUTHORIZED", "user not authenticated")
+		return
+	}
 
 	user, err := h.userService.GetByID(userID)
 	if err != nil {
@@ -206,7 +210,11 @@ func (h *UserHandler) isVIPUser(user *model.User) bool {
 // @Failure 401 {object} map[string]interface{}
 // @Router /api/v1/user/profile [put]
 func (h *UserHandler) UpdateProfile(c *gin.Context) {
-	userID := c.MustGet("user_id").(uint)
+	userID, ok := extractUserID(c)
+	if !ok {
+		response.Fail(c, "UNAUTHORIZED", "user not authenticated")
+		return
+	}
 
 	var req struct {
 		Username string `json:"username"`
@@ -255,7 +263,11 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 // @Failure 401 {object} map[string]interface{}
 // @Router /api/v1/user/change-password [post]
 func (h *UserHandler) ChangePassword(c *gin.Context) {
-	userID := c.MustGet("user_id").(uint)
+	userID, ok := extractUserID(c)
+	if !ok {
+		response.Fail(c, "UNAUTHORIZED", "user not authenticated")
+		return
+	}
 
 	var req struct {
 		OldPassword string `json:"old_password" binding:"required"`
@@ -286,7 +298,11 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 // @Failure 401 {object} map[string]interface{}
 // @Router /api/v1/user/quota [get]
 func (h *UserHandler) GetQuota(c *gin.Context) {
-	userID := c.MustGet("user_id").(uint)
+	userID, ok := extractUserID(c)
+	if !ok {
+		response.Fail(c, "UNAUTHORIZED", "user not authenticated")
+		return
+	}
 
 	quota, err := h.userService.GetQuota(userID)
 	if err != nil {
@@ -325,7 +341,11 @@ func isValidVIP(user *model.User) bool {
 // @Failure 401 {object} map[string]interface{}
 // @Router /api/v1/user/vip/status [get]
 func (h *UserHandler) GetVIPStatus(c *gin.Context) {
-	userID := c.MustGet("user_id").(uint)
+	userID, ok := extractUserID(c)
+	if !ok {
+		response.Fail(c, "UNAUTHORIZED", "user not authenticated")
+		return
+	}
 
 	user, err := h.userService.GetByID(userID)
 	if err != nil {
@@ -365,7 +385,11 @@ func (h *UserHandler) GetVIPStatus(c *gin.Context) {
 // @Failure 401 {object} map[string]interface{}
 // @Router /api/v1/user/stats/usage [get]
 func (h *UserHandler) GetUsageStats(c *gin.Context) {
-	userID := c.MustGet("user_id").(uint)
+	userID, ok := extractUserID(c)
+	if !ok {
+		response.Fail(c, "UNAUTHORIZED", "user not authenticated")
+		return
+	}
 	db := h.userService.GetDB()
 
 	type DailyUsage struct {
@@ -430,7 +454,11 @@ func (h *UserHandler) GetUsageStats(c *gin.Context) {
 // @Failure 401 {object} map[string]interface{}
 // @Router /api/v1/user/activities [get]
 func (h *UserHandler) GetRecentActivities(c *gin.Context) {
-	userID := c.MustGet("user_id").(uint)
+	userID, ok := extractUserID(c)
+	if !ok {
+		response.Fail(c, "UNAUTHORIZED", "user not authenticated")
+		return
+	}
 	db := h.userService.GetDB()
 
 	type Activity struct {

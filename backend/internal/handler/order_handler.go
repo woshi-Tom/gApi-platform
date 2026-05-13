@@ -47,7 +47,11 @@ func NewOrderHandler(
 }
 
 func (h *OrderHandler) List(c *gin.Context) {
-	userID := c.MustGet("user_id").(uint)
+	userID, ok := extractUserID(c)
+	if !ok {
+		response.Fail(c, "UNAUTHORIZED", "user not authenticated")
+		return
+	}
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
 	orderType := c.Query("type")
@@ -70,7 +74,11 @@ func (h *OrderHandler) List(c *gin.Context) {
 }
 
 func (h *OrderHandler) Create(c *gin.Context) {
-	userID := c.MustGet("user_id").(uint)
+	userID, ok := extractUserID(c)
+	if !ok {
+		response.Fail(c, "UNAUTHORIZED", "user not authenticated")
+		return
+	}
 	idempotencyKey := c.GetHeader("X-Idempotency-Key")
 
 	var req struct {
@@ -228,7 +236,11 @@ func (h *OrderHandler) isVIPUser(user *model.User) bool {
 }
 
 func (h *OrderHandler) GetByID(c *gin.Context) {
-	userID := c.MustGet("user_id").(uint)
+	userID, ok := extractUserID(c)
+	if !ok {
+		response.Fail(c, "UNAUTHORIZED", "user not authenticated")
+		return
+	}
 	idStr := c.Param("id")
 
 	id, err := strconv.ParseUint(idStr, 10, 32)
@@ -252,7 +264,11 @@ func (h *OrderHandler) GetByID(c *gin.Context) {
 }
 
 func (h *OrderHandler) GetByOrderNo(c *gin.Context) {
-	userID := c.MustGet("user_id").(uint)
+	userID, ok := extractUserID(c)
+	if !ok {
+		response.Fail(c, "UNAUTHORIZED", "user not authenticated")
+		return
+	}
 	orderNo := c.Param("order_no")
 
 	order, err := h.orderRepo.GetByOrderNo(orderNo)

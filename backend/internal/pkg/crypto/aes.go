@@ -92,14 +92,14 @@ func Init(key string) error {
 
 func Encrypt(plaintext string) (string, error) {
 	if defaultEncryptor == nil {
-		return plaintext, nil
+		return "", errors.New("encryptor not initialized")
 	}
 	return defaultEncryptor.Encrypt(plaintext)
 }
 
 func Decrypt(ciphertext string) (string, error) {
 	if defaultEncryptor == nil {
-		return ciphertext, nil
+		return "", errors.New("encryptor not initialized")
 	}
 	return defaultEncryptor.Decrypt(ciphertext)
 }

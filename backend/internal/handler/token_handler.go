@@ -30,7 +30,11 @@ func NewTokenHandler(tokenService *service.TokenService) *TokenHandler {
 // @Failure 401 {object} map[string]interface{}
 // @Router /api/v1/tokens [get]
 func (h *TokenHandler) List(c *gin.Context) {
-	userID := c.MustGet("user_id").(uint)
+	userID, ok := extractUserID(c)
+	if !ok {
+		response.Fail(c, "UNAUTHORIZED", "user not authenticated")
+		return
+	}
 
 	tokens, err := h.tokenService.ListByUser(userID)
 	if err != nil {
@@ -85,7 +89,11 @@ func (h *TokenHandler) List(c *gin.Context) {
 // @Failure 401 {object} map[string]interface{}
 // @Router /api/v1/tokens [post]
 func (h *TokenHandler) Create(c *gin.Context) {
-	userID := c.MustGet("user_id").(uint)
+	userID, ok := extractUserID(c)
+	if !ok {
+		response.Fail(c, "UNAUTHORIZED", "user not authenticated")
+		return
+	}
 
 	var req struct {
 		Name          string     `json:"name" binding:"required"`
@@ -126,7 +134,11 @@ func (h *TokenHandler) Create(c *gin.Context) {
 // @Failure 404 {object} map[string]interface{}
 // @Router /api/v1/tokens/{id} [delete]
 func (h *TokenHandler) Delete(c *gin.Context) {
-	userID := c.MustGet("user_id").(uint)
+	userID, ok := extractUserID(c)
+	if !ok {
+		response.Fail(c, "UNAUTHORIZED", "user not authenticated")
+		return
+	}
 	tokenIDStr := c.Param("id")
 
 	tokenID, err := strconv.ParseUint(tokenIDStr, 10, 32)

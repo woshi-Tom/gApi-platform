@@ -266,7 +266,11 @@ type AlipayPaymentResponse struct {
 func (h *PaymentHandler) QueryAlipayOrder(c *gin.Context) {
 	orderNo := c.Param("order_no")
 
-	userID := c.MustGet("user_id").(uint)
+	userID, ok := extractUserID(c)
+	if !ok {
+		response.Fail(c, "UNAUTHORIZED", "user not authenticated")
+		return
+	}
 
 	order, err := h.orderRepo.GetByOrderNo(orderNo)
 	if err != nil {
@@ -323,7 +327,11 @@ func (h *PaymentHandler) QueryAlipayOrder(c *gin.Context) {
 
 func (h *PaymentHandler) CancelAlipayOrder(c *gin.Context) {
 	orderNo := c.Param("order_no")
-	userID := c.MustGet("user_id").(uint)
+	userID, ok := extractUserID(c)
+	if !ok {
+		response.Fail(c, "UNAUTHORIZED", "user not authenticated")
+		return
+	}
 
 	var lockToken string
 	var lockKey string
@@ -390,7 +398,11 @@ func (h *PaymentHandler) CancelAlipayOrder(c *gin.Context) {
 
 func (h *PaymentHandler) RefundOrder(c *gin.Context) {
 	orderNo := c.Param("order_no")
-	userID := c.MustGet("user_id").(uint)
+	userID, ok := extractUserID(c)
+	if !ok {
+		response.Fail(c, "UNAUTHORIZED", "user not authenticated")
+		return
+	}
 
 	var lockToken string
 	var lockKey string
@@ -718,6 +730,8 @@ func (h *PaymentHandler) AlipayNotify(c *gin.Context) {
 			}
 			if err := h.processPaymentSuccess(order, result.TradeNo, amount); err != nil {
 				log.Error().Err(err).Str("order_no", result.OutTradeNo).Msg("AlipayNotify: processPaymentSuccess failed")
+				c.String(http.StatusInternalServerError, "fail") // 触发支付宝重试
+				return
 			}
 		}
 	}
