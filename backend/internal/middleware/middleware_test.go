@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -188,5 +189,54 @@ func TestTokenAuth_InvalidFormat(t *testing.T) {
 
 	if !c.IsAborted() {
 		t.Error("expected request to be aborted")
+	}
+}
+
+func TestTokenAuth_XApiKeyHeader_MissingBoth(t *testing.T) {
+	// No x-api-key and no Authorization header → should abort
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("POST", "/v1/chat/completions", nil)
+
+	middleware := TokenAuth(nil)
+	middleware(c)
+
+	if !c.IsAborted() {
+		t.Error("expected request to be aborted when both headers missing")
+	}
+}
+
+func TestTokenAuth_XApiKeyHeader_Present(t *testing.T) {
+	// x-api-key header present → should proceed past header extraction
+	// (will fail at tokenService.Validate since we pass nil, but header parsing works)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("POST", "/v1/messages", nil)
+	c.Request.Header.Set("x-api-key", "sk-ap-test123")
+
+	middleware := TokenAuth(nil)
+	middleware(c)
+
+	// With nil tokenService, Validate will panic or abort.
+	// The important thing is it did NOT abort at the "missing header" check.
+	// We verify by checking that the response code is not 401 with "Missing API key"
+	if w.Code == 401 && strings.Contains(w.Body.String(), "Missing API key") {
+		t.Error("x-api-key header should have been accepted, but got 'Missing API key' error")
+	}
+}
+
+func TestTokenAuth_BearerStillWorks(t *testing.T) {
+	// Authorization: Bearer should still work (regression test)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("POST", "/v1/chat/completions", nil)
+	c.Request.Header.Set("Authorization", "Bearer sk-ap-test123")
+
+	middleware := TokenAuth(nil)
+	middleware(c)
+
+	// Same as above — should not abort at "missing header" check
+	if w.Code == 401 && strings.Contains(w.Body.String(), "Missing API key") {
+		t.Error("Bearer header should have been accepted, but got 'Missing API key' error")
 	}
 }
