@@ -148,7 +148,7 @@ func (s *BillingService) PostConsumeQuota(userID, tokenID uint, modelName string
 
 		// 2. Deduct recharge_quota (FIFO by expired_at)
 		if remaining > 0 && s.rechargeRecordRepo != nil {
-			records, err := s.rechargeRecordRepo.GetActiveByUser(userID)
+			records, err := s.rechargeRecordRepo.WithTx(tx).GetActiveByUser(userID)
 			if err == nil {
 				for i := range records {
 					if remaining <= 0 {
