@@ -28,8 +28,8 @@
 
 | # | 问题 | 来源 | 说明 | 状态 |
 |---|------|------|------|------|
-| K11 | Redis 密码泄露于进程列表 | v1.2.0 审查 | docker-compose.yml 命令行传密码 | ⬜ |
-| K12 | AutoMigrate 约束操作非幂等 | #005 部署 | GORM AutoMigrate 对已迁移数据库重跑时，尝试 DROP 不存在的约束（`uni_model_groups_name`）导致启动失败 | ⬜ |
+| K11 | Redis 密码泄露于进程列表 | v1.2.0 审查 | docker-compose.yml 命令行传密码 | ✅ 已解决（使用 redis.conf 配置文件） |
+| K12 | AutoMigrate 约束操作非幂等 | #005 部署 | GORM AutoMigrate 对已迁移数据库重跑时，尝试 DROP 不存在的约束（`uni_model_groups_name`）导致启动失败 | ✅ 已解决（error 非致命处理，database.go:102） |
 
 ---
 
@@ -38,6 +38,7 @@
 | # | 问题 | 来源 | 修复 | 关闭日期 |
 |---|------|------|------|---------|
 | — | P2 安全: AES 静默明文 / 支付 ACK / MustGet panic / 审计 body / 解密错误 | #012 | cbff276 | 2026-05-13 |
+| — | billing_service 事务中 GetActiveByUser 读 r.db 非 tx | #011 P3 | 待提交 | 2026-05-13 |
 
 ---
 
