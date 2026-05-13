@@ -268,3 +268,135 @@ func TestRechargeRepo_TotalActiveQuota(t *testing.T) {
 		t.Errorf("expected total=1200 after partial consumption, got %d", total)
 	}
 }
+
+// T-P2-07: PostConsumeQuota — 充值配额扣减（recharge FIFO）
+func TestPostConsumeQuota_RechargeQuota(t *testing.T) {
+	db, billing, _, _ := setupBillingTest(t)
+
+	// User with no free quota, only recharge
+	createBillingUser(t, db, 20, 0, 0)
+	createBillingToken(t, db, 20, 20, 100000)
+
+	future := time.Now().Add(48 * time.Hour)
+	createRechargeRecord(t, db, 20, 701, 5000, 5000, future)
+
+	err := billing.PostConsumeQuota(20, 20, "gpt-3.5-turbo", 100, 100)
+	if err != nil {
+		t.Fatalf("PostConsumeQuota failed: %v", err)
+	}
+
+	// Verify: recharge record remaining decreased
+	var rec model.UserRechargeRecord
+	db.Where("order_id = ?", 701).First(&rec)
+	if rec.Remaining >= 5000 {
+		t.Errorf("expected recharge remaining < 5000, got %d", rec.Remaining)
+	}
+
+	// Verify: quota transaction created with quota_type=recharge
+	var txCount int64
+	db.Model(&model.QuotaTransaction{}).Where("user_id = ? AND quota_type = ?", 20, "recharge").Count(&txCount)
+	if txCount == 0 {
+		t.Error("expected quota transaction with quota_type='recharge'")
+	}
+}
+
+// T-P2-08: PostConsumeQuota — VIP 配额扣减（free 和 recharge 都不足时）
+func TestPostConsumeQuota_VIPQuota(t *testing.T) {
+	db, billing, _, _ := setupBillingTest(t)
+
+	// User with no free quota, no recharge, only VIP
+	createBillingUser(t, db, 21, 0, 100000)
+	createBillingToken(t, db, 21, 21, 100000)
+
+	err := billing.PostConsumeQuota(21, 21, "gpt-3.5-turbo", 100, 100)
+	if err != nil {
+		t.Fatalf("PostConsumeQuota failed: %v", err)
+	}
+
+	// Verify: vip_quota decreased
+	var user model.User
+	db.First(&user, 21)
+	if user.VIPQuota >= 100000 {
+		t.Errorf("expected vip_quota < 100000, got %d", user.VIPQuota)
+	}
+
+	// Verify: quota transaction created with quota_type=vip
+	var txCount int64
+	db.Model(&model.QuotaTransaction{}).Where("user_id = ? AND quota_type = ?", 21, "vip").Count(&txCount)
+	if txCount == 0 {
+		t.Error("expected quota transaction with quota_type='vip'")
+	}
+}
+
+// T-P2-09: PostConsumeQuota — free→recharge→vip 三级级联扣减
+func TestPostConsumeQuota_Cascade(t *testing.T) {
+	db, billing, _, _ := setupBillingTest(t)
+
+	// free=100, recharge=200 (1 record), vip=10000
+	// consume ~400 quota → should drain free + recharge partially + vip
+	createBillingUser(t, db, 22, 100, 10000)
+	createBillingToken(t, db, 22, 22, 100000)
+
+	future := time.Now().Add(48 * time.Hour)
+	createRechargeRecord(t, db, 22, 801, 200, 200, future)
+
+	// 400 tokens at rate 1.0 → 400 quota
+	err := billing.PostConsumeQuota(22, 22, "gpt-3.5-turbo", 200, 200)
+	if err != nil {
+		t.Fatalf("PostConsumeQuota cascade failed: %v", err)
+	}
+
+	var user model.User
+	db.First(&user, 22)
+
+	// free_quota should be 0 (all 100 consumed)
+	if user.FreeQuota != 0 {
+		t.Errorf("expected free_quota=0, got %d", user.FreeQuota)
+	}
+
+	// vip_quota should have been partially consumed
+	if user.VIPQuota >= 10000 {
+		t.Errorf("expected vip_quota < 10000 after cascade, got %d", user.VIPQuota)
+	}
+
+	// Verify: transactions exist for all three quota types
+	var freeCount, rechargeCount, vipCount int64
+	db.Model(&model.QuotaTransaction{}).Where("user_id = ? AND quota_type = ?", 22, "free").Count(&freeCount)
+	db.Model(&model.QuotaTransaction{}).Where("user_id = ? AND quota_type = ?", 22, "recharge").Count(&rechargeCount)
+	db.Model(&model.QuotaTransaction{}).Where("user_id = ? AND quota_type = ?", 22, "vip").Count(&vipCount)
+
+	if freeCount == 0 {
+		t.Error("expected free quota transaction")
+	}
+	if rechargeCount == 0 {
+		t.Error("expected recharge quota transaction")
+	}
+	if vipCount == 0 {
+		t.Error("expected vip quota transaction")
+	}
+}
+
+// T-P2-10: PostConsumeQuota — token.remain_quota 递减
+func TestPostConsumeQuota_TokenRemainQuota(t *testing.T) {
+	db, billing, _, _ := setupBillingTest(t)
+
+	createBillingUser(t, db, 23, 100000, 0)
+	createBillingToken(t, db, 23, 23, 50000)
+
+	before := int64(50000)
+
+	err := billing.PostConsumeQuota(23, 23, "gpt-3.5-turbo", 50, 50)
+	if err != nil {
+		t.Fatalf("PostConsumeQuota failed: %v", err)
+	}
+
+	var token model.Token
+	db.First(&token, 23)
+
+	if token.RemainQuota >= before {
+		t.Errorf("expected remain_quota < %d, got %d", before, token.RemainQuota)
+	}
+	if token.UsedQuota == 0 {
+		t.Error("expected used_quota > 0")
+	}
+}

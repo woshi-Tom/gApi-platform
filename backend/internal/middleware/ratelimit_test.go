@@ -166,3 +166,67 @@ func TestTokenRateLimit_NoTokenID(t *testing.T) {
 		t.Error("request without token_id should pass through (not rate limited)")
 	}
 }
+
+// T-P2-02b: TokenRateLimit — 多 token 隔离（token A 耗尽不影响 token B）
+func TestTokenRateLimit_MultipleTokens(t *testing.T) {
+	db, tokenSvc := setupRateLimitDB(t)
+
+	createTestToken(t, db, 401, 2, 0) // token A: RPM=2
+	createTestToken(t, db, 402, 2, 0) // token B: RPM=2
+
+	middleware := TokenRateLimit(tokenSvc)
+
+	// Exhaust token A's budget (2 requests)
+	for i := 0; i < 2; i++ {
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest("GET", "/", nil)
+		c.Set("token_id", uint(401))
+		middleware(c)
+		if c.IsAborted() {
+			t.Errorf("token A request %d should pass", i+1)
+		}
+	}
+
+	// Token A's 3rd request should be blocked
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("GET", "/", nil)
+	c.Set("token_id", uint(401))
+	middleware(c)
+	if !c.IsAborted() {
+		t.Error("token A request 3 should be rate limited")
+	}
+
+	// Token B should still pass (independent limiter)
+	w = httptest.NewRecorder()
+	c, _ = gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("GET", "/", nil)
+	c.Set("token_id", uint(402))
+	middleware(c)
+	if c.IsAborted() {
+		t.Error("token B should not be affected by token A's rate limit")
+	}
+}
+
+// T-P2-02c: TokenRateLimit — nil tokenService 使用默认 RPM=10
+func TestTokenRateLimit_NilTokenService(t *testing.T) {
+	middleware := TokenRateLimit(nil)
+
+	passed := 0
+	for i := 0; i < 11; i++ {
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest("GET", "/", nil)
+		c.Set("token_id", uint(501))
+
+		middleware(c)
+		if !c.IsAborted() {
+			passed++
+		}
+	}
+
+	if passed != 10 {
+		t.Errorf("expected 10 requests to pass with nil tokenService (default RPM=10), got %d", passed)
+	}
+}

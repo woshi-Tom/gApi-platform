@@ -283,3 +283,177 @@ func TestAPIError_Format(t *testing.T) {
 		})
 	}
 }
+
+// T-P3-04: Completions — 缺少 prompt 字段返回 400
+func TestCompletions_MissingPrompt(t *testing.T) {
+	r, db := setupPhase3Test(t)
+	token := createPhase3UserAndToken(t, db)
+
+	body := map[string]interface{}{
+	 "model": "gpt-3.5-turbo",
+	 // no prompt field
+	}
+	jsonBody, _ := json.Marshal(body)
+
+	req := httptest.NewRequest("POST", "/api/v1/completions", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	// Should reject with 400, not panic or 500
+	if w.Code == http.StatusInternalServerError {
+		t.Fatalf("should not return 500 for missing prompt: %s", w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+
+	if errObj, ok := resp["error"].(map[string]interface{}); ok {
+		if errObj["code"] == nil || errObj["code"] == "" {
+			t.Error("error response should have 'code' field")
+		}
+		if errObj["message"] == nil || errObj["message"] == "" {
+			t.Error("error response should have 'message' field")
+		}
+	}
+}
+
+// T-P3-05: Anthropic Messages 端点 — 请求解析 + 认证
+func TestAnthropicMessages_Parsing(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("failed to open test db: %v", err)
+	}
+
+	err = db.AutoMigrate(
+		&model.User{},
+		&model.Token{},
+		&model.Channel{},
+		&model.QuotaTransaction{},
+		&model.UsageLog{},
+	)
+	if err != nil {
+		t.Fatalf("failed to migrate: %v", err)
+	}
+
+	userRepo := repository.NewUserRepository(db)
+	tokenRepo := repository.NewTokenRepository(db)
+	channelRepo := repository.NewChannelRepository(db)
+
+	tokenService := service.NewTokenService(tokenRepo)
+	tokenService.SetUserRepo(userRepo, nil)
+	channelService := service.NewChannelService(channelRepo)
+
+	apiHandler := NewAPIHandler(tokenService, channelService, userRepo, nil, nil)
+
+	r := gin.New()
+	v1 := r.Group("/api/v1")
+	{
+		v1.POST("/messages", middleware.TokenAuth(tokenService), apiHandler.Messages)
+	}
+
+	// Create user + token
+	hash, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
+	user := &model.User{
+		Username:     "testuser",
+		Email:        "test@anthropic.com",
+		PasswordHash: string(hash),
+		Level:        "free",
+		Status:       "active",
+		FreeQuota:    100000,
+	}
+	userRepo.Create(user)
+
+	apiToken, err := tokenService.Create(user.ID, "Test Token", nil, nil, nil, nil, nil)
+	if err != nil {
+		t.Fatalf("failed to create token: %v", err)
+	}
+
+	t.Run("valid request parses successfully", func(t *testing.T) {
+		body := map[string]interface{}{
+			"model":      "claude-3-sonnet-20240229",
+			"max_tokens": 1024,
+			"messages": []map[string]interface{}{
+				{"role": "user", "content": "Hello"},
+			},
+		}
+		jsonBody, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST", "/api/v1/messages", bytes.NewBuffer(jsonBody))
+		req.Header.Set("x-api-key", apiToken.TokenKey)
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, req)
+
+		// No channel → 502, but should NOT be 400 (parsing should succeed)
+		if w.Code == http.StatusBadRequest {
+			t.Errorf("valid Anthropic request should parse, got 400: %s", w.Body.String())
+		}
+	})
+
+	t.Run("missing model returns Anthropic error format", func(t *testing.T) {
+		body := map[string]interface{}{
+			"max_tokens": 1024,
+			"messages": []map[string]interface{}{
+				{"role": "user", "content": "Hello"},
+			},
+		}
+		jsonBody, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST", "/api/v1/messages", bytes.NewBuffer(jsonBody))
+		req.Header.Set("x-api-key", apiToken.TokenKey)
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("expected 400 for missing model, got %d", w.Code)
+		}
+
+		// Verify Anthropic error format: { type: "error", error: { type, message } }
+		var resp map[string]interface{}
+		json.Unmarshal(w.Body.Bytes(), &resp)
+
+		if resp["type"] != "error" {
+			t.Errorf("expected response type='error', got '%v'", resp["type"])
+		}
+		if errObj, ok := resp["error"].(map[string]interface{}); ok {
+			if errObj["type"] == nil || errObj["type"] == "" {
+				t.Error("Anthropic error should have 'type' field")
+			}
+			if errObj["message"] == nil || errObj["message"] == "" {
+				t.Error("Anthropic error should have 'message' field")
+			}
+		} else {
+			t.Error("expected 'error' object in Anthropic error response")
+		}
+	})
+
+	t.Run("unauthenticated returns 401", func(t *testing.T) {
+		body := map[string]interface{}{
+			"model":      "claude-3-sonnet-20240229",
+			"max_tokens": 1024,
+			"messages": []map[string]interface{}{
+				{"role": "user", "content": "Hello"},
+			},
+		}
+		jsonBody, _ := json.Marshal(body)
+
+		req := httptest.NewRequest("POST", "/api/v1/messages", bytes.NewBuffer(jsonBody))
+		// No x-api-key header
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, req)
+
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("expected 401 for unauthenticated request, got %d", w.Code)
+		}
+	})
+}

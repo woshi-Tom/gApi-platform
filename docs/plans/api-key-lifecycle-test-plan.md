@@ -2,9 +2,9 @@
 
 > 类型: 测试补充
 > 提出: 2026-05-13
-> 状态: ⬜ 待评审
-> 关联: [api-key-lifecycle-plan.md](api-key-lifecycle-plan.md) Phase 2/3/4 "待编译验证后补充"
-> 背景: Phase 1-4 的功能代码已全部完成并编译通过，但 Phase 2/3/4 的测试尚未编写
+> 状态: ✅ Phase 2/3 已编写（Phase 4 压测回归推迟）
+> 关联: [api-key-lifecycle-plan.md](api-key-lifecycle-plan.md) Phase 2/3/4
+> 背景: Phase 1-4 的功能代码已全部完成并编译通过，Phase 2/3 测试已于 2026-05-14 补充
 
 ---
 

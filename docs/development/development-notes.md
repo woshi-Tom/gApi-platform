@@ -546,7 +546,7 @@ PENDING → (payment success) → PAID → (admin process) → COMPLETED
 ### 10.1 未完成
 
 - [ ] 支付集成 — 微信支付（当前决定：暂不接入）
-- [ ] Phase 2/3/4 测试补充（`api-key-lifecycle-test-plan.md`，待评审）
+- [ ] Phase 4 压测回归（`api-key-lifecycle-test-plan.md`，推迟到后续 Sprint）
 - [ ] 压测自动化断言（`test_api.py` 脚本存在但无自动化断言）
 
 ### 10.2 已完成摘要
