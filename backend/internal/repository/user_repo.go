@@ -194,6 +194,22 @@ func (r *TokenRepository) UpdateQuota(tokenID uint, amount int64) error {
 		UpdateColumn("remain_quota", gorm.Expr("remain_quota + ?", amount)).Error
 }
 
+// ListAll lists all tokens with optional user_id filter (admin)
+func (r *TokenRepository) ListAll(page, pageSize int, userID uint) ([]model.Token, int64, error) {
+	var tokens []model.Token
+	var total int64
+
+	query := r.db.Model(&model.Token{})
+	if userID > 0 {
+		query = query.Where("user_id = ?", userID)
+	}
+	query.Count(&total)
+
+	offset := (page - 1) * pageSize
+	err := query.Order("created_at DESC").Offset(offset).Limit(pageSize).Find(&tokens).Error
+	return tokens, total, err
+}
+
 // OrderRepository handles order database operations
 type OrderRepository struct {
 	db *gorm.DB

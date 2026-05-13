@@ -34,6 +34,8 @@ type AdminHandler struct {
 	adminUsers         []config.AdminAccount
 	healthCheckService *service.HealthCheckService
 	testHistoryRepo    *repository.ChannelTestHistoryRepository
+	tokenService       *service.TokenService
+	billingService     *service.BillingService
 }
 
 // NewAdminHandler creates a new admin handler
@@ -48,6 +50,8 @@ func NewAdminHandler(
 	adminUsers []config.AdminAccount,
 	healthCheckService *service.HealthCheckService,
 	testHistoryRepo *repository.ChannelTestHistoryRepository,
+	tokenService *service.TokenService,
+	billingService *service.BillingService,
 ) *AdminHandler {
 	return &AdminHandler{
 		authService:        authService,
@@ -60,6 +64,8 @@ func NewAdminHandler(
 		adminUsers:         adminUsers,
 		healthCheckService: healthCheckService,
 		testHistoryRepo:    testHistoryRepo,
+		tokenService:       tokenService,
+		billingService:     billingService,
 	}
 }
 
@@ -1222,4 +1228,188 @@ func (h *AdminHandler) StatsUserDetail(c *gin.Context) {
 		"model_distribution":  modelDist,
 		"result_distribution": resultDist,
 	})
+}
+
+// ListTokens lists all tokens with pagination (admin)
+func (h *AdminHandler) ListTokens(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	userIDStr := c.Query("user_id")
+	var userID uint
+	if userIDStr != "" {
+		id, _ := strconv.ParseUint(userIDStr, 10, 32)
+		userID = uint(id)
+	}
+
+	tokenRepo := repository.NewTokenRepository(h.getDB())
+	tokens, total, err := tokenRepo.ListAll(page, pageSize, userID)
+	if err != nil {
+		response.InternalError(c, "failed to list tokens")
+		return
+	}
+
+	// Mask token keys for security
+	for i := range tokens {
+		if len(tokens[i].TokenKey) > 12 {
+			tokens[i].TokenKey = tokens[i].TokenKey[:12] + "****"
+		}
+	}
+
+	response.Paginated(c, tokens, page, pageSize, total)
+}
+
+// DeleteToken deletes a token (admin)
+func (h *AdminHandler) DeleteToken(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		response.Fail(c, "INVALID_PARAMETER", "invalid token id")
+		return
+	}
+
+	if h.tokenService != nil {
+		if err := h.tokenService.Delete(uint(id)); err != nil {
+			response.InternalError(c, "failed to delete token")
+			return
+		}
+	} else {
+		tokenRepo := repository.NewTokenRepository(h.getDB())
+		if err := tokenRepo.Delete(uint(id)); err != nil {
+			response.InternalError(c, "failed to delete token")
+			return
+		}
+	}
+
+	response.SuccessWithMessage(c, nil, "token deleted")
+}
+
+// AdjustUserQuota adjusts a user's quota (admin)
+func (h *AdminHandler) AdjustUserQuota(c *gin.Context) {
+	idStr := c.Param("id")
+	userID, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		response.Fail(c, "INVALID_PARAMETER", "invalid user id")
+		return
+	}
+
+	var req struct {
+		QuotaType   string `json:"quota_type" binding:"required,oneof=free vip"`
+		Amount      int64  `json:"amount" binding:"required"`
+		Description string `json:"description"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, "INVALID_PARAMETER", err.Error())
+		return
+	}
+
+	if req.Amount == 0 {
+		response.Fail(c, "INVALID_PARAMETER", "amount must be non-zero")
+		return
+	}
+
+	if h.billingService == nil {
+		response.InternalError(c, "billing service not available")
+		return
+	}
+
+	if req.Amount > 0 {
+		if err := h.billingService.AddQuota(uint(userID), req.Amount, req.QuotaType, req.Description); err != nil {
+			response.InternalError(c, "failed to add quota: "+err.Error())
+			return
+		}
+	} else {
+		if err := h.billingService.DeductQuota(uint(userID), -req.Amount, req.Description); err != nil {
+			response.Fail(c, "QUOTA_INSUFFICIENT", "failed to deduct quota: "+err.Error())
+			return
+		}
+	}
+
+	quotaInfo, _ := h.billingService.GetUserQuota(uint(userID))
+	response.SuccessWithMessage(c, quotaInfo, "quota adjusted")
+}
+
+// GetOrderDetail gets order detail (admin)
+func (h *AdminHandler) GetOrderDetail(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		response.Fail(c, "INVALID_PARAMETER", "invalid order id")
+		return
+	}
+
+	order, err := h.orderRepo.GetByID(uint(id))
+	if err != nil {
+		response.NotFound(c, "order not found")
+		return
+	}
+
+	var payment model.Payment
+	h.getDB().Where("order_id = ?", order.ID).First(&payment)
+
+	response.Success(c, gin.H{
+		"order":   order,
+		"payment": payment,
+	})
+}
+
+// ProcessOrder manually processes an order (admin)
+func (h *AdminHandler) ProcessOrder(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		response.Fail(c, "INVALID_PARAMETER", "invalid order id")
+		return
+	}
+
+	var req struct {
+		Action string `json:"action" binding:"required,oneof=complete cancel"`
+		Reason string `json:"reason"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Fail(c, "INVALID_PARAMETER", err.Error())
+		return
+	}
+
+	order, err := h.orderRepo.GetByID(uint(id))
+	if err != nil {
+		response.NotFound(c, "order not found")
+		return
+	}
+
+	now := time.Now()
+
+	switch req.Action {
+	case "complete":
+		if order.Status == model.OrderStatusCompleted {
+			response.Fail(c, "ORDER_ALREADY_COMPLETED", "order is already completed")
+			return
+		}
+		order.Status = model.OrderStatusCompleted
+		order.CompletedAt = &now
+
+		// Grant quota based on package
+		if h.billingService != nil && order.PackageID != nil {
+			var pkg model.RechargePackage
+			if err := h.getDB().First(&pkg, *order.PackageID).Error; err == nil {
+				if pkg.Quota > 0 {
+					h.billingService.AddQuota(order.UserID, pkg.Quota, "free", "admin process order: "+order.OrderNo)
+				}
+			}
+		}
+
+	case "cancel":
+		if order.Status == model.OrderStatusCancelled {
+			response.Fail(c, "ORDER_ALREADY_CANCELLED", "order is already cancelled")
+			return
+		}
+		order.Status = model.OrderStatusCancelled
+		order.CancelReason = req.Reason
+	}
+
+	if err := h.orderRepo.Update(order); err != nil {
+		response.InternalError(c, "failed to update order")
+		return
+	}
+
+	response.SuccessWithMessage(c, order, "order "+req.Action+"d")
 }

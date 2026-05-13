@@ -235,16 +235,16 @@
 | `/api/v1/admin/login` | POST | Admin login | ✅ |
 | `/api/v1/admin/users` | GET | User list | ✅ |
 | `/api/v1/admin/users/:id` | PUT | Update user | ✅ |
-| `/api/v1/admin/users/:id/quota` | POST | Adjust quota | ⬜ |
-| `/api/v1/admin/tokens` | GET | Token list | ⬜ |
-| `/api/v1/admin/tokens/:id` | DELETE | Revoke token | ⬜ |
+| `/api/v1/admin/users/:id/quota` | POST | Adjust quota | ✅ v1.4.0 |
+| `/api/v1/admin/tokens` | GET | Token list | ✅ v1.4.0 |
+| `/api/v1/admin/tokens/:id` | DELETE | Revoke token | ✅ v1.4.0 |
 | `/api/v1/admin/products` | GET | Product list | ✅ |
 | `/api/v1/admin/products` | POST | Create product | ✅ |
 | `/api/v1/admin/products/:id` | PUT | Update product | ✅ |
 | `/api/v1/admin/products/:id` | DELETE | Delete product | ✅ |
 | `/api/v1/admin/orders` | GET | Order list | ✅ |
-| `/api/v1/admin/orders/:id` | GET | Order detail | ⬜ |
-| `/api/v1/admin/orders/:id/process` | POST | Process order | ⬜ |
+| `/api/v1/admin/orders/:id` | GET | Order detail | ✅ v1.4.0 |
+| `/api/v1/admin/orders/:id/process` | POST | Process order | ✅ v1.4.0 |
 | `/api/v1/admin/channels` | GET | Channel list | ✅ |
 | `/api/v1/admin/channels` | POST | Create channel | ✅ |
 | `/api/v1/admin/channels/:id` | PUT | Update channel | ✅ |

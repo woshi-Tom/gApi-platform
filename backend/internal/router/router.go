@@ -233,6 +233,14 @@ func SetupAdminRoutes(
 	settingsService := service.NewSettingsService(db.GetDB())
 	authService := service.NewAuthService(userRepo, tokenRepo, &cfg.JWT)
 	channelService := service.NewChannelService(channelRepo)
+	tokenService := service.NewTokenService(tokenRepo)
+	tokenService.SetUserRepo(userRepo, vipRepo)
+
+	usageLogRepo := repository.NewUsageLogRepository(db.GetDB())
+	quotaTxRepo := repository.NewQuotaTransactionRepository(db.GetDB())
+	rechargeRecordRepo := repository.NewUserRechargeRecordRepository(db.GetDB())
+	billingService := service.NewBillingService(userRepo, tokenRepo, usageLogRepo, quotaTxRepo, rechargeRecordRepo)
+
 	alipayService := service.NewAlipayService(
 		settingsService,
 		orderRepo,
@@ -243,7 +251,7 @@ func SetupAdminRoutes(
 	)
 
 	testHistoryRepo := repository.NewChannelTestHistoryRepository(db.GetDB())
-	adminHandler := handler.NewAdminHandler(authService, userRepo, channelService, orderRepo, auditRepo, loginLogRepo, apiAccessLogRepo, cfg.AdminUsers, healthCheckService, testHistoryRepo)
+	adminHandler := handler.NewAdminHandler(authService, userRepo, channelService, orderRepo, auditRepo, loginLogRepo, apiAccessLogRepo, cfg.AdminUsers, healthCheckService, testHistoryRepo, tokenService, billingService)
 	productHandler := handler.NewProductHandler(vipRepo, rechargeRepo)
 	settingsHandler := handler.NewSettingsHandler(settingsService, alipayService)
 
@@ -280,6 +288,13 @@ func SetupAdminRoutes(
 			adminAuth.POST("/channels/:id/disable", adminHandler.DisableChannel)
 
 			adminAuth.GET("/orders", adminHandler.ListOrders)
+			adminAuth.GET("/orders/:id", adminHandler.GetOrderDetail)
+			adminAuth.POST("/orders/:id/process", adminHandler.ProcessOrder)
+
+			adminAuth.GET("/tokens", adminHandler.ListTokens)
+			adminAuth.DELETE("/tokens/:id", adminHandler.DeleteToken)
+
+			adminAuth.POST("/users/:id/quota", adminHandler.AdjustUserQuota)
 
 			adminAuth.GET("/logs/operation", adminHandler.GetAuditLogs)
 			adminAuth.GET("/logs/operation/:id", adminHandler.GetAuditLogDetail)
