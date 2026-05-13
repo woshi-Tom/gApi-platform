@@ -1,9 +1,9 @@
 # #011 编译测试指南
 
 > 日期: 2026-05-13
-> 关联: [010-ability-types-type-mismatch.md](010-ability-types-type-mismatch.md) K13 修复 + 代码清理
+> 关联: [010-ability-types-type-mismatch.md](010-ability-types-type-mismatch.md) K13 + [chat-completions-content-format-fix.md](../plans/chat-completions-content-format-fix.md) content 兼容
 > 状态: 待编译验证
-> 目标: 验证 K13 后端兼容修复、死代码清理、不安全类型断言修复的编译通过和基础功能正确性
+> 目标: 验证 K13 后端兼容、Chat Completions content 格式兼容、死代码清理、不安全类型断言修复
 
 ---
 
@@ -11,8 +11,9 @@
 
 | 文件 | 变更内容 |
 |------|---------|
-| `backend/internal/handler/model_pricing_handler.go` | 新增 `parseAbilityTypes()` 辅助函数；Create/Update 中 `AbilityTypes` 类型从 `[]string` 改为 `interface{}`，运行时兼容字符串和数组两种格式 |
-| `backend/internal/handler/api_handler.go` | 删除 6 个死代码函数：`handleStream()`、`logUsage()`、`parseSSEStream()`、`getChannelID()`、`setChannelID()`、`getModelName()`、`parseIntParam()`；`ListModels()` 中 `userID.(uint)` 不安全断言改为安全断言；清理 `bufio`、`strconv`、`strings` 无用 import |
+| `backend/internal/handler/model_pricing_handler.go` | 新增 `parseAbilityTypes()`；Create/Update 中 `AbilityTypes` 从 `[]string` 改为 `interface{}`，兼容字符串和数组 |
+| `backend/internal/model/response.go` | `ChatCompletionsRequest.Messages` 从 `[]map[string]string` 改为 `[]map[string]interface{}`，兼容 OpenAI content 数组格式 |
+| `backend/internal/handler/api_handler.go` | 新增 `normalizeMessages()` + `extractTextContent()`；ChatCompletions 入口处 normalize 后传给 adapter；删除 6 个死代码函数；`ListModels` 断言安全化；清理无用 import |
 
 ---
 
@@ -82,7 +83,55 @@ go test ./... -count=1 -timeout 120s
   预期: ability_types 返回 JSON 数组格式
 ```
 
-### 3.2 T-CLEAN: 死代码清理
+### 3.2 T-CONTENT: Chat Completions content 格式兼容
+
+```
+验证点 1: 字符串 content（回归测试）
+  POST /v1/chat/completions
+  Body: {"model":"gpt-3.5-turbo","messages":[{"role":"user","content":"你好"}]}
+  预期: 200，正常回复
+
+验证点 2: 数组 content（本次修复）
+  POST /v1/chat/completions
+  Body: {"model":"gpt-3.5-turbo","messages":[{"role":"user","content":[{"type":"text","text":"你好"}]}]}
+  预期: 200，正常回复
+
+验证点 3: 混合 messages
+  Body: {"model":"gpt-3.5-turbo","messages":[
+    {"role":"user","content":"hi"},
+    {"role":"assistant","content":[{"type":"text","text":"hello"}]},
+    {"role":"user","content":"继续"}
+  ]}
+  预期: 200，正常回复
+
+验证点 4: 多 text 块拼接
+  Body: {"model":"gpt-3.5-turbo","messages":[{"role":"user","content":[
+    {"type":"text","text":"第一段"},
+    {"type":"text","text":"第二段"}
+  ]}]}
+  预期: 200，上游收到拼接后的内容（"第一段\n第二段"）
+
+验证点 5: 非 text 类型被忽略
+  Body: {"model":"gpt-3.5-turbo","messages":[{"role":"user","content":[
+    {"type":"text","text":"描述图片"},
+    {"type":"image_url","image_url":{"url":"https://example.com/img.jpg"}}
+  ]}]}
+  预期: 200，仅提取 text 部分
+
+验证点 6: 流式 + 数组 content
+  Body: {"model":"gpt-3.5-turbo","messages":[{"role":"user","content":[{"type":"text","text":"你好"}]}],"stream":true}
+  预期: 200，SSE 正常返回
+
+验证点 7: 空 content
+  Body: {"model":"gpt-3.5-turbo","messages":[{"role":"user","content":""}]}
+  预期: 200 或合理错误
+
+验证点 8: 空数组 content
+  Body: {"model":"gpt-3.5-turbo","messages":[{"role":"user","content":[]}]}
+  预期: 200（content 为空字符串）
+```
+
+### 3.3 T-CLEAN: 死代码清理
 
 ```
 验证点 1: 编译无引用错误
@@ -94,7 +143,7 @@ go test ./... -count=1 -timeout 120s
   预期: 无 "unused" 警告
 ```
 
-### 3.3 T-SAFE: 不安全类型断言
+### 3.4 T-SAFE: 不安全类型断言
 
 ```
 验证点 1: ListModels 正常调用（有 user_id）
@@ -112,14 +161,20 @@ go test ./... -count=1 -timeout 120s
 ## 四、验证结论模板
 
 ```
-编译结果: ✅ 通过 / ❌ 失败（错误信息: ...）
-Go Vet:   ✅ 通过 / ❌ 失败
-现有测试: ✅ 全部通过 / ❌ 有失败（用例: ...）
-T-K13 字符串:  ✅ / ❌
-T-K13 数组:    ✅ / ❌
-T-K13 空/null: ✅ / ❌
-T-K13 Update:  ✅ / ❌
-T-CLEAN:       ✅ / ❌
-T-SAFE:        ✅ / ❌
+编译结果:       ✅ 通过 / ❌ 失败（错误信息: ...）
+Go Vet:         ✅ 通过 / ❌ 失败
+现有测试:       ✅ 全部通过 / ❌ 有失败（用例: ...）
+T-K13 字符串:   ✅ / ❌
+T-K13 数组:     ✅ / ❌
+T-K13 空/null:  ✅ / ❌
+T-K13 Update:   ✅ / ❌
+T-CONTENT 字符串:  ✅ / ❌
+T-CONTENT 数组:    ✅ / ❌
+T-CONTENT 混合:    ✅ / ❌
+T-CONTENT 多块:    ✅ / ❌
+T-CONTENT 非text:  ✅ / ❌
+T-CONTENT 流式:    ✅ / ❌
+T-CLEAN:           ✅ / ❌
+T-SAFE:            ✅ / ❌
 结论:     可合入 / 需修复后重新验证
 ```

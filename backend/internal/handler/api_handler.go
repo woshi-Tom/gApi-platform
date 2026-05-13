@@ -64,13 +64,16 @@ func (h *APIHandler) ChatCompletions(c *gin.Context) {
 	// Set model in context for APIAccessLog middleware
 	c.Set("request_model", req.Model)
 
+	// Normalize messages: convert content arrays to strings (OpenAI spec compatibility)
+	normalizedMessages := normalizeMessages(req.Messages)
+
 	// Pre-check quota
 	preCheckStart := time.Now()
 	if h.billingService != nil {
 		userID := getUserID(c)
 		tokenID := getTokenID(c)
 		if userID > 0 && tokenID > 0 {
-			estimatedTokens := h.estimateChatTokens(req.Messages, req.MaxTokens)
+			estimatedTokens := h.estimateChatTokens(normalizedMessages, req.MaxTokens)
 			if err := h.billingService.PreConsumeQuota(userID, tokenID, req.Model, estimatedTokens); err != nil {
 				if err == service.ErrQuotaInsufficient {
 					c.JSON(http.StatusPaymentRequired, model.APIErrorResponse{
@@ -99,7 +102,7 @@ func (h *APIHandler) ChatCompletions(c *gin.Context) {
 
 	chatReq := &adapter.ChatRequest{
 		Model:       req.Model,
-		Messages:    req.Messages,
+		Messages:    normalizedMessages,
 		Temperature: req.Temperature,
 		MaxTokens:   req.MaxTokens,
 		TopP:        req.TopP,
@@ -770,6 +773,51 @@ func (h *APIHandler) embeddingsWithFailover(ctx context.Context, embedReq *adapt
 		return nil, fmt.Errorf("all channels failed after %d attempts: %v", maxChannelRetries, lastErr)
 	}
 	return nil, fmt.Errorf("no available channel")
+}
+
+// normalizeMessages converts OpenAI content format (string or content block array)
+// to the flat string format used internally by adapters.
+func normalizeMessages(msgs []map[string]interface{}) []map[string]string {
+	result := make([]map[string]string, 0, len(msgs))
+	for _, m := range msgs {
+		normalized := make(map[string]string)
+		for k, v := range m {
+			if k == "content" {
+				normalized[k] = extractTextContent(v)
+			} else if s, ok := v.(string); ok {
+				normalized[k] = s
+			} else {
+				normalized[k] = fmt.Sprintf("%v", v)
+			}
+		}
+		result = append(result, normalized)
+	}
+	return result
+}
+
+// extractTextContent extracts text from either a string or an OpenAI content block array.
+func extractTextContent(v interface{}) string {
+	switch val := v.(type) {
+	case string:
+		return val
+	case []interface{}:
+		text := ""
+		for _, part := range val {
+			if block, ok := part.(map[string]interface{}); ok {
+				if block["type"] == "text" {
+					if t, ok := block["text"].(string); ok {
+						if text != "" {
+							text += "\n"
+						}
+						text += t
+					}
+				}
+			}
+		}
+		return text
+	default:
+		return fmt.Sprintf("%v", v)
+	}
 }
 
 func getUserID(c *gin.Context) uint {

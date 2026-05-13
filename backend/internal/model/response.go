@@ -211,7 +211,7 @@ type DateCount struct {
 // ChatCompletionsRequest represents OpenAI chat completions request
 type ChatCompletionsRequest struct {
 	Model       string                   `json:"model" binding:"required"`
-	Messages    []map[string]string      `json:"messages" binding:"required"`
+	Messages    []map[string]interface{} `json:"messages" binding:"required"`
 	Temperature float64                  `json:"temperature"`
 	MaxTokens   int                      `json:"max_tokens"`
 	TopP        float64                  `json:"top_p"`
