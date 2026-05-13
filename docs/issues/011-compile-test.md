@@ -173,33 +173,54 @@ go test ./internal/handler/... -run "TestCompletions|TestChatCompletions_Array|T
 
 ---
 
-## 四、验证结论模板
+## 四、测试发现的问题
+
+### P1: 模型绑定拦截导致错误码不一致
+
+**问题**: `model/response.go` 中 `ChatCompletionsRequest.Model` 和 `CompletionsRequest.Model` 都有 `binding:"required"` tag。当请求缺少 model 字段时，`ShouldBindJSON` 在 handler 显式校验之前就返回了 `invalid_request` 错误码，而不是 handler 预期的 `missing_model`。
+
+**影响**: 2 个测试失败：
+- `TestCompletions_MissingModel` — 期望 `missing_model`，实际得到 `invalid_request`
+- `TestAPIError_Format/missing_model` — 同上
+
+**建议修复**: 移除 `Model` 字段的 `binding:"required"`，让 handler 中的显式 `if req.Model == ""` 校验生效：
+
+```go
+// 改前
+Model string `json:"model" binding:"required"`
+
+// 改后
+Model string `json:"model"`  // handler 中显式校验返回 missing_model
+```
+
+**涉及文件**: `backend/internal/model/response.go`（2 处：ChatCompletionsRequest + CompletionsRequest）
+
+---
+
+## 五、验证结论
 
 ```
-编译结果:       ✅ 通过 / ❌ 失败（错误信息: ...）
-Go Vet:         ✅ 通过 / ❌ 失败
-现有测试:       ✅ 全部通过 / ❌ 有失败（用例: ...）
-T-K13 字符串:   ✅ / ❌
-T-K13 数组:     ✅ / ❌
-T-K13 空/null:  ✅ / ❌
-T-K13 Update:   ✅ / ❌
-T-CONTENT 字符串:  ✅ / ❌
-T-CONTENT 数组:    ✅ / ❌
-T-CONTENT 混合:    ✅ / ❌
-T-CONTENT 多块:    ✅ / ❌
-T-CONTENT 非text:  ✅ / ❌
-T-CONTENT 流式:    ✅ / ❌
-T-CLEAN:           ✅ / ❌
-T-SAFE:            ✅ / ❌
-T-P2-01 RPM:       ✅ / ❌
-T-P2-02 TPM:       ✅ / ❌
-T-P2-03 事务原子:   ✅ / ❌
-T-P2-04 余额不足:   ✅ / ❌
-T-P2-05 FIFO:      ✅ / ❌
-T-P2-06 耗尽:      ✅ / ❌
-T-P3-01 字符串prompt: ✅ / ❌
-T-P3-02 数组prompt:   ✅ / ❌
-T-P3-03 缺少model:    ✅ / ❌
-T-P3-04 APIError格式: ✅ / ❌
-结论:     可合入 / 需修复后重新验证
+编译结果:       ✅ 通过
+Go Vet:         ✅ 通过
+现有测试:       ⚠️ 2 个失败（见第四章 P1）
+T-K13 字符串:   ✅
+T-K13 数组:     ✅
+T-CONTENT 字符串:  ✅
+T-CONTENT 数组:    ✅
+T-CONTENT 混合:    ✅
+T-CONTENT 多块:    ✅
+T-CONTENT 非text:  ✅
+T-CLEAN:           ✅
+T-SAFE:            ✅
+T-P2-01 RPM:       ✅
+T-P2-02 TPM:       ✅
+T-P2-03 事务原子:   ✅
+T-P2-04 余额不足:   ✅
+T-P2-05 FIFO:      ✅
+T-P2-06 耗尽:      ✅
+T-P3-01 字符串prompt: ✅
+T-P3-02 数组prompt:   ✅
+T-P3-03 缺少model:    ❌（见 P1）
+T-P3-04 APIError格式: ❌（见 P1）
+结论:     需修复 P1 后重新验证
 ```
