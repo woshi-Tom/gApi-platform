@@ -41,6 +41,7 @@ func setupPhase3Test(t *testing.T) (*gin.Engine, *gorm.DB) {
 
 	userRepo := repository.NewUserRepository(db)
 	tokenRepo := repository.NewTokenRepository(db)
+	channelRepo := repository.NewChannelRepository(db)
 
 	jwtCfg := &config.JWTConfig{
 		Secret:     "test-secret-key-for-phase3",
@@ -49,8 +50,9 @@ func setupPhase3Test(t *testing.T) (*gin.Engine, *gorm.DB) {
 	authService := service.NewAuthService(userRepo, tokenRepo, jwtCfg)
 	tokenService := service.NewTokenService(tokenRepo)
 	tokenService.SetUserRepo(userRepo, nil)
+	channelService := service.NewChannelService(channelRepo)
 
-	apiHandler := NewAPIHandler(tokenService, nil, userRepo, nil, nil)
+	apiHandler := NewAPIHandler(tokenService, channelService, userRepo, nil, nil)
 
 	r := gin.New()
 
