@@ -187,6 +187,7 @@ func SetupUserRoutes(
 
 		v1.POST("/completions", middleware.TokenAuth(tokenService), middleware.TokenRateLimit(tokenService), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.Completions)
 		v1.POST("/chat/completions", middleware.TokenAuth(tokenService), middleware.TokenRateLimit(tokenService), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.ChatCompletions)
+			v1.POST("/messages", middleware.TokenAuth(tokenService), middleware.TokenRateLimit(tokenService), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.Messages)
 		v1.GET("/models", middleware.TokenAuth(tokenService), middleware.TokenRateLimit(tokenService), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.ListModels)
 		v1.POST("/embeddings", middleware.TokenAuth(tokenService), middleware.TokenRateLimit(tokenService), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.Embeddings)
 
@@ -365,7 +366,7 @@ func corsMiddleware(allowedOrigins []string) gin.HandlerFunc {
 
 		c.Header("Access-Control-Allow-Origin", allowedOrigin)
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, X-Admin-Secret, X-Idempotency-Key")
+		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization, X-Api-Key, X-Admin-Secret, X-Idempotency-Key")
 		c.Header("Access-Control-Allow-Credentials", "true")
 
 		if c.Request.Method == "OPTIONS" {

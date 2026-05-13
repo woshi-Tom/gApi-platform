@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -189,4 +190,64 @@ func TestTokenAuth_InvalidFormat(t *testing.T) {
 	if !c.IsAborted() {
 		t.Error("expected request to be aborted")
 	}
+}
+
+func TestTokenAuth_XApiKeyHeader_MissingBoth(t *testing.T) {
+	// No x-api-key and no Authorization header → should abort
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("POST", "/v1/chat/completions", nil)
+
+	middleware := TokenAuth(nil)
+	middleware(c)
+
+	if !c.IsAborted() {
+		t.Error("expected request to be aborted when both headers missing")
+	}
+}
+
+func TestTokenAuth_XApiKeyHeader_Present(t *testing.T) {
+	// x-api-key header present → should get past header extraction
+	// (will panic at tokenService.Validate since we pass nil, which confirms header was accepted)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("POST", "/v1/messages", nil)
+	c.Request.Header.Set("x-api-key", "sk-ap-test123")
+
+	defer func() {
+		r := recover()
+		if r != nil {
+			// Panic at Validate() means x-api-key was successfully extracted
+			// (if header was missing, we'd get a JSON 401 response, not a panic)
+			return
+		}
+		// No panic means tokenService handled it (shouldn't happen with nil)
+		if w.Code == 401 && strings.Contains(w.Body.String(), "Missing API key") {
+			t.Error("x-api-key header should have been accepted, but got 'Missing API key' error")
+		}
+	}()
+
+	middleware := TokenAuth(nil)
+	middleware(c)
+}
+
+func TestTokenAuth_BearerStillWorks(t *testing.T) {
+	// Authorization: Bearer should still work (regression test)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("POST", "/v1/chat/completions", nil)
+	c.Request.Header.Set("Authorization", "Bearer sk-ap-test123")
+
+	defer func() {
+		r := recover()
+		if r != nil {
+			return // Panic at Validate() means Bearer was successfully extracted
+		}
+		if w.Code == 401 && strings.Contains(w.Body.String(), "Missing API key") {
+			t.Error("Bearer header should have been accepted, but got 'Missing API key' error")
+		}
+	}()
+
+	middleware := TokenAuth(nil)
+	middleware(c)
 }
