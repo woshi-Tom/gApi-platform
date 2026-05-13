@@ -78,7 +78,6 @@ type JWTConfig struct {
 
 type PaymentConfig struct {
 	Alipay AlipayConfig `yaml:"alipay" json:"alipay"`
-	Wechat WechatConfig `yaml:"wechat" json:"wechat"`
 }
 
 type AlipayConfig struct {
@@ -88,14 +87,6 @@ type AlipayConfig struct {
 	EncryptKey      string `yaml:"encrypt_key" json:"encrypt_key"`
 	Sandbox         bool   `yaml:"sandbox" json:"sandbox"`
 	Enabled         bool   `yaml:"enabled" json:"enabled"`
-}
-
-type WechatConfig struct {
-	AppID    string `yaml:"app_id" json:"app_id"`
-	MchID    string `yaml:"mch_id" json:"mch_id"`
-	APIKey   string `yaml:"api_key" json:"api_key"`
-	CertPath string `yaml:"cert_path" json:"cert_path"`
-	Enabled  bool   `yaml:"enabled" json:"enabled"`
 }
 
 type SMTPConfig struct {

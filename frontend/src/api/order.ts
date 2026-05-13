@@ -35,7 +35,7 @@ export type Order = {
 
 export interface CreateOrderRequest {
   package_id: number
-  payment_method: 'alipay' | 'wechat'
+  payment_method: 'alipay'
 }
 
 export const productApi = {

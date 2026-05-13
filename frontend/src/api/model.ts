@@ -20,7 +20,7 @@ export interface ModelPricing {
   display_name: string
   price_input: number
   price_output: number
-  ability_types: string
+  ability_types: string | string[]
   context_length: number
   max_output: number
   group_id: number | null

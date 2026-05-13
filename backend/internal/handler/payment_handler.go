@@ -747,6 +747,5 @@ func (h *PaymentHandler) GetPaymentConfig(c *gin.Context) {
 
 	response.Success(c, gin.H{
 		"alipay_enabled": enabled,
-		"wechat_enabled": false,
 	})
 }
