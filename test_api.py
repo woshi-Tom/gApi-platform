@@ -29,6 +29,7 @@ class APITester:
         self.session = requests.Session()  # 复用 TCP 连接，提高测试效率
         self.token = None                  # 登录后保存 JWT token
         self.user_id = None
+        self.failures = []                 # 记录失败的测试
 
     def request(self, method, path, **kwargs):
         """
@@ -49,133 +50,119 @@ class APITester:
             print(f"❌ Failed to connect to {url}")
             sys.exit(1)
 
+    def assert_eq(self, name, actual, expected, msg=""):
+        """断言 actual == expected，失败则记录并返回 False"""
+        if actual != expected:
+            detail = f" (expected {expected}, got {actual}) {msg}"
+            self.failures.append(name + detail)
+            print(f"  ❌ {name}{detail}")
+            return False
+        return True
+
+    def assert_true(self, name, condition, msg=""):
+        """断言 condition 为真"""
+        if not condition:
+            self.failures.append(name + f" {msg}")
+            print(f"  ❌ {name} {msg}")
+            return False
+        return True
+
     def test_health(self):
         """测试服务健康检查端点（无需认证）"""
         print("\n=== Test 1: Health Check ===")
         try:
             resp = requests.get("http://localhost:8080/health")
-            print(f"✅ Health: {resp.json()}")
-            return True
+            self.assert_eq("health status", resp.status_code, 200)
+            data = resp.json()
+            self.assert_true("health has status", "status" in data or "code" in data)
+            print(f"  Health: {resp.text[:200]}")
         except Exception as e:
-            print(f"❌ Health check failed: {e}")
-            return False
+            self.failures.append(f"health check connection failed: {e}")
+            print(f"  ❌ Connection failed: {e}")
 
     def test_register(self):
-        """
-        测试用户注册端点。
-        注意：生产环境需要邮箱验证码，此测试仅探测 init 状态。
-        """
-        print("\n=== Test 2: User Registration ===")
-        import time
-        email = f"test{int(time.time())}@example.com"
-
-        data = {
-            "username": f"testuser{int(time.time())}",
-            "email": email,
-            "password": "Test123456"
-        }
-
-        # 探测系统初始化状态
+        """测试系统初始化状态探测"""
+        print("\n=== Test 2: Init Status ===")
         resp = self.request('GET', '/init/status')
-        print(f"Init status: {resp.status_code} - {resp.text[:200]}")
-
-        return True
+        self.assert_eq("init status", resp.status_code, 200)
+        print(f"  Init status: {resp.text[:200]}")
 
     def test_login(self):
         """
         测试管理员登录。
-        - 先验证未认证时访问受保护端点返回 401
-        - 再用 admin/admin123 登录获取 JWT token
-        - 管理后台登录路径是 /admin/login，不是 /login
+        - 验证未认证返回 401
+        - 验证错误路径返回 404
+        - 用 admin/admin123 登录获取 JWT token
         """
         print("\n=== Test 3: User Login ===")
 
         # 验证未认证请求被拒绝
         resp = self.request('GET', '/user/info')
-        print(f"Get info without auth: {resp.status_code}")
+        self.assert_eq("unauth returns 401", resp.status_code, 401)
 
-        if resp.status_code == 401:
-            print("✅ Auth required (expected)")
+        # 验证错误路径返回 404
+        resp2 = self.request('POST', '/login', json={"username": "admin", "password": "admin123"})
+        self.assert_eq("wrong path returns 404", resp2.status_code, 404)
 
         # 管理员登录
-        admin_data = {
-            "username": "admin",
-            "password": "admin123"
-        }
-
-        # /admin/login 是管理后台正确路径
+        admin_data = {"username": "admin", "password": "admin123"}
         resp = self.request('POST', '/admin/login', json=admin_data)
-        print(f"Admin login (/admin/login): {resp.status_code}")
-
-        # /login 是错误路径，用来验证返回 404
-        resp2 = self.request('POST', '/login', json=admin_data)
-        print(f"Admin login (/login): {resp2.status_code} - {resp2.text[:200] if resp2.text else 'empty'}")
+        self.assert_eq("admin login", resp.status_code, 200)
 
         if resp.status_code == 200:
-            try:
-                result = resp.json()
-                if 'data' in result and 'token' in result['data']:
-                    self.token = result['data']['token']
-                    print(f"✅ Admin login successful, token: {self.token[:20]}...")
-                else:
-                    print(f"Response: {result}")
-            except:
-                print(f"Response: {resp.text}")
-        else:
-            print(f"❌ Admin login failed: {resp.text}")
-
-        return self.token is not None
+            result = resp.json()
+            has_token = 'data' in result and 'token' in result['data']
+            self.assert_true("login returns token", has_token)
+            if has_token:
+                self.token = result['data']['token']
+                print(f"  Token: {self.token[:20]}...")
 
     def test_channels(self):
-        """测试渠道管理 API — 列出前 3 个渠道的信息"""
+        """测试渠道管理 API — 列出渠道并验证响应格式"""
         print("\n=== Test 4: Channel Management ===")
 
         if not self.token:
-            print("❌ No auth token, skipping channel test")
-            return False
+            self.failures.append("channels: no auth token")
+            print("  ❌ No auth token")
+            return
 
         resp = self.request('GET', '/admin/channels')
-        print(f"List channels: {resp.status_code}")
+        self.assert_eq("channels list", resp.status_code, 200)
 
         if resp.status_code == 200:
-            try:
-                result = resp.json()
-                channels = result.get('data', {}).get('list', [])
-                print(f"✅ Found {len(channels)} channels")
-
+            result = resp.json()
+            has_list = 'data' in result and 'list' in result['data']
+            self.assert_true("channels has list", has_list)
+            if has_list:
+                channels = result['data']['list']
+                print(f"  Found {len(channels)} channels")
                 for ch in channels[:3]:
-                    print(f"  - {ch.get('name')} ({ch.get('type')}) @ {ch.get('base_url')}")
-
-                return True
-            except:
-                print(f"Response: {resp.text}")
-
-        return False
+                    print(f"  - {ch.get('name')} ({ch.get('type')})")
 
     def test_register_settings(self):
-        """测试注册设置 API — 获取系统是否开放注册、默认配额等"""
+        """测试注册设置 API"""
         print("\n=== Test 5: Register Settings ===")
 
         resp = self.request('GET', '/admin/settings/register')
-        print(f"Register settings: {resp.status_code}")
+        self.assert_eq("register settings", resp.status_code, 200)
 
         if resp.status_code == 200:
-            try:
-                result = resp.json()
-                print(f"✅ Register settings: {json.dumps(result.get('data', {}), indent=2)}")
-                return True
-            except:
-                print(f"Response: {resp.text}")
-
-        return False
+            result = resp.json()
+            has_data = 'data' in result
+            self.assert_true("settings has data", has_data)
+            if has_data:
+                data = result['data']
+                self.assert_true("settings has enabled", 'enabled' in data or 'enable_register' in data or len(data) > 0)
+                print(f"  Settings: {json.dumps(data, indent=2)}")
 
     def test_redemption_codes(self):
-        """测试兑换码创建 — 使用 admin token 批量生成兑换码"""
+        """测试兑换码创建 — 批量生成兑换码"""
         print("\n=== Test 6: Create Redemption Code ===")
 
         if not self.token:
-            print("❌ No auth token, skipping")
-            return False
+            self.failures.append("redemption: no auth token")
+            print("  ❌ No auth token")
+            return
 
         data = {
             "code_type": "quota",
@@ -186,22 +173,17 @@ class APITester:
         }
 
         resp = self.request('POST', '/admin/redemption/codes', json=data)
-        print(f"Create codes: {resp.status_code}")
+        self.assert_eq("create redemption codes", resp.status_code, 200)
 
         if resp.status_code == 200:
-            try:
-                result = resp.json()
-                print(f"✅ Created: {json.dumps(result.get('data', {}), indent=2)}")
-                return True
-            except:
-                print(f"Response: {resp.text}")
-        else:
-            print(f"Response: {resp.text[:200]}")
-
-        return False
+            result = resp.json()
+            has_codes = 'data' in result and result['data']
+            self.assert_true("codes created", has_codes)
+            if has_codes:
+                print(f"  Created: {json.dumps(result['data'], indent=2)}")
 
     def run_all(self):
-        """按顺序执行所有功能测试"""
+        """按顺序执行所有功能测试，返回 0=全部通过 1=有失败"""
         print("=" * 50)
         print("gAPI Platform API Test Suite")
         print("=" * 50)
@@ -214,8 +196,16 @@ class APITester:
         self.test_redemption_codes()
 
         print("\n" + "=" * 50)
-        print("Test Complete")
-        print("=" * 50)
+        if self.failures:
+            print(f"FAILED: {len(self.failures)} assertion(s) failed")
+            for f in self.failures:
+                print(f"  - {f}")
+            print("=" * 50)
+            return 1
+        else:
+            print("ALL PASSED")
+            print("=" * 50)
+            return 0
 
 
 # ============================================================
@@ -484,13 +474,18 @@ class PressureTest:
         print("\n" + "=" * 60)
         print("Pressure Test Summary")
         print("=" * 60)
+        all_pass = True
         for r in results:
-            status = "PASS" if r["error_rate_pct"] < 1 and r["p95_ms"] < 3000 else "FAIL"
+            passed = r["error_rate_pct"] < 1 and r["p95_ms"] < 3000
+            status = "PASS" if passed else "FAIL"
+            if not passed:
+                all_pass = False
             print(f"  [{status}] {r['scenario']}: "
                   f"TPS={r['tps']:.1f}, P95={r['p95_ms']:.0f}ms, "
                   f"Err={r['error_rate_pct']:.1f}%")
 
-        return results
+        print(f"\n{'ALL PASSED' if all_pass else 'SOME SCENARIOS FAILED'}")
+        return 0 if all_pass else 1
 
 
 if __name__ == "__main__":
@@ -504,8 +499,10 @@ if __name__ == "__main__":
     if args.pressure:
         # 压力测试模式
         pt = PressureTest(base_url=args.base_url)
-        pt.run_all(token=args.token)
+        rc = pt.run_all(token=args.token)
     else:
         # 功能测试模式（默认）
         tester = APITester()
-        tester.run_all()
+        rc = tester.run_all()
+
+    sys.exit(rc)
