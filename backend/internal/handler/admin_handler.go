@@ -16,6 +16,7 @@ import (
 	"gapi-platform/internal/pkg/validator"
 	"gapi-platform/internal/repository"
 	"gapi-platform/internal/service"
+
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -82,6 +83,7 @@ func (h *AdminHandler) Login(c *gin.Context) {
 		return
 	}
 
+	// First try config-based admin users
 	for _, admin := range h.adminUsers {
 		if admin.Username == req.Username {
 			if err := bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(req.Password)); err != nil {
@@ -96,6 +98,24 @@ func (h *AdminHandler) Login(c *gin.Context) {
 				"token":    token,
 				"username": admin.Username,
 				"role":     admin.Role,
+			})
+			return
+		}
+	}
+
+	// Then try database admin_users table (created by InitWizard)
+	var adminUser model.AdminUser
+	if err := h.userRepo.GetDB().Where("username = ? AND status = ?", req.Username, "active").First(&adminUser).Error; err == nil {
+		if err := bcrypt.CompareHashAndPassword([]byte(adminUser.PasswordHash), []byte(req.Password)); err == nil {
+			token, _, err := h.authService.GenerateAdminToken(adminUser.Username, adminUser.Role)
+			if err != nil {
+				response.InternalError(c, "failed to generate token")
+				return
+			}
+			response.Success(c, map[string]interface{}{
+				"token":    token,
+				"username": adminUser.Username,
+				"role":     adminUser.Role,
 			})
 			return
 		}

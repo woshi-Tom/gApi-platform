@@ -18,44 +18,53 @@
       <!-- Step 1: Database Connection -->
       <div v-if="step === 1" class="step-content">
         <h3>配置数据库连接</h3>
-        <p class="text-muted">输入 PostgreSQL 数据库连接信息</p>
-        
-        <el-form :model="dbForm" :rules="dbRules" ref="dbFormRef" label-position="top" style="margin-top: 20px">
-          <el-row :gutter="20">
-            <el-col :span="12">
-              <el-form-item label="主机地址" prop="host">
-                <el-input v-model="dbForm.host" placeholder="localhost 或 IP 地址" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="端口" prop="port">
-                <el-input-number v-model="dbForm.port" :min="1" :max="65535" style="width: 100%" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row :gutter="20">
-            <el-col :span="12">
-              <el-form-item label="用户名" prop="user">
-                <el-input v-model="dbForm.user" placeholder="数据库用户名" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="12">
-              <el-form-item label="密码" prop="password">
-                <el-input v-model="dbForm.password" type="password" show-password placeholder="数据库密码" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-form-item label="数据库名称" prop="dbname">
-            <el-input v-model="dbForm.dbname" placeholder="数据库名称" />
-          </el-form-item>
-        </el-form>
 
         <el-alert v-if="dbStatus" :type="dbStatusType" show-icon :closable="false" style="margin: 16px 0">
           <template #title>{{ dbStatus }}</template>
         </el-alert>
 
+        <!-- 自动初始化模式：Docker 环境下使用已有连接 -->
+        <div v-if="autoInitMode" style="margin-top: 20px">
+          <p class="text-muted">检测到服务器已配置数据库连接，正在自动初始化...</p>
+        </div>
+
+        <!-- 手动输入模式：非 Docker 环境 -->
+        <div v-else>
+          <p class="text-muted">输入 PostgreSQL 数据库连接信息</p>
+          <el-form :model="dbForm" :rules="dbRules" ref="dbFormRef" label-position="top" style="margin-top: 20px">
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item label="主机地址" prop="host">
+                  <el-input v-model="dbForm.host" placeholder="localhost 或 IP 地址" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="端口" prop="port">
+                  <el-input-number v-model="dbForm.port" :min="1" :max="65535" style="width: 100%" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="20">
+              <el-col :span="12">
+                <el-form-item label="用户名" prop="user">
+                  <el-input v-model="dbForm.user" placeholder="数据库用户名" />
+                </el-form-item>
+              </el-col>
+              <el-col :span="12">
+                <el-form-item label="密码" prop="password">
+                  <el-input v-model="dbForm.password" type="password" show-password placeholder="数据库密码" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-form-item label="数据库名称" prop="dbname">
+              <el-input v-model="dbForm.dbname" placeholder="数据库名称" />
+            </el-form-item>
+          </el-form>
+        </div>
+
         <div class="step-actions">
-          <el-button type="primary" :loading="dbTesting" @click="testAndInitDB">测试连接并初始化</el-button>
+          <el-button v-if="!autoInitMode" type="primary" :loading="dbTesting" @click="testAndInitDB">测试连接并初始化</el-button>
+          <el-button v-if="!autoInitMode" @click="tryAutoInit" :loading="dbTesting">使用服务器已有连接</el-button>
         </div>
       </div>
 
@@ -143,7 +152,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { Setting, CircleCheckFilled } from '@element-plus/icons-vue'
@@ -167,6 +176,7 @@ const dbTesting = ref(false)
 const dbConnected = ref(false)
 const dbStatus = ref('')
 const dbStatusType = computed(() => dbConnected.value ? 'success' : 'error')
+const autoInitMode = ref(false)
 
 const dbRules: FormRules = {
   host: [{ required: true, message: '请输入主机地址', trigger: 'blur' }],
@@ -340,9 +350,50 @@ function createAdmin() {
   })
 }
 
+async function tryAutoInit() {
+  dbTesting.value = true
+  dbStatus.value = ''
+  autoInitMode.value = true
+
+  try {
+    // Step 1: Use existing database connection to initialize tables
+    dbStatus.value = '正在初始化数据库表结构...'
+    const initResponse = await axios.post(`${apiBase}/api/v1/init/init-db-default`)
+
+    if (initResponse.data.success) {
+      dbConnected.value = true
+      dbStatus.value = '数据库表结构初始化成功'
+      ElMessage.success('数据库初始化成功')
+      setTimeout(() => {
+        step.value = 2
+      }, 1000)
+    }
+  } catch (e: any) {
+    dbConnected.value = false
+    autoInitMode.value = false
+    const msg = e.response?.data?.error?.message || e.message || '自动初始化失败，请手动输入连接信息'
+    dbStatus.value = msg
+    ElMessage.warning('自动初始化失败，请手动输入数据库连接信息')
+  } finally {
+    dbTesting.value = false
+  }
+}
+
 function goToAdmin() {
   router.push('/login')
 }
+
+// On mount, try auto-init first
+onMounted(async () => {
+  try {
+    const statusResponse = await axios.get(`${apiBase}/api/v1/init/status`)
+    if (statusResponse.data?.data?.db_connected) {
+      tryAutoInit()
+    }
+  } catch {
+    // Status check failed, stay in manual mode
+  }
+})
 </script>
 
 <style scoped>
