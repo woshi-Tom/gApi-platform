@@ -49,6 +49,14 @@ adminRouter.beforeEach(async (to, from, next) => {
   }
   
   if (path === '/init') {
+    // If system is already initialized, redirect to login
+    if (initStatusChecked) {
+      const initialized = await checkInitStatus()
+      if (initialized) {
+        next('/login')
+        return
+      }
+    }
     next()
     return
   }

@@ -8,6 +8,7 @@ import (
 	"gapi-platform/internal/middleware"
 	"gapi-platform/internal/repository"
 	"gapi-platform/internal/service"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -99,6 +100,7 @@ func SetupUserRoutes(
 			init.POST("/test-db", initHandler.TestDatabase)
 			init.POST("/test-db-with-config", initHandler.TestDatabaseWithConfig)
 			init.POST("/init-db", initHandler.InitializeDatabase)
+			init.POST("/init-db-default", initHandler.InitializeDatabaseDefault)
 			init.POST("/test-redis", initHandler.TestRedis)
 			init.POST("/create-admin", initHandler.CreateAdmin)
 		}
@@ -187,7 +189,7 @@ func SetupUserRoutes(
 
 		v1.POST("/completions", middleware.TokenAuth(tokenService), middleware.TokenRateLimit(tokenService), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.Completions)
 		v1.POST("/chat/completions", middleware.TokenAuth(tokenService), middleware.TokenRateLimit(tokenService), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.ChatCompletions)
-			v1.POST("/messages", middleware.TokenAuth(tokenService), middleware.TokenRateLimit(tokenService), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.Messages)
+		v1.POST("/messages", middleware.TokenAuth(tokenService), middleware.TokenRateLimit(tokenService), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.Messages)
 		v1.GET("/models", middleware.TokenAuth(tokenService), middleware.TokenRateLimit(tokenService), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.ListModels)
 		v1.POST("/embeddings", middleware.TokenAuth(tokenService), middleware.TokenRateLimit(tokenService), middleware.APIAccessLog(apiAccessLogRepo), apiHandler.Embeddings)
 

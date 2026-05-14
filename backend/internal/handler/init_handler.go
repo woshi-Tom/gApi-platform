@@ -10,6 +10,7 @@ import (
 	mq "gapi-platform/internal/mq"
 	"gapi-platform/internal/pkg/response"
 	"gapi-platform/internal/repository"
+
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
@@ -230,6 +231,51 @@ func (h *InitHandler) TestDatabaseWithConfig(c *gin.Context) {
 
 	sqlDB.Close()
 	response.SuccessWithMessage(c, nil, "database connected")
+}
+
+func (h *InitHandler) InitializeDatabaseDefault(c *gin.Context) {
+	if h.DB == nil {
+		response.Fail(c, "DB_UNINITIALIZED", "database not configured")
+		return
+	}
+
+	// Verify the existing connection is alive
+	sqlDB, err := h.DB.DB()
+	if err != nil {
+		response.Fail(c, "DB_CONNECTION_FAILED", err.Error())
+		return
+	}
+	if err := sqlDB.PingContext(c.Request.Context()); err != nil {
+		response.Fail(c, "DB_CONNECTION_FAILED", err.Error())
+		return
+	}
+
+	err = h.DB.AutoMigrate(
+		&model.AdminUser{},
+		&model.User{},
+		&model.Channel{},
+		&model.Ability{},
+		&model.Token{},
+		&model.VIPPackage{},
+		&model.RechargePackage{},
+		&model.Order{},
+		&model.Payment{},
+		&model.RedemptionCode{},
+		&model.QuotaTransaction{},
+		&model.AuditLog{},
+		&model.LoginLog{},
+		&model.UsageLog{},
+		&model.APIAccessLog{},
+		&model.ChannelTestHistory{},
+		&model.SystemConfig{},
+		&model.SignupConfig{},
+	)
+	if err != nil {
+		response.Fail(c, "DB_MIGRATION_FAILED", err.Error())
+		return
+	}
+
+	response.SuccessWithMessage(c, nil, "database initialized")
 }
 
 func (h *InitHandler) InitializeDatabase(c *gin.Context) {
