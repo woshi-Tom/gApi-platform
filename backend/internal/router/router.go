@@ -72,7 +72,7 @@ func SetupUserRoutes(
 	apiAccessLogHandler := handler.NewAPIAccessLogHandler(apiAccessLogRepo)
 
 	// Init handler for setup wizard
-	initHandler := handler.NewInitHandler(db.GetDB(), redisClient, nil, cfg.AdminUsers)
+	initHandler := handler.NewInitHandler(db.GetDB(), redisClient, nil)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
@@ -251,7 +251,7 @@ func SetupAdminRoutes(
 	)
 
 	testHistoryRepo := repository.NewChannelTestHistoryRepository(db.GetDB())
-	adminHandler := handler.NewAdminHandler(authService, userRepo, channelService, orderRepo, auditRepo, loginLogRepo, apiAccessLogRepo, cfg.AdminUsers, healthCheckService, testHistoryRepo, tokenService, billingService)
+	adminHandler := handler.NewAdminHandler(authService, userRepo, channelService, orderRepo, auditRepo, loginLogRepo, apiAccessLogRepo, healthCheckService, testHistoryRepo, tokenService, billingService)
 	productHandler := handler.NewProductHandler(vipRepo, rechargeRepo)
 	settingsHandler := handler.NewSettingsHandler(settingsService, alipayService)
 

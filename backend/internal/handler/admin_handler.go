@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"gapi-platform/internal/config"
 	"gapi-platform/internal/model"
 	"gapi-platform/internal/pkg/crypto"
 	"gapi-platform/internal/pkg/response"
@@ -31,7 +30,6 @@ type AdminHandler struct {
 	auditRepo          *repository.AuditRepository
 	loginLogRepo       *repository.LoginLogRepository
 	apiAccessLogRepo   *repository.APIAccessLogRepository
-	adminUsers         []config.AdminAccount
 	healthCheckService *service.HealthCheckService
 	testHistoryRepo    *repository.ChannelTestHistoryRepository
 	tokenService       *service.TokenService
@@ -47,7 +45,6 @@ func NewAdminHandler(
 	auditRepo *repository.AuditRepository,
 	loginLogRepo *repository.LoginLogRepository,
 	apiAccessLogRepo *repository.APIAccessLogRepository,
-	adminUsers []config.AdminAccount,
 	healthCheckService *service.HealthCheckService,
 	testHistoryRepo *repository.ChannelTestHistoryRepository,
 	tokenService *service.TokenService,
@@ -61,7 +58,6 @@ func NewAdminHandler(
 		auditRepo:          auditRepo,
 		loginLogRepo:       loginLogRepo,
 		apiAccessLogRepo:   apiAccessLogRepo,
-		adminUsers:         adminUsers,
 		healthCheckService: healthCheckService,
 		testHistoryRepo:    testHistoryRepo,
 		tokenService:       tokenService,
@@ -89,45 +85,60 @@ func (h *AdminHandler) Login(c *gin.Context) {
 		return
 	}
 
-	// First try config-based admin users
-	for _, admin := range h.adminUsers {
-		if admin.Username == req.Username {
-			if err := bcrypt.CompareHashAndPassword([]byte(admin.Password), []byte(req.Password)); err != nil {
-				continue
-			}
-			token, _, err := h.authService.GenerateAdminToken(admin.Username, admin.Role)
-			if err != nil {
-				response.InternalError(c, "failed to generate token")
-				return
-			}
-			response.Success(c, map[string]interface{}{
-				"token":    token,
-				"username": admin.Username,
-				"role":     admin.Role,
-			})
-			return
-		}
-	}
-
-	// Then try database admin_users table (created by InitWizard)
+	// Authenticate via database admin_users table (single source of truth)
 	var adminUser model.AdminUser
-	if err := h.userRepo.GetDB().Where("username = ? AND status = ?", req.Username, "active").First(&adminUser).Error; err == nil {
-		if err := bcrypt.CompareHashAndPassword([]byte(adminUser.PasswordHash), []byte(req.Password)); err == nil {
-			token, _, err := h.authService.GenerateAdminToken(adminUser.Username, adminUser.Role)
-			if err != nil {
-				response.InternalError(c, "failed to generate token")
-				return
-			}
-			response.Success(c, map[string]interface{}{
-				"token":    token,
-				"username": adminUser.Username,
-				"role":     adminUser.Role,
+	if err := h.userRepo.GetDB().Where("username = ? AND status = ?", req.Username, "active").First(&adminUser).Error; err != nil {
+		if h.loginLogRepo != nil {
+			h.loginLogRepo.Create(&model.LoginLog{
+				Username:   req.Username,
+				LoginType:  "admin",
+				IP:         c.ClientIP(),
+				UserAgent:  c.Request.UserAgent(),
+				Success:    false,
+				FailReason: "user not found",
 			})
-			return
 		}
+		response.Fail(c, "INVALID_CREDENTIALS", "用户名或密码错误")
+		return
 	}
 
-	response.Fail(c, "INVALID_CREDENTIALS", "用户名或密码错误")
+	if err := bcrypt.CompareHashAndPassword([]byte(adminUser.PasswordHash), []byte(req.Password)); err != nil {
+		if h.loginLogRepo != nil {
+			h.loginLogRepo.Create(&model.LoginLog{
+				Username:   req.Username,
+				LoginType:  "admin",
+				IP:         c.ClientIP(),
+				UserAgent:  c.Request.UserAgent(),
+				Success:    false,
+				FailReason: "wrong password",
+			})
+		}
+		response.Fail(c, "INVALID_CREDENTIALS", "用户名或密码错误")
+		return
+	}
+
+	token, _, err := h.authService.GenerateAdminToken(adminUser.Username, adminUser.Role)
+	if err != nil {
+		response.InternalError(c, "failed to generate token")
+		return
+	}
+
+	if h.loginLogRepo != nil {
+		h.loginLogRepo.Create(&model.LoginLog{
+			UserID:    &adminUser.ID,
+			Username:  adminUser.Username,
+			LoginType: "admin",
+			IP:        c.ClientIP(),
+			UserAgent: c.Request.UserAgent(),
+			Success:   true,
+		})
+	}
+
+	response.Success(c, map[string]interface{}{
+		"token":    token,
+		"username": adminUser.Username,
+		"role":     adminUser.Role,
+	})
 }
 
 // ListUsers godoc

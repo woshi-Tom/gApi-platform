@@ -21,6 +21,7 @@ type Config struct {
 	Email      EmailConfig    `yaml:"email" json:"email"`
 	Log        LogConfig      `yaml:"log" json:"log"`
 	Security   SecurityConfig `yaml:"security" json:"security"`
+	// Deprecated: no longer used for admin login. Kept for config backward compatibility.
 	AdminUsers []AdminAccount `yaml:"admin_users" json:"admin_users"`
 }
 
@@ -28,8 +29,10 @@ type SecurityConfig struct {
 	EncryptKey string `yaml:"encrypt_key" json:"encrypt_key"`
 }
 
-// AdminAccount represents an admin user account
-// Password must be bcrypt hashed (e.g., $2a$10$...)
+// AdminAccount represents an admin user account.
+// Deprecated: admin_users in config is no longer used for authentication.
+// Use the InitWizard (POST /api/v1/init/create-admin) to create admin accounts
+// stored in the database admin_users table.
 type AdminAccount struct {
 	Username string `yaml:"username" json:"username"`
 	Password string `yaml:"password" json:"password"`

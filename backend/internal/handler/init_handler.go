@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"gapi-platform/internal/config"
 	"gapi-platform/internal/model"
 	mq "gapi-platform/internal/mq"
 	"gapi-platform/internal/pkg/response"
@@ -18,14 +17,13 @@ import (
 )
 
 type InitHandler struct {
-	DB       *gorm.DB
-	Redis    *repository.RedisClient
-	MQ       *mq.Client
-	cfgAdmin []config.AdminAccount
+	DB    *gorm.DB
+	Redis *repository.RedisClient
+	MQ    *mq.Client
 }
 
-func NewInitHandler(db *gorm.DB, redisClient *repository.RedisClient, mqClient *mq.Client, adminCfg []config.AdminAccount) *InitHandler {
-	return &InitHandler{DB: db, Redis: redisClient, MQ: mqClient, cfgAdmin: adminCfg}
+func NewInitHandler(db *gorm.DB, redisClient *repository.RedisClient, mqClient *mq.Client) *InitHandler {
+	return &InitHandler{DB: db, Redis: redisClient, MQ: mqClient}
 }
 
 // GetStatus returns the initialization status of the system
@@ -250,27 +248,14 @@ func (h *InitHandler) InitializeDatabaseDefault(c *gin.Context) {
 		return
 	}
 
-	err = h.DB.AutoMigrate(
-		&model.AdminUser{},
-		&model.User{},
-		&model.Channel{},
-		&model.Ability{},
-		&model.Token{},
-		&model.VIPPackage{},
-		&model.RechargePackage{},
-		&model.Order{},
-		&model.Payment{},
-		&model.RedemptionCode{},
-		&model.QuotaTransaction{},
-		&model.AuditLog{},
-		&model.LoginLog{},
-		&model.UsageLog{},
-		&model.APIAccessLog{},
-		&model.ChannelTestHistory{},
-		&model.SystemConfig{},
-		&model.SignupConfig{},
-	)
-	if err != nil {
+	// Idempotency: skip if system is already initialized
+	var sc model.SystemConfig
+	if err := h.DB.Where("config_key = ?", "system_initialized").First(&sc).Error; err == nil && sc.ConfigValue == "true" {
+		response.SuccessWithMessage(c, nil, "database already initialized")
+		return
+	}
+
+	if err := h.DB.AutoMigrate(repository.AutoMigrateModels()...); err != nil {
 		response.Fail(c, "DB_MIGRATION_FAILED", err.Error())
 		return
 	}
@@ -309,27 +294,7 @@ func (h *InitHandler) InitializeDatabase(c *gin.Context) {
 		return
 	}
 
-	err = db.AutoMigrate(
-		&model.AdminUser{},
-		&model.User{},
-		&model.Channel{},
-		&model.Ability{},
-		&model.Token{},
-		&model.VIPPackage{},
-		&model.RechargePackage{},
-		&model.Order{},
-		&model.Payment{},
-		&model.RedemptionCode{},
-		&model.QuotaTransaction{},
-		&model.AuditLog{},
-		&model.LoginLog{},
-		&model.UsageLog{},
-		&model.APIAccessLog{},
-		&model.ChannelTestHistory{},
-		&model.SystemConfig{},
-		&model.SignupConfig{},
-	)
-	if err != nil {
+	if err := db.AutoMigrate(repository.AutoMigrateModels()...); err != nil {
 		response.Fail(c, "DB_MIGRATION_FAILED", err.Error())
 		return
 	}

@@ -353,7 +353,6 @@ function createAdmin() {
 async function tryAutoInit() {
   dbTesting.value = true
   dbStatus.value = ''
-  autoInitMode.value = true
 
   try {
     // Step 1: Use existing database connection to initialize tables
@@ -385,13 +384,14 @@ function goToAdmin() {
 
 // On mount, try auto-init first
 onMounted(async () => {
+  autoInitMode.value = true
   try {
     const statusResponse = await axios.get(`${apiBase}/api/v1/init/status`)
     if (statusResponse.data?.data?.db_connected) {
       tryAutoInit()
     }
   } catch {
-    // Status check failed, stay in manual mode
+    autoInitMode.value = false
   }
 })
 </script>

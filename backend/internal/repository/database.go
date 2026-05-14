@@ -71,7 +71,15 @@ func NewDatabase(cfg *config.DatabaseConfig) (*Database, error) {
 // GORM may attempt non-idempotent constraint operations on re-run,
 // so errors are logged as warnings instead of blocking startup.
 func (d *Database) AutoMigrate() error {
-	if err := d.DB.AutoMigrate(
+	if err := d.DB.AutoMigrate(AutoMigrateModels()...); err != nil {
+		log.Printf("[WARN] AutoMigrate non-fatal error (ignored): %v", err)
+	}
+	return nil
+}
+
+// AutoMigrateModels returns the canonical list of all GORM models for migration.
+func AutoMigrateModels() []interface{} {
+	return []interface{}{
 		&model.Tenant{},
 		&model.AdminUser{},
 		&model.User{},
@@ -98,10 +106,7 @@ func (d *Database) AutoMigrate() error {
 		&model.ChannelGroupRelation{},
 		&model.UserGroupRelation{},
 		&model.ModelPricing{},
-	); err != nil {
-		log.Printf("[WARN] AutoMigrate non-fatal error (ignored): %v", err)
 	}
-	return nil
 }
 
 // Close closes the database connection
