@@ -1,6 +1,6 @@
 # gAPI Platform - Development Notes & Implementation Checklist
 
-> Last Updated: 2026-05-14
+> Last Updated: 2026-05-15
 > Purpose: Capture all detail issues and pending items for development session
 >
 > API 接口清单（第 3 节）已于 2026-05-14 与 router.go 逐行核对。
@@ -622,6 +622,7 @@ PENDING → (payment success) → PAID → (admin process) → COMPLETED
 
 - [ ] 微信支付接入（当前决定：暂不接入）
 - [ ] Phase 4 压测回归（`api-key-lifecycle-test-plan.md`，推迟到后续 Sprint）
+- [ ] #016 全面 Bug 审查修复（3 Critical / 10 High / 10 Medium / 13 Low，详见 [docs/issues/016-comprehensive-bug-review.md](../issues/016-comprehensive-bug-review.md)）
 - [x] Phase 2/3 单元测试补充（BillingService 级联扣减 + TokenRateLimit 隔离 + Anthropic 端点）
 - [x] 压测自动化断言（`test_api.py` assert_eq/assert_true + sys.exit 退出码）
 
@@ -636,5 +637,50 @@ PENDING → (payment success) → PAID → (admin process) → COMPLETED
 
 ---
 
-*Document Version: 1.4*
-*Last Updated: 2026-05-14*
+## 13. Platform-Specific Notes
+
+### 13.1 Windows 兼容性
+
+> 项目主要开发/部署平台为 Debian Linux (Docker)。Windows 作为**发布目标**（交叉编译产物提供 `.exe`），不推荐裸机运行。
+
+**已知 Windows 限制**：
+
+| 限制 | 说明 | 影响 |
+|------|------|------|
+| SIGTERM 不工作 | `signal.Notify(quit, syscall.SIGTERM)` 在 Windows 上静默忽略 | `taskkill /PID` 无法优雅关闭，只能用 Ctrl+C |
+| CRLF 行尾 | SSEReader 只处理 `\n`，不处理 `\r\n` | Windows 本地 AI 服务器流式响应可能中断 |
+| 无裸机部署指南 | 所有部署文档基于 Docker/Linux | Windows 裸机运行需用户自行配置 PostgreSQL/Redis/RabbitMQ |
+
+**Windows 上推荐运行方式**：
+1. **Docker Desktop**：使用 `deploy/docker/docker-compose.yml` 部署所有服务
+2. **WSL2**：在 WSL2 内按 Linux 方式运行
+3. **仅后端交叉编译**：Go 后端交叉编译为 `.exe` 配合外部 PostgreSQL/Redis
+
+**Go 后端 Windows 兼容性良好**：
+- 无 `os.Chmod`、`os/exec`、`filepath` 拼接硬编码路径
+- GORM 表名均为小写 + 显式 `TableName()`，无大小写问题
+- `os.TempDir` 等跨平台 API 使用正确
+
+### 13.2 Debian/Linux
+
+- 主要开发平台，Docker Compose 一键部署
+- 生产建议使用 `deploy/docker/docker-compose.prod.yml`
+- 裸机部署参考 `deploy/nginx/deploy-nginx.sh`（Nginx 反向代理）
+
+### 13.3 已知部署 Bug
+
+以下部署配置问题在 #016 审查中发现，尚未修复：
+
+| # | 问题 | 影响 |
+|---|------|------|
+| H-05 | `deploy/release/docker-compose.yml` JWT/ENCRYPT_KEY 无默认值 | `.env` 缺失时密钥为空 |
+| H-06 | `deploy/release/docker-compose.yml` Redis 密码不可配 | 改 `REDIS_PASSWORD` 不生效 |
+| H-07 | CI `release-readme.txt` 不存在 | release 流水线崩溃 |
+| H-08 | `deploy/docker/docker-compose.yml` config 卷源不存在 | 后端启动失败 |
+| H-09 | `deploy/release/Dockerfile.backend` HEALTHCHECK 缺 curl | 容器健康检查失败 |
+| H-10 | `deploy/nginx/deploy-nginx.sh` 调用未定义函数 | 裸机 nginx 部署脚本崩溃 |
+
+---
+	
+*Document Version: 1.5*
+*Last Updated: 2026-05-15*
