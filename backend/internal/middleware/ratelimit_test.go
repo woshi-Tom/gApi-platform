@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -34,7 +35,7 @@ func createTestToken(t *testing.T, db *gorm.DB, id uint, rpm, tpm int) {
 		ID:       id,
 		UserID:   1,
 		Name:     "test-token",
-		TokenKey: "sk-ap-test",
+		TokenKey: fmt.Sprintf("sk-ap-test-%d", id),
 		Status:   "active",
 	}
 	if rpm > 0 {
