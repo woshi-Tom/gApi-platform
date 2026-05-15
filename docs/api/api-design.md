@@ -1,8 +1,8 @@
 # API Proxy Platform - 接口设计文档 v1.0
 
 **版本**: 1.0  
-**日期**: 2026-03-23  
-**状态**: 待实现
+**日期**: 2026-05-15
+**状态**: 已实现
 
 ---
 
@@ -37,44 +37,56 @@ X-Trace-ID: <trace-id>
 ### 1.4 通用响应格式
 
 ```json
-// 成功响应
+// 成功响应（普通）
 {
-    "code": 0,
-    "message": "success",
+    "success": true,
+    "data": { ... }
+}
+
+// 成功响应（带消息）
+{
+    "success": true,
     "data": { ... },
-    "request_id": "uuid"
+    "message": "操作成功"
+}
+
+// 成功响应（分页 - response.Paginated）
+{
+    "success": true,
+    "data": [ ... ],
+    "pagination": {
+        "page": 1,
+        "page_size": 20,
+        "total": 100,
+        "total_pages": 5
+    }
 }
 
 // 错误响应
 {
-    "code": 40001,
-    "message": "Invalid parameters",
-    "error": "field 'email' is required",
-    "request_id": "uuid"
+    "success": false,
+    "error": {
+        "code": "INVALID_PARAMETER",
+        "message": "错误描述"
+    }
 }
 ```
 
 ### 1.5 错误码定义
 
-| 错误码 | 说明 |
-|--------|------|
-| 0 | 成功 |
-| 40001 | 参数错误 |
-| 40002 | 参数验证失败 |
-| 40101 | 未授权 |
-| 40102 | Token 过期 |
-| 40103 | Token 无效 |
-| 40301 | 权限不足 |
-| 40302 | 资源不存在 |
-| 40401 | 渠道不存在 |
-| 40402 | Token 不存在 |
-| 40403 | 用户不存在 |
-| 40901 | 资源已存在 |
-| 42201 | 配额不足 |
-| 42202 | VIP 已过期 |
-| 42901 | 请求过于频繁 |
-| 50001 | 服务器内部错误 |
-| 50002 | 第三方服务错误 |
+| 错误码 | HTTP 状态码 | 说明 |
+|--------|-------------|------|
+| INVALID_PARAMETER | 400 | 参数错误 |
+| INVALID_CREDENTIALS | 401 | 用户名或密码错误 |
+| UNAUTHORIZED | 401 | 未授权 |
+| FORBIDDEN | 403 | 禁止访问 |
+| NOT_FOUND | 404 | 资源不存在 |
+| INVALID_PASSWORD | 400 | 密码错误 |
+| INVALID_CSV | 400 | CSV 格式错误 |
+| CHANNEL_CREATE_FAILED | 400 | 渠道创建失败 |
+| INTERNAL_ERROR | 500 | 服务器内部错误 |
+| QUOTA_INSUFFICIENT | 402 | 配额不足 |
+| TOKEN_INVALID | 403 | Token 无效或已过期 |
 
 ---
 
@@ -233,8 +245,7 @@ POST /api/v1/user/auth/register
 
 ```json
 {
-    "code": 0,
-    "message": "success",
+    "success": true,
     "data": {
         "user_id": 1,
         "username": "testuser",
@@ -262,8 +273,7 @@ POST /api/v1/user/auth/login
 
 ```json
 {
-    "code": 0,
-    "message": "success",
+    "success": true,
     "data": {
         "token": "eyJhbGciOiJIUzI1NiIs...",
         "expires_at": "2026-03-24T00:00:00Z",
@@ -330,8 +340,7 @@ POST /api/v1/user/tokens
 
 ```json
 {
-    "code": 0,
-    "message": "success",
+    "success": true,
     "data": {
         "id": 1,
         "name": "My API Key",
@@ -384,8 +393,7 @@ GET /api/v1/user/quota
 
 ```json
 {
-    "code": 0,
-    "message": "success",
+    "success": true,
     "data": {
         "remain_quota": 500000,
         "vip_quota": 1000000,
@@ -426,8 +434,7 @@ GET /api/v1/user/recharge/packages
 
 ```json
 {
-    "code": 0,
-    "message": "success",
+    "success": true,
     "data": [
         {
             "id": 1,
@@ -551,8 +558,7 @@ GET /api/v1/admin/dashboard/stats
 
 ```json
 {
-    "code": 0,
-    "message": "success",
+    "success": true,
     "data": {
         "total_users": 1000,
         "active_users_today": 150,
@@ -601,32 +607,18 @@ GET /api/v1/admin/channels
 
 ```json
 {
-    "code": 0,
-    "message": "success",
-    "data": {
+    "success": true,
+    "data": [ ... ],
+    "pagination": {
+        "page": 1,
+        "page_size": 20,
         "total": 20,
-        "list": [
-            {
-                "id": 1,
-                "name": "OpenAI Primary",
-                "type": "openai",
-                "base_url": "https://api.openai.com",
-                "status": 1,
-                "is_healthy": true,
-                "models": ["gpt-4", "gpt-3.5-turbo"],
-                "weight": 100,
-                "priority": 0,
-                "rpm_limit": 1000,
-                "tpm_limit": 100000,
-                "failure_count": 0,
-                "last_success_at": "2026-03-23T12:00:00Z",
-                "response_time_avg": 500,
-                "created_at": "2026-03-01T00:00:00Z"
-            }
-        ]
+        "total_pages": 1
     }
 }
 ```
+
+> **注:** 渠道列表使用 `response.Paginated` 返回，`data` 为数组，分页信息在 `pagination` 字段中。
 
 #### 创建渠道
 
@@ -704,8 +696,7 @@ POST /api/v1/admin/channels/:id/test
 
 ```json
 {
-    "code": 0,
-    "message": "success",
+    "success": true,
     "data": {
         "success": true,
         "response_time_ms": 1234,
@@ -940,27 +931,15 @@ GET /api/v1/admin/audit-logs
 
 ```json
 {
-    "code": 0,
-    "message": "success",
+    "success": true,
     "data": {
-        "total": 1000,
-        "list": [
-            {
-                "id": 1,
-                "user_id": 1,
-                "username": "testuser",
-                "action": "user.login",
-                "action_group": "auth",
-                "resource_type": "user",
-                "resource_id": 1,
-                "request_method": "POST",
-                "request_path": "/api/v1/user/auth/login",
-                "request_ip": "192.168.1.1",
-                "status_code": 200,
-                "success": true,
-                "created_at": "2026-03-23T12:00:00Z"
-            }
-        ]
+        "list": [ ... ],
+        "pagination": {
+            "page": 1,
+            "page_size": 20,
+            "total": 1000,
+            "total_pages": 50
+        }
     }
 }
 ```
@@ -991,8 +970,7 @@ GET /api/v1/admin/audit-logs/statistics
 
 ```json
 {
-    "code": 0,
-    "message": "success",
+    "success": true,
     "data": {
         "total_count": 10000,
         "success_count": 9500,
@@ -1144,22 +1122,17 @@ ws://localhost:8080/api/v1/ws/chat?token=xxx
 
 | 错误码 | HTTP状态码 | 说明 | 解决方案 |
 |--------|------------|------|----------|
-| 40001 | 400 | 参数错误 | 检查请求参数 |
-| 40002 | 400 | 参数验证失败 | 检查字段格式 |
-| 40101 | 401 | 未授权 | 登录后重试 |
-| 40102 | 401 | Token 过期 | 刷新Token |
-| 40103 | 401 | Token 无效 | 重新登录 |
-| 40301 | 403 | 权限不足 | 申请权限 |
-| 40302 | 403 | 资源不存在 | 检查资源ID |
-| 40401 | 404 | 渠道不存在 | 检查渠道ID |
-| 40402 | 404 | Token 不存在 | 检查Token |
-| 40403 | 404 | 用户不存在 | 检查用户ID |
-| 40901 | 409 | 资源已存在 | 更换名称 |
-| 42201 | 422 | 配额不足 | 充值后重试 |
-| 42202 | 422 | VIP已过期 | 续费VIP |
-| 42901 | 429 | 请求过于频繁 | 降低请求频率 |
-| 50001 | 500 | 服务器内部错误 | 联系技术支持 |
-| 50002 | 502 | 第三方服务错误 | 检查配置 |
+| INVALID_PARAMETER | 400 | 参数错误 | 检查请求参数 |
+| INVALID_CSV | 400 | CSV格式错误 | 检查CSV文件格式 |
+| CHANNEL_CREATE_FAILED | 400 | 渠道创建失败 | 检查渠道配置 |
+| INVALID_PASSWORD | 400 | 密码错误 | 检查旧密码 |
+| INVALID_CREDENTIALS | 401 | 用户名或密码错误 | 检查登录凭据 |
+| UNAUTHORIZED | 401 | 未授权 | 登录后重试 |
+| QUOTA_INSUFFICIENT | 402 | 配额不足 | 充值后重试 |
+| FORBIDDEN | 403 | 禁止访问 | 申请权限 |
+| TOKEN_INVALID | 403 | Token无效或已过期 | 重新登录 |
+| NOT_FOUND | 404 | 资源不存在 | 检查资源ID |
+| INTERNAL_ERROR | 500 | 服务器内部错误 | 联系技术支持 |
 
 ---
 
