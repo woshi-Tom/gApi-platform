@@ -1,14 +1,14 @@
 <template>
   <div class="dashboard">
     <!-- Stats Cards -->
-    <div class="stats-grid">
+    <div class="stats-grid" v-loading="pageLoading" element-loading-text="加载中...">
       <el-card shadow="hover" class="stat-card" :class="{ 'urgent-card': isFreeExpiringSoon }">
         <div class="stat-icon blue">
           <el-icon size="24"><Coin /></el-icon>
         </div>
         <div class="stat-info">
           <div class="stat-label">可用额度</div>
-          <div class="stat-value">{{ formatQuota(getTotalAvailableQuota()) }}</div>
+          <div class="stat-value">{{ formatQuota(animatedQuota) }}</div>
           <div class="stat-sub" v-if="!quota?.is_vip && quota?.free_expired_at">
             <el-tag type="danger" size="small" effect="plain">免费额度仅剩 {{ getFreeDaysRemaining() }} 天</el-tag>
           </div>
@@ -21,7 +21,7 @@
         </div>
         <div class="stat-info">
           <div class="stat-label">今日用量</div>
-          <div class="stat-value">{{ formatQuota(usageStats?.used_today) }}</div>
+          <div class="stat-value">{{ formatQuota(animatedTodayUsage) }}</div>
         </div>
       </el-card>
       
@@ -32,7 +32,7 @@
         <div class="stat-info">
           <div class="stat-label">{{ quota?.is_vip ? 'VIP剩余天数' : '会员状态' }}</div>
           <div class="stat-value" :class="{ 'vip-value': quota?.is_vip }">
-            {{ quota?.is_vip ? getVIPDaysRemaining() + ' 天' : '免费用户' }}
+            {{ quota?.is_vip ? animatedVIPDays + ' 天' : '免费用户' }}
           </div>
         </div>
       </el-card>
@@ -43,7 +43,7 @@
         </div>
         <div class="stat-info">
           <div class="stat-label">API密钥</div>
-          <div class="stat-value">{{ tokenCount }} 个</div>
+          <div class="stat-value">{{ animatedTokenCount }} 个</div>
         </div>
       </el-card>
     </div>
@@ -211,14 +211,16 @@ curl http://localhost:8080/api/v1/chat/completions \
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useCountUp } from '@/composables/useCountUp'
+import { formatQuota as fmtQuota } from '@/composables/useFormat'
 import { ElMessage } from 'element-plus'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent } from 'echarts/components'
 import VChart from 'vue-echarts'
-import { 
-  Coin, TrendCharts, Star, Key, CopyDocument, 
+import {
+  Coin, TrendCharts, Star, Key, CopyDocument,
   ShoppingCart, ArrowRight, Timer
 } from '@element-plus/icons-vue'
 import request from '@/api/request'
@@ -248,6 +250,7 @@ interface UsageStats {
   used_today: number
 }
 
+const pageLoading = ref(true)
 const quota = ref<Quota | null>(null)
 const tokenCount = ref(0)
 const usageStats = ref<UsageStats | null>(null)
@@ -266,12 +269,14 @@ const recentActivity = ref<Array<{
   time: Date
 }>>([])
 
-function formatQuota(n: number | undefined): string {
-  if (!n) return '0'
-  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M'
-  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K'
-  return n.toLocaleString()
-}
+// 数字滚动动画
+const animatedQuota = useCountUp(() => getTotalAvailableQuota())
+const animatedTodayUsage = useCountUp(() => usageStats.value?.used_today || 0, 600)
+const animatedTokenCount = useCountUp(() => tokenCount.value, 600)
+const animatedVIPDays = useCountUp(() => getVIPDaysRemaining(), 600)
+
+// 使用共享的 formatQuota
+const formatQuota = fmtQuota
 
 function formatVIPExpiry(dateStr: string | undefined): string {
   if (!dateStr) return '-'
@@ -484,6 +489,8 @@ onMounted(async () => {
     }
   } catch (e: any) {
     ElMessage.error('加载数据失败')
+  } finally {
+    pageLoading.value = false
   }
 })
 </script>
@@ -511,31 +518,31 @@ onMounted(async () => {
 .stat-icon {
   width: 52px;
   height: 52px;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
 }
 
-.stat-icon.blue { background: linear-gradient(135deg, #409eff 0%, #337ecc 100%); }
-.stat-icon.green { background: linear-gradient(135deg, #67c23a 0%, #529b2e 100%); }
-.stat-icon.orange { background: linear-gradient(135deg, #e6a23c 0%, #b88230 100%); }
-.stat-icon.red { background: linear-gradient(135deg, #f56c6c 0%, #c45656 100%); }
+.stat-icon.blue { background: var(--gradient-blue); }
+.stat-icon.green { background: var(--gradient-green); }
+.stat-icon.orange { background: var(--gradient-orange); }
+.stat-icon.red { background: var(--gradient-red); }
 
 .stat-info {
   flex: 1;
 }
 
 .stat-label {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--el-text-color-secondary);
-  margin-bottom: 4px;
+  margin-bottom: var(--spacing-xs);
 }
 
 .stat-value {
-  font-size: 22px;
-  font-weight: 600;
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-semibold);
   color: var(--el-text-color-primary);
 }
 
@@ -544,7 +551,7 @@ onMounted(async () => {
 }
 
 .vip-card :deep(.stat-icon) {
-  background: linear-gradient(135deg, #e6a23c 0%, #b88230 100%);
+  background: var(--gradient-vip);
 }
 
 .charts-grid {
@@ -554,7 +561,7 @@ onMounted(async () => {
 }
 
 .chart-card {
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
 }
 
 .chart-card :deep(.el-card__header) {
@@ -584,32 +591,32 @@ onMounted(async () => {
 }
 
 .code-box {
-  background: #1e1e1e;
-  border-radius: 8px;
+  background: var(--color-sidebar-bg);
+  border-radius: var(--radius-md);
   overflow: hidden;
 }
 
 .code-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--spacing-md);
   padding: 10px 16px;
-  background: #2d2d2d;
-  border-bottom: 1px solid #333;
+  background: var(--color-sidebar-header-bg);
+  border-bottom: 1px solid var(--color-sidebar-border);
 }
 
 .lang-badge {
-  background: #409eff;
+  background: var(--color-primary);
   color: #fff;
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 2px var(--spacing-sm);
+  border-radius: var(--radius-xs);
   font-size: 11px;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 .code-header .title {
-  color: #a0a0a0;
-  font-size: 13px;
+  color: var(--color-sidebar-text);
+  font-size: var(--font-size-sm);
 }
 
 .code-content {
@@ -617,7 +624,7 @@ onMounted(async () => {
   padding: 16px;
   color: #d4d4d4;
   font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   line-height: 1.6;
   overflow-x: auto;
 }
@@ -634,12 +641,12 @@ onMounted(async () => {
 }
 
 .list-label {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--el-text-color-secondary);
 }
 
 .model-tag {
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
 }
 
 .quota-card :deep(.el-card__header) {
@@ -685,8 +692,8 @@ onMounted(async () => {
 .activity-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 0;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) 0;
   border-bottom: 1px solid var(--el-border-color-lighter);
 }
 
@@ -697,7 +704,7 @@ onMounted(async () => {
 .activity-icon {
   width: 36px;
   height: 36px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -724,19 +731,19 @@ onMounted(async () => {
 }
 
 .activity-title {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
   color: var(--el-text-color-primary);
   margin-bottom: 2px;
 }
 
 .activity-desc {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--el-text-color-secondary);
 }
 
 .activity-time {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--el-text-color-placeholder);
 }
 

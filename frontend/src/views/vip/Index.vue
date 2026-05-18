@@ -1,9 +1,6 @@
 <template>
   <div class="vip-page">
-    <div class="page-header">
-      <h2>VIP 会员</h2>
-      <p class="subtitle">开通 VIP 享受更多特权，提升 API 调用体验</p>
-    </div>
+    <PageHeader title="VIP 会员" description="开通 VIP 享受更多特权，提升 API 调用体验" centered />
 
     <div class="benefits-bar">
       <div class="benefit">
@@ -194,8 +191,10 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Check, Star, TrendCharts, Headset, Timer } from '@element-plus/icons-vue'
+import PageHeader from '@/components/PageHeader.vue'
 import { getProducts } from '@/api/product'
 import request from '@/api/request'
+import { formatQuota } from '@/composables/useFormat'
 
 interface VIPPackage {
   id: number
@@ -225,13 +224,6 @@ const pkgs = ref<VIPPackage[]>([])
 const isVIP = ref(false)
 const vipStatus = ref<VIPStatus | null>(null)
 const router = useRouter()
-
-function formatQuota(n: number): string {
-  if (!n) return '0'
-  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M'
-  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K'
-  return n.toLocaleString()
-}
 
 function formatExpiry(dateStr: string | undefined): string {
   if (!dateStr) return '-'
@@ -326,21 +318,6 @@ onMounted(() => {
   gap: 20px;
 }
 
-.page-header {
-  text-align: center;
-  margin-bottom: 10px;
-}
-
-.page-header h2 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 600;
-}
-
-.subtitle {
-  color: var(--el-text-color-secondary);
-  margin: 8px 0 0;
-}
 
 /* Benefits Bar */
 .benefits-bar {

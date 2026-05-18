@@ -4,7 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   User, Avatar, Setting, ArrowDown, Back, Clock, Connection,
-  Document, DataAnalysis, Lock, Goods, Monitor, Ticket, Grid
+  Document, DataAnalysis, Lock, Goods, Monitor, Ticket, Grid,
+  Fold, Expand
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -12,6 +13,15 @@ const router = useRouter()
 
 const adminUsername = ref('管理员')
 const menuActive = computed(() => route.path)
+
+// 侧边栏折叠状态（记忆到 localStorage）
+const collapsed = ref(localStorage.getItem('admin-sidebar-collapsed') === 'true')
+const sidebarWidth = computed(() => collapsed.value ? '64px' : '220px')
+
+function toggleSidebar() {
+  collapsed.value = !collapsed.value
+  localStorage.setItem('admin-sidebar-collapsed', String(collapsed.value))
+}
 
 const isNoLayoutPage = computed(() => {
   const path = route.path
@@ -48,10 +58,10 @@ onBeforeMount(() => {
 <template>
   <router-view v-if="isNoLayoutPage" />
   <el-container v-else class="app-container admin-layout">
-    <el-aside width="220px" class="sidebar admin-sidebar">
+    <el-aside :width="sidebarWidth" class="sidebar admin-sidebar">
       <div class="logo admin-logo">
         <el-icon class="logo-icon"><Setting /></el-icon>
-        <span>管理后台</span>
+        <span v-show="!collapsed">管理后台</span>
       </div>
       <el-menu 
         :default-active="menuActive" 
@@ -60,53 +70,60 @@ onBeforeMount(() => {
         text-color="#a0a0a0" 
         active-text-color="#409eff"
         :ellipsis="false"
+        :collapse="collapsed"
       >
         <el-menu-item index="/dashboard">
           <el-icon><DataAnalysis /></el-icon>
-          <span>仪表盘</span>
+          <template #title>仪表盘</template>
         </el-menu-item>
         <el-menu-item index="/users">
           <el-icon><User /></el-icon>
-          <span>用户管理</span>
+          <template #title>用户管理</template>
         </el-menu-item>
         <el-menu-item index="/products">
           <el-icon><Goods /></el-icon>
-          <span>商品管理</span>
+          <template #title>商品管理</template>
         </el-menu-item>
         <el-menu-item index="/channels">
           <el-icon><Connection /></el-icon>
-          <span>渠道管理</span>
+          <template #title>渠道管理</template>
         </el-menu-item>
         <el-menu-item index="/models">
           <el-icon><Grid /></el-icon>
-          <span>模型管理</span>
+          <template #title>模型管理</template>
         </el-menu-item>
         <el-menu-item index="/orders">
           <el-icon><Document /></el-icon>
-          <span>订单管理</span>
+          <template #title>订单管理</template>
         </el-menu-item>
         <el-menu-item index="/redemption">
           <el-icon><Ticket /></el-icon>
-          <span>兑换码管理</span>
+          <template #title>兑换码管理</template>
         </el-menu-item>
         <el-menu-item index="/logs">
           <el-icon><Clock /></el-icon>
-          <span>操作日志</span>
+          <template #title>操作日志</template>
         </el-menu-item>
         <el-menu-item index="/settings">
           <el-icon><Setting /></el-icon>
-          <span>系统设置</span>
+          <template #title>系统设置</template>
         </el-menu-item>
         <el-menu-item index="/change-password">
           <el-icon><Lock /></el-icon>
-          <span>修改密码</span>
+          <template #title>修改密码</template>
         </el-menu-item>
-        <el-divider style="margin: 10px 0; border-color: #333" />
+        <el-divider v-show="!collapsed" style="margin: 10px 0; border-color: #333" />
         <el-menu-item index="/logout" @click="handleLogout">
           <el-icon><Back /></el-icon>
-          <span>退出登录</span>
+          <template #title>退出登录</template>
         </el-menu-item>
       </el-menu>
+      <div class="sidebar-toggle" @click="toggleSidebar">
+        <el-icon :size="18">
+          <Fold v-if="!collapsed" />
+          <Expand v-else />
+        </el-icon>
+      </div>
     </el-aside>
     <el-container>
       <el-header class="header admin-header">
@@ -211,5 +228,53 @@ onBeforeMount(() => {
 .el-container {
   width: 100%;
   height: 100%;
+}
+
+/* ===== 侧边栏折叠 ===== */
+.admin-sidebar {
+  transition: width 0.25s ease !important;
+  overflow-x: hidden;
+  position: relative;
+}
+
+.admin-logo {
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.admin-logo span {
+  transition: opacity 0.2s ease;
+}
+
+.el-menu--collapse .el-menu-item {
+  padding: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.el-menu--collapse .el-menu-item .el-icon {
+  margin: 0;
+}
+
+.sidebar-toggle {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #a0a0a0;
+  border-top: 1px solid #333;
+  background-color: #1e1e1e;
+  transition: color 0.2s, background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.sidebar-toggle:hover {
+  color: #fff;
+  background-color: #2a2a2a;
 }
 </style>

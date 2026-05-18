@@ -5,6 +5,7 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import { createPinia } from 'pinia'
 import adminRouter from './admin-router'
 import AdminApp from './admin-app.vue'
+import './styles/tokens.css'
 import './style.css'
 
 const app = createApp(AdminApp)

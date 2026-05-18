@@ -1,11 +1,8 @@
 <template>
   <div class="activities-view">
+    <PageHeader title="最近活动" description="查看您的账户活动记录" />
+
     <el-card shadow="hover" class="activities-card">
-      <template #header>
-        <div class="card-header">
-          <span>最近活动</span>
-        </div>
-      </template>
       
       <div class="filter-tabs">
         <el-radio-group v-model="filterType" size="default">
@@ -61,6 +58,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
+import PageHeader from '@/components/PageHeader.vue'
 import request from '@/api/request'
 
 interface Activity {
@@ -152,22 +150,30 @@ onMounted(loadActivities)
 </script>
 
 <style scoped>
-.activities-view {
-  padding: 20px;
-}
 
 .activities-card {
+  border-radius: 12px;
+}
+
+.activities-card :deep(.el-table) {
   border-radius: 8px;
 }
 
-.card-header {
+.activities-card :deep(.el-table th.el-table__cell) {
+  background: var(--el-fill-color-lighter);
   font-weight: 600;
-  font-size: 16px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+.activities-card :deep(.el-table td.el-table__cell) {
+  font-size: 14px;
 }
 
 .filter-tabs {
   display: flex;
   gap: 8px;
+  margin-bottom: 4px;
 }
 
 .type-cell {
@@ -223,10 +229,6 @@ onMounted(loadActivities)
 }
 
 @media (max-width: 768px) {
-  .activities-view {
-    padding: 12px;
-  }
-
   .filter-tabs :deep(.el-radio-button__inner) {
     padding: 8px 12px;
     font-size: 13px;

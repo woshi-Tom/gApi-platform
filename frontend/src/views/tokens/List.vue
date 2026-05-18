@@ -1,21 +1,20 @@
 <template>
   <div>
-    <div class="page-header">
-      <h2>API 密钥管理</h2>
-      <div class="header-info">
+    <PageHeader title="API 密钥管理" description="管理您的 API 访问密钥">
+      <template #actions>
         <span class="token-count">{{ list.length }} / {{ maxTokens }} 个密钥</span>
         <el-button type="primary" @click="dlg = true" :disabled="list.length >= maxTokens">
           <el-icon><Plus /></el-icon> 创建密钥
         </el-button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <el-alert v-if="maxTokens === 1" type="warning" :closable="false" show-icon style="margin-bottom: 16px;">
       您的VIP已过期，当前为免费用户，最多只能创建1个API密钥。升级VIP可获得更多密钥。
     </el-alert>
 
     <el-card class="token-card">
-      <el-table :data="list" v-loading="ld" stripe>
+      <el-table v-if="list.length > 0" :data="list" v-loading="ld" stripe>
         <el-table-column prop="name" label="名称" min-width="120">
           <template #default="{ row }">
             <span :class="{ 'disabled-text': isTokenDisabled(row) }">{{ row.name }}</span>
@@ -67,29 +66,23 @@
         </el-table-column>
         <el-table-column label="操作" width="120" fixed="right">
           <template #default="{ row }">
-            <div class="action-buttons">
-              <el-popconfirm 
-                :key="'popconfirm-' + row.id"
-                title="确定删除此密钥？删除后不可恢复。" 
-                @confirm="del(row.id)"
-                confirm-button-text="删除"
-                cancel-button-text="取消"
-                :ref="'popconfirm-' + row.id"
-              >
-                <template #reference>
-                  <el-button 
-                    type="danger" 
-                    link 
-                    size="small" 
-                    :loading="deleting === row.id"
-                    @click.stop
-                  >删除</el-button>
-                </template>
-              </el-popconfirm>
-            </div>
+            <el-button 
+              type="danger" 
+              link 
+              size="small" 
+              :loading="deleting === row.id"
+              @click="del(row.id)"
+            >删除</el-button>
           </template>
         </el-table-column>
       </el-table>
+      <div v-if="!ld && list.length === 0" class="empty-state">
+        <el-empty description="还没有 API 密钥">
+          <el-button type="primary" @click="dlg = true">
+            <el-icon><Plus /></el-icon> 创建第一个密钥
+          </el-button>
+        </el-empty>
+      </div>
     </el-card>
 
     <el-dialog v-model="dlg" title="创建 API 密钥" width="500px" :close-on-click-modal="false">
@@ -125,9 +118,11 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { View, Hide, Plus, CopyDocument } from '@element-plus/icons-vue'
+import PageHeader from '@/components/PageHeader.vue'
 import request from '@/api/request'
+import { formatQuota, formatDate } from '@/composables/useFormat'
 
 interface Token {
   id: number
@@ -228,24 +223,6 @@ function getDisplayKey(row: Token): string {
   return row.token_key.substring(0, 8) + '••••••••••••'
 }
 
-function formatQuota(quota: number | undefined): string {
-  if (!quota) return '0'
-  if (quota >= 1000000) return (quota / 1000000).toFixed(1) + 'M'
-  if (quota >= 1000) return (quota / 1000).toFixed(1) + 'K'
-  return quota.toLocaleString()
-}
-
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr)
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
 async function load() { 
   ld.value = true
   try { 
@@ -292,7 +269,16 @@ async function create() {
   }
 }
 
-async function del(id: number) { 
+async function del(id: number) {
+  try {
+    await ElMessageBox.confirm('确定删除此密钥？删除后不可恢复。', '确认删除', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    return // 用户取消
+  }
   deleting.value = id
   try {
     await request.delete(`/tokens/${id}`)
@@ -309,41 +295,36 @@ onMounted(load)
 </script>
 
 <style scoped>
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.page-header h2 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-
-.header-info {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
 .token-count {
   color: var(--el-text-color-secondary);
   font-size: 14px;
 }
 
 .token-card {
+  border-radius: 12px;
+}
+
+.token-card :deep(.el-table) {
   border-radius: 8px;
+}
+
+.token-card :deep(.el-table th.el-table__cell) {
+  background: var(--el-fill-color-lighter);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+}
+
+.token-card :deep(.el-table td.el-table__cell) {
+  font-size: 14px;
 }
 
 .token-key {
   display: inline-block;
-  padding: 4px 8px;
+  padding: 5px 10px;
   background: var(--el-fill-color-light);
-  border-radius: 4px;
-  font-family: 'Monaco', 'Menlo', monospace;
+  border-radius: 6px;
+  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
   font-size: 13px;
   color: var(--el-text-color-primary);
   margin-right: 8px;
@@ -351,11 +332,13 @@ onMounted(load)
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  letter-spacing: 0.3px;
 }
 
 .quota-value {
-  font-weight: 500;
+  font-weight: 600;
   color: var(--el-color-success);
+  font-size: 15px;
 }
 
 .disabled-text {
@@ -370,5 +353,9 @@ onMounted(load)
 
 .create-form {
   padding-top: 10px;
+}
+
+.empty-state {
+  padding: 40px 0;
 }
 </style>

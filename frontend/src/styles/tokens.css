@@ -1,0 +1,122 @@
+/**
+ * gAPI Platform Design Tokens
+ * 集中管理所有设计变量，方便全局统一调整
+ */
+
+:root {
+  /* ===== 颜色体系 ===== */
+
+  /* 主色 */
+  --color-primary: #409eff;
+  --color-primary-light: #66b1ff;
+  --color-primary-lighter: #a0cfff;
+  --color-primary-dark: #3a8ee6;
+
+  /* 语义色 */
+  --color-success: #67c23a;
+  --color-warning: #e6a23c;
+  --color-danger: #f56c6c;
+  --color-info: #909399;
+
+  /* 中性色 */
+  --color-text-primary: #303133;
+  --color-text-regular: #606266;
+  --color-text-secondary: #909399;
+  --color-text-placeholder: #c0c4cc;
+  --color-text-disabled: #c0c4cc;
+
+  /* 背景色 */
+  --color-bg-page: #f5f7fa;
+  --color-bg-card: #ffffff;
+  --color-bg-overlay: rgba(0, 0, 0, 0.5);
+  --color-bg-hover: #f5f7fa;
+
+  /* 侧边栏 */
+  --color-sidebar-bg: #1e1e1e;
+  --color-sidebar-hover: #2a2a2a;
+  --color-sidebar-active-bg: rgba(64, 158, 255, 0.15);
+  --color-sidebar-text: #a0a0a0;
+  --color-sidebar-active-text: #409eff;
+  --color-sidebar-header-bg: #252525;
+  --color-sidebar-border: #333333;
+
+  /* 边框 */
+  --color-border: #e4e7ed;
+  --color-border-light: #ebeef5;
+  --color-border-lighter: #f2f6fc;
+
+  /* 渐变色（统计卡片） */
+  --gradient-blue: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-green: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  --gradient-orange: linear-gradient(135deg, #f2994a 0%, #f2c94c 100%);
+  --gradient-red: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+  --gradient-vip: linear-gradient(135deg, #e6a23c 0%, #b88230 100%);
+
+  /* ===== 间距体系 ===== */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-base: 16px;
+  --spacing-lg: 20px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+  --spacing-3xl: 40px;
+
+  /* ===== 圆角 ===== */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 14px;
+  --radius-full: 9999px;
+
+  /* ===== 阴影 ===== */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-base: 0 2px 12px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-xl: 0 16px 32px rgba(0, 0, 0, 0.1);
+  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.08);
+
+  /* ===== 字号 ===== */
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-base: 14px;
+  --font-size-md: 15px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 20px;
+  --font-size-3xl: 22px;
+  --font-size-4xl: 28px;
+
+  /* ===== 字重 ===== */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* ===== 过渡动画 ===== */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.25s ease;
+  --transition-slow: 0.35s ease;
+  --transition-spring: 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  /* ===== 布局尺寸 ===== */
+  --sidebar-width: 220px;
+  --sidebar-collapsed-width: 64px;
+  --header-height: 60px;
+  --content-padding: 24px;
+
+  /* ===== 表格 ===== */
+  --table-header-bg: var(--el-fill-color-lighter);
+  --table-header-font-weight: 600;
+  --table-header-font-size: 13px;
+  --table-header-color: var(--el-text-color-secondary);
+  --table-cell-font-size: 14px;
+
+  /* ===== 卡片 ===== */
+  --card-border-radius: var(--radius-xl);
+  --card-shadow: var(--shadow-base);
+  --card-border: 1px solid var(--color-border);
+}
