@@ -88,3 +88,8 @@ scripts/
 
 # review report
 CODE_REVIEW_REPORT.md__pycache__/
+
+# Cline AI tool
+.clineignore
+.clinerules/
+skills/

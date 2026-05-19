@@ -1,0 +1,360 @@
+/**
+ * gAPI Platform - Auth Pages Shared Styles
+ * 认证页面共享样式：背景、动画、组件样式
+ */
+
+/* ===== 认证页面全局缩放：100% 浏览器 = 原始 120% 效果 ===== */
+.auth-page {
+  zoom: 1.2;
+}
+
+/* ===== 星空粒子背景 ===== */
+@keyframes twinkle {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+
+@keyframes drift {
+  0% { transform: translateY(0) translateX(0); }
+  25% { transform: translateY(-10px) translateX(5px); }
+  50% { transform: translateY(-5px) translateX(-3px); }
+  75% { transform: translateY(-15px) translateX(8px); }
+  100% { transform: translateY(0) translateX(0); }
+}
+
+@keyframes orb-float-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -20px) scale(1.05); }
+  66% { transform: translate(-20px, 15px) scale(0.97); }
+}
+
+@keyframes orb-float-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-25px, 20px) scale(1.08); }
+  66% { transform: translate(15px, -10px) scale(0.95); }
+}
+
+@keyframes orb-float-3 {
+  0%, 100% { transform: translate(-50%, 0) scale(1); }
+  33% { transform: translate(-50%, -20px) scale(1.03); }
+  66% { transform: translate(-50%, 25px) scale(0.97); }
+}
+
+/* ===== 入场动画 ===== */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+    filter: blur(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ===== Shimmer 动画 ===== */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ===== 按钮光流效果 ===== */
+@keyframes btn-glow {
+  0% { left: -100%; }
+  50%, 100% { left: 100%; }
+}
+
+/* ===== 终端打字效果 ===== */
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes terminal-line {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* ===== 脉冲动画 ===== */
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  50% { transform: scale(1.1); opacity: 0; }
+  100% { transform: scale(0.8); opacity: 0; }
+}
+
+@keyframes pulse-icon {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* ===== 信封飞入动画 ===== */
+@keyframes envelope-fly {
+  0% { transform: translateY(30px) rotate(-10deg) scale(0.8); opacity: 0; }
+  60% { transform: translateY(-5px) rotate(3deg) scale(1.02); opacity: 1; }
+  100% { transform: translateY(0) rotate(0) scale(1); opacity: 1; }
+}
+
+/* ===== 步骤指示器动画 ===== */
+@keyframes step-active-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(99, 102, 241, 0); }
+}
+
+/* ===== 通用入场类 ===== */
+.animate-fade-up {
+  animation: fadeUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  opacity: 0;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+  opacity: 0;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  opacity: 0;
+}
+
+/* ===== 密码强度进度条 ===== */
+.password-strength-bar {
+  height: 3px;
+  border-radius: 2px;
+  margin-top: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.password-strength-bar .bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1), background 0.4s ease;
+}
+
+.password-strength-bar .bar-fill.strength-weak {
+  width: 25%;
+  background: linear-gradient(90deg, #ef4444, #f87171);
+}
+
+.password-strength-bar .bar-fill.strength-fair {
+  width: 50%;
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+
+.password-strength-bar .bar-fill.strength-good {
+  width: 75%;
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.password-strength-bar .bar-fill.strength-strong {
+  width: 100%;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6, #a78bfa);
+}
+
+/* ===== 分格式验证码输入 ===== */
+.code-input-group {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.code-input-group .code-input {
+  width: 44px;
+  height: 48px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  outline: none;
+  transition: all 0.3s ease;
+  caret-color: rgba(255, 255, 255, 0.5);
+}
+
+.code-input-group .code-input:focus {
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1), 0 0 16px rgba(99, 102, 241, 0.08);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.code-input-group .code-input::placeholder {
+  color: rgba(255, 255, 255, 0.15);
+}
+
+.code-input-group .code-input.filled {
+  border-color: rgba(99, 102, 241, 0.3);
+  background: rgba(99, 102, 241, 0.06);
+}
+
+/* ===== 终端动画组件 ===== */
+.terminal-demo {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 16px 18px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 12px;
+  line-height: 1.8;
+  overflow: hidden;
+  position: relative;
+  max-width: 380px;
+}
+
+.terminal-demo::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 12px 12px 0 0;
+}
+
+.terminal-demo .terminal-dots {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.terminal-demo .terminal-dots span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.terminal-demo .terminal-dots span:nth-child(1) { background: #ef4444; }
+.terminal-demo .terminal-dots span:nth-child(2) { background: #f59e0b; }
+.terminal-demo .terminal-dots span:nth-child(3) { background: #22c55e; }
+
+.terminal-demo .terminal-line {
+  opacity: 0;
+  animation: terminal-line 0.4s ease-out forwards;
+  white-space: nowrap;
+}
+
+.terminal-demo .terminal-line .prompt {
+  color: #6366f1;
+}
+
+.terminal-demo .terminal-line .command {
+  color: #a5b4fc;
+}
+
+.terminal-demo .terminal-line .response {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.terminal-demo .terminal-line .success {
+  color: #22c55e;
+}
+
+.terminal-demo .terminal-line .cursor {
+  display: inline-block;
+  width: 7px;
+  height: 14px;
+  background: rgba(99, 102, 241, 0.8);
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: blink-cursor 1s step-end infinite;
+}
+
+/* ===== 特性亮点列表 ===== */
+.feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 28px;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  transition: all 0.3s ease;
+}
+
+.feature-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+  transform: translateX(4px);
+}
+
+.feature-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.feature-icon.icon-purple {
+  background: rgba(99, 102, 241, 0.12);
+  color: #818cf8;
+}
+
+.feature-icon.icon-blue {
+  background: rgba(59, 130, 246, 0.12);
+  color: #60a5fa;
+}
+
+.feature-icon.icon-green {
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+}
+
+.feature-icon.icon-orange {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+}
+
+.feature-text {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.45);
+  line-height: 1.4;
+}
+
+.feature-text strong {
+  display: block;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 2px;
+}

@@ -1,64 +1,85 @@
 <template>
-  <div class="auth-page">
-    <div class="bg-decoration">
-      <div class="orb orb-1"></div>
-      <div class="orb orb-2"></div>
-      <div class="orb orb-3"></div>
-      <div class="grid-lines"></div>
-    </div>
+  <AuthLayout :showLoginLink="true">
+    <!-- 品牌展示区 -->
+    <template #brand>
+      <h1 class="brand-title">
+        <span class="gradient-text">重置密码</span>
+        <br />设置您的新密码
+      </h1>
+      <p class="brand-desc">为了您的账户安全，建议使用包含大小写字母、数字和特殊字符的强密码</p>
 
-    <nav class="navbar">
-      <router-link to="/login" class="nav-logo animate-fade-up" style="animation-delay: 0ms">gAPI Platform</router-link>
-      <router-link to="/login" class="nav-link-btn animate-fade-up" style="animation-delay: 150ms">返回登录</router-link>
-    </nav>
-
-    <main class="auth-content">
-      <div class="glass-card animate-fade-up" style="animation-delay: 300ms">
-        <div class="card-inner">
-          <div class="card-header">
-            <h2 class="animate-fade-up" style="animation-delay: 400ms">重置密码</h2>
-            <p class="card-desc animate-fade-up" style="animation-delay: 450ms">为您的账户设置新密码</p>
+      <!-- 特性亮点 -->
+      <div class="feature-list animate-fade-up" style="animation-delay: 600ms">
+        <div class="feature-item">
+          <div class="feature-icon icon-green">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           </div>
-
-          <div v-if="loading" class="animate-fade-up" style="animation-delay: 500ms">
-            <el-skeleton :rows="3" animated />
+          <div class="feature-text">
+            <strong>安全加密</strong>
+            密码加密存储，传输全程 HTTPS
           </div>
-
-          <div v-else-if="tokenValid" class="animate-fade-up" style="animation-delay: 500ms">
-            <p class="email-hint">为 <strong>{{ email }}</strong> 设置新密码</p>
-            <el-form @submit.prevent="handleSubmit" class="auth-form">
-              <el-form-item>
-                <el-input v-model="form.password" type="password" show-password placeholder="新密码（至少8位）" :prefix-icon="Lock" size="large" />
-                <div v-if="form.password" class="password-strength">
-                  <span>密码强度：</span>
-                  <el-tag :type="passwordStrengthType" size="small">{{ passwordStrengthText }}</el-tag>
-                </div>
-              </el-form-item>
-              <el-form-item>
-                <el-input v-model="form.confirmPassword" type="password" show-password placeholder="再次输入新密码" :prefix-icon="Lock" size="large" />
-              </el-form-item>
-              <el-form-item>
-                <el-button type="primary" native-type="submit" :loading="submitting" :disabled="!canSubmit" @click="handleSubmit" size="large" class="submit-btn">重置密码</el-button>
-              </el-form-item>
-            </el-form>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon icon-purple">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
-
-          <div v-else class="error-content animate-fade-up" style="animation-delay: 500ms">
-            <el-icon class="error-icon"><CircleClose /></el-icon>
-            <h3>链接已失效</h3>
-            <p>重置链接无效或已过期，请重新申请</p>
-            <el-button type="primary" @click="$router.push('/forgot-password')" size="large" class="submit-btn" style="margin-top: 20px">重新申请</el-button>
-          </div>
-
-          <div class="card-footer animate-fade-up" style="animation-delay: 600ms">
-            <router-link to="/login" class="footer-link">返回登录</router-link>
+          <div class="feature-text">
+            <strong>即时生效</strong>
+            重置后立即使用新密码登录
           </div>
         </div>
       </div>
-    </main>
+    </template>
 
-    <footer class="page-footer animate-fade-up" style="animation-delay: 700ms">© {{ new Date().getFullYear() }} gAPI Platform. All rights reserved.</footer>
-  </div>
+    <!-- 重置密码卡片内容 -->
+    <div class="card-header">
+      <h2 class="animate-fade-up" style="animation-delay: 400ms">重置密码</h2>
+      <p class="card-desc animate-fade-up" style="animation-delay: 450ms">为您的账户设置新密码</p>
+    </div>
+
+    <div v-if="loading" class="animate-fade-up" style="animation-delay: 500ms">
+      <div class="skeleton-wrapper">
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line short"></div>
+        <div class="skeleton-line"></div>
+      </div>
+    </div>
+
+    <div v-else-if="tokenValid" class="animate-fade-up" style="animation-delay: 500ms">
+      <p class="email-hint">为 <strong>{{ email }}</strong> 设置新密码</p>
+      <el-form @submit.prevent="handleSubmit" class="auth-form">
+        <el-form-item>
+          <el-input v-model="form.password" type="password" show-password placeholder="新密码（至少8位）" :prefix-icon="Lock" size="large" />
+          <div v-if="form.password" class="password-strength-bar">
+            <div class="bar-fill" :class="passwordStrengthClass"></div>
+          </div>
+          <div v-if="form.password" class="password-strength-info">
+            <span class="password-strength-text" :class="passwordStrengthClass">{{ passwordStrengthText }}</span>
+          </div>
+        </el-form-item>
+        <el-form-item>
+          <el-input v-model="form.confirmPassword" type="password" show-password placeholder="再次输入新密码" :prefix-icon="Lock" size="large" />
+          <span v-if="form.confirmPassword && form.password !== form.confirmPassword" class="mismatch-hint">两次输入的密码不一致</span>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" native-type="submit" :loading="submitting" :disabled="!canSubmit" @click="handleSubmit" size="large" class="submit-btn">重置密码</el-button>
+        </el-form-item>
+      </el-form>
+    </div>
+
+    <div v-else class="error-content animate-fade-up" style="animation-delay: 500ms">
+      <div class="error-icon-wrapper">
+        <el-icon class="error-icon"><CircleClose /></el-icon>
+      </div>
+      <h3>链接已失效</h3>
+      <p>重置链接无效或已过期，请重新申请</p>
+      <el-button type="primary" @click="$router.push('/forgot-password')" size="large" class="submit-btn" style="margin-top: 20px">重新申请</el-button>
+    </div>
+
+    <div class="card-footer animate-fade-up" style="animation-delay: 600ms">
+      <router-link to="/login" class="footer-link">返回登录</router-link>
+    </div>
+  </AuthLayout>
 </template>
 
 <script setup lang="ts">
@@ -66,7 +87,9 @@ import { reactive, ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Lock, CircleClose } from '@element-plus/icons-vue'
+import AuthLayout from '@/components/auth/AuthLayout.vue'
 import request from '@/api/request'
+import '@/styles/auth.css'
 
 const router = useRouter()
 const route = useRoute()
@@ -75,7 +98,6 @@ const loading = ref(true)
 const submitting = ref(false)
 const tokenValid = ref(false)
 const email = ref('')
-const error = ref('')
 
 const form = reactive({ password: '', confirmPassword: '' })
 
@@ -93,29 +115,30 @@ const passwordStrength = computed(() => {
   return score
 })
 
-const passwordStrengthType = computed(() => {
+const passwordStrengthClass = computed(() => {
   const s = passwordStrength.value
-  if (s <= 2) return 'danger'
-  if (s <= 3) return 'warning'
-  return 'success'
+  if (s <= 1) return 'strength-weak'
+  if (s <= 2) return 'strength-fair'
+  if (s <= 3) return 'strength-good'
+  return 'strength-strong'
 })
 
 const passwordStrengthText = computed(() => {
   const s = passwordStrength.value
   if (s <= 1) return '弱'
-  if (s <= 2) return '中等'
+  if (s <= 2) return '一般'
   if (s <= 3) return '良好'
   return '强'
 })
 
 onMounted(async () => {
   const token = route.query.token as string
-  if (!token) { error.value = 'Missing token'; tokenValid.value = false; loading.value = false; return }
+  if (!token) { tokenValid.value = false; loading.value = false; return }
   try {
     const res = await request.get('/auth/reset-password', { params: { token } })
     if (res.data?.success) { email.value = res.data.data.email; tokenValid.value = true }
-    else { error.value = res.data?.error?.message || 'Invalid token'; tokenValid.value = false }
-  } catch (e: any) { error.value = e.response?.data?.error?.message || 'Link expired'; tokenValid.value = false }
+    else { tokenValid.value = false }
+  } catch { tokenValid.value = false }
   finally { loading.value = false }
 })
 
@@ -133,58 +156,70 @@ async function handleSubmit() {
 }
 </script>
 
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-</style>
-
 <style scoped>
-.auth-page { position: relative; width: 100%; min-height: 100vh; display: flex; flex-direction: column; background: #000; font-family: 'Inter', sans-serif; overflow: hidden; color: #fff; }
-.bg-decoration { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-.orb { position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.15; }
-.orb-1 { width: 600px; height: 600px; background: radial-gradient(circle, #6366f1, transparent 70%); top: -200px; left: -150px; animation: orb-1 25s ease-in-out infinite; }
-.orb-2 { width: 500px; height: 500px; background: radial-gradient(circle, #8b5cf6, transparent 70%); bottom: -200px; right: -100px; animation: orb-2 30s ease-in-out infinite; }
-.orb-3 { width: 400px; height: 400px; background: radial-gradient(circle, #3b82f6, transparent 70%); top: 40%; left: 50%; animation: orb-3 20s ease-in-out infinite; }
-@keyframes orb-1 { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(40px, 30px) scale(1.08); } }
-@keyframes orb-2 { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-30px, -20px) scale(1.05); } }
-@keyframes orb-3 { 0%, 100% { transform: translate(-50%, 0) scale(1); } 50% { transform: translate(-50%, 30px) scale(0.95); } }
-.grid-lines { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 80px 80px; }
-@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); filter: blur(10px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
-.animate-fade-up { animation: fadeUp 0.8s ease-out forwards; opacity: 0; }
-.navbar { position: relative; z-index: 50; display: flex; justify-content: space-between; align-items: center; padding: 16px; }
-@media (min-width: 768px) { .navbar { padding: 16px 48px; } }
-.nav-logo { font-size: 24px; font-weight: 600; letter-spacing: -0.04em; color: #fff; text-decoration: none; transition: opacity 0.2s; }
-@media (min-width: 768px) { .nav-logo { font-size: 28px; } }
-.nav-logo:hover { opacity: 0.8; }
-.nav-link-btn { padding: 8px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.8); text-decoration: none; border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s; }
-.nav-link-btn:hover { border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.05); }
-.auth-content { position: relative; z-index: 10; flex: 1; display: flex; align-items: center; justify-content: center; padding: 0 16px 32px; }
-.glass-card { background: rgba(255,255,255,0.03); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-radius: 16px; border: 1px solid rgba(255,255,255,0.06); position: relative; overflow: hidden; width: 100%; max-width: 400px; }
-.glass-card::before { content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1px; background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.02) 30%, rgba(255,255,255,0) 60%, rgba(255,255,255,0.02) 80%, rgba(255,255,255,0.08) 100%); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
-.card-inner { padding: 28px 24px 24px; }
-@media (min-width: 640px) { .card-inner { padding: 32px 28px 28px; } }
+/* ===== 品牌展示区 ===== */
+.brand-title { font-size: 28px; font-weight: 600; letter-spacing: -0.04em; line-height: 1.2; margin: 0 0 16px; color: #fff; }
+@media (min-width: 640px) { .brand-title { font-size: 36px; } }
+@media (min-width: 768px) { .brand-title { font-size: 44px; } }
+@media (min-width: 1024px) { .brand-title { font-size: 52px; } }
+
+.gradient-text { background: linear-gradient(135deg, #fff 0%, rgba(167, 139, 250, 0.7) 50%, rgba(129, 140, 248, 0.8) 100%); background-size: 200% 200%; animation: gradient-shift 6s ease infinite; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+.brand-desc { font-size: 15px; color: rgba(255, 255, 255, 0.35); margin: 0 0 24px; line-height: 1.6; max-width: 400px; }
+@media (min-width: 768px) { .brand-desc { font-size: 16px; } }
+
+/* ===== 卡片头部 ===== */
 .card-header { text-align: center; margin-bottom: 24px; }
-.card-header h2 { margin: 0 0 6px; font-size: 20px; font-weight: 600; color: #fff; }
-.card-desc { margin: 0; font-size: 14px; color: rgba(255,255,255,0.35); }
-.email-hint { color: rgba(255,255,255,0.5); text-align: center; margin-bottom: 20px; font-size: 14px; }
-.email-hint strong { color: #fff; }
+.card-header h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; color: #fff; }
+.card-desc { margin: 0; font-size: 14px; color: rgba(255, 255, 255, 0.3); }
+
+/* ===== 骨架屏 ===== */
+.skeleton-wrapper { padding: 8px 0; }
+.skeleton-line { height: 14px; background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 25%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.04) 75%); background-size: 200% 100%; animation: shimmer 1.5s ease-in-out infinite; border-radius: 6px; margin-bottom: 16px; }
+.skeleton-line.short { width: 60%; }
+
+/* ===== 邮箱提示 ===== */
+.email-hint { color: rgba(255, 255, 255, 0.4); text-align: center; margin-bottom: 20px; font-size: 14px; }
+.email-hint strong { color: rgba(255, 255, 255, 0.8); }
+
+/* ===== 表单 ===== */
 .auth-form :deep(.el-form-item) { margin-bottom: 16px; }
 .auth-form :deep(.el-form-item:last-child) { margin-bottom: 0; }
-.auth-form :deep(.el-input__wrapper) { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; box-shadow: none; transition: all 0.3s; padding: 4px 12px; }
-.auth-form :deep(.el-input__wrapper:hover) { border-color: rgba(255,255,255,0.15); }
-.auth-form :deep(.el-input__wrapper.is-focus) { border-color: rgba(255,255,255,0.25); box-shadow: 0 0 0 3px rgba(255,255,255,0.04); }
+.auth-form :deep(.el-input__wrapper) { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 10px; box-shadow: none; transition: all 0.3s; padding: 4px 12px; }
+.auth-form :deep(.el-input__wrapper:hover) { border-color: rgba(255, 255, 255, 0.12); }
+.auth-form :deep(.el-input__wrapper.is-focus) { border-color: rgba(99, 102, 241, 0.4); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08), 0 0 20px rgba(99, 102, 241, 0.04); }
 .auth-form :deep(.el-input__inner) { color: #fff; font-size: 14px; }
-.auth-form :deep(.el-input__inner::placeholder) { color: rgba(255,255,255,0.25); }
-.auth-form :deep(.el-input__prefix .el-icon) { color: rgba(255,255,255,0.25); font-size: 16px; }
-.password-strength { display: flex; align-items: center; gap: 8px; font-size: 12px; color: rgba(255,255,255,0.35); margin-top: 8px; }
+.auth-form :deep(.el-input__inner::placeholder) { color: rgba(255, 255, 255, 0.2); }
+.auth-form :deep(.el-input__prefix .el-icon) { color: rgba(255, 255, 255, 0.2); font-size: 16px; }
+
+/* ===== 密码强度 ===== */
+.password-strength-info { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.password-strength-text { font-size: 12px; transition: color 0.3s ease; }
+.password-strength-text.strength-weak { color: #ef4444; }
+.password-strength-text.strength-fair { color: #f59e0b; }
+.password-strength-text.strength-good { color: #10b981; }
+.password-strength-text.strength-strong { color: #8b5cf6; }
+
+/* ===== 密码不一致提示 ===== */
+.mismatch-hint { display: block; font-size: 12px; color: #ef4444; margin-top: 6px; }
+
+/* ===== 提交按钮 ===== */
+.submit-btn { width: 100%; height: 44px; border-radius: 10px; font-size: 14px; font-weight: 500; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; border: none; transition: all 0.3s ease; position: relative; overflow: hidden; }
+.submit-btn::after { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent); animation: btn-glow 3s ease-in-out infinite; }
+.submit-btn:hover:not(:disabled) { background: linear-gradient(135deg, #818cf8, #a78bfa); box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3); transform: translateY(-1px); }
+.submit-btn:active:not(:disabled) { transform: translateY(0); }
+.submit-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ===== 错误态 ===== */
 .error-content { text-align: center; padding: 20px 0; }
-.error-icon { font-size: 56px; color: #f56c6c; margin-bottom: 16px; }
+.error-icon-wrapper { position: relative; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+.error-icon { font-size: 56px; color: rgba(239, 68, 68, 0.8); animation: envelope-fly 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.error-icon-wrapper::before { content: ''; position: absolute; width: 80px; height: 80px; border-radius: 50%; background: rgba(239, 68, 68, 0.06); animation: pulse-ring 2s ease-in-out infinite; }
 .error-content h3 { margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #fff; }
-.error-content p { color: rgba(255,255,255,0.5); margin: 8px 0; font-size: 14px; }
-.submit-btn { width: 100%; height: 42px; border-radius: 10px; font-size: 14px; font-weight: 500; background: #fff; color: #000; border: none; transition: all 0.2s; }
-.submit-btn:hover:not(:disabled) { background: rgba(229,229,229,1); }
-.submit-btn:disabled { opacity: 0.25; cursor: not-allowed; }
-.card-footer { text-align: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 13px; }
-.footer-link { color: rgba(255,255,255,0.5); text-decoration: none; font-weight: 500; transition: color 0.2s; }
+.error-content p { color: rgba(255, 255, 255, 0.4); margin: 8px 0; font-size: 14px; }
+
+/* ===== 底部链接 ===== */
+.card-footer { text-align: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.04); font-size: 13px; }
+.footer-link { color: rgba(255, 255, 255, 0.4); text-decoration: none; font-weight: 500; transition: color 0.2s ease; }
 .footer-link:hover { color: #fff; }
-.page-footer { position: relative; z-index: 10; text-align: center; padding: 0 16px 16px; font-size: 12px; color: rgba(255,255,255,0.2); }
 </style>
