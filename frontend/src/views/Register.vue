@@ -8,8 +8,15 @@
       </h1>
       <p class="brand-desc">注册即可获得免费额度，体验多渠道 AI API 中转服务</p>
 
+      <!-- 用户概览面板 -->
+      <StatsPanel
+        title="用户概览"
+        live-label="今日状态"
+        :stats="registerStats"
+      />
+
       <!-- 特性亮点 -->
-      <div class="feature-list animate-fade-up" style="animation-delay: 600ms">
+      <div class="feature-list animate-fade-up" style="animation-delay: 700ms">
         <div class="feature-item">
           <div class="feature-icon icon-purple">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8l-8 8"/><path d="M8 8l8 8"/></svg>
@@ -74,7 +81,7 @@
           <el-input v-model="form.email" placeholder="请输入邮箱" :prefix-icon="Message" size="large" @blur="checkEmailFormat" />
         </el-form-item>
         <el-form-item v-if="form.email && isValidEmail">
-          <div class="captcha-wrapper" :class="{ 'captcha-verified': captchaVerified }" @click="showCaptcha = true">
+          <div class="captcha-wrapper" :class="{ 'captcha-verified': captchaVerified }" @click="!captchaVerified && (showCaptcha = true)">
             <el-icon class="captcha-icon"><Picture /></el-icon>
             <span class="captcha-text">{{ captchaVerified ? '安全验证已通过' : '点击进行安全验证' }}</span>
             <el-icon v-if="captchaVerified" class="captcha-check"><CircleCheck /></el-icon>
@@ -169,8 +176,15 @@ import { ElMessage } from 'element-plus'
 import { User, Message, Lock, Key, Picture, CircleCheck } from '@element-plus/icons-vue'
 import SlideCaptcha from '@/components/SlideCaptcha.vue'
 import AuthLayout from '@/components/auth/AuthLayout.vue'
+import StatsPanel from '@/components/auth/StatsPanel.vue'
 import request from '@/api/request'
 import '@/styles/auth.css'
+
+const registerStats = [
+  { value: '12,860', label: '已注册用户', fillWidth: '82%' },
+  { value: '128', label: '今日新增', color: 'green' as const, fillWidth: '65%' },
+  { value: '2,430', label: '已创建 Key', color: 'purple' as const, fillWidth: '72%' },
+]
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -558,6 +572,8 @@ async function handleRegister() {
   transition: all 0.3s;
   background: rgba(255, 255, 255, 0.03);
   width: 100%;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .captcha-wrapper:hover {
@@ -566,6 +582,12 @@ async function handleRegister() {
 }
 
 .captcha-wrapper.captcha-verified {
+  border-color: rgba(34, 197, 94, 0.3);
+  background: rgba(34, 197, 94, 0.06);
+  cursor: default;
+}
+
+.captcha-wrapper.captcha-verified:hover {
   border-color: rgba(34, 197, 94, 0.3);
   background: rgba(34, 197, 94, 0.06);
 }

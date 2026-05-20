@@ -608,26 +608,24 @@ function getStarStyle(index: number) {
   box-shadow: 0 8px 40px rgba(99, 102, 241, 0.06);
 }
 
-/* Shimmer 高光条 */
+/* Shimmer 高光条 — 渐变色流动（无割裂感） */
 .card-shimmer {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.3), rgba(139, 92, 246, 0.2), transparent);
+  background: linear-gradient(
+    90deg,
+    rgba(139, 92, 246, 0.08),
+    rgba(99, 102, 241, 0.35),
+    rgba(129, 140, 248, 0.25),
+    rgba(99, 102, 241, 0.35),
+    rgba(139, 92, 246, 0.08)
+  );
+  background-size: 200% 100%;
+  animation: shimmer-flow 4s linear infinite;
   z-index: 1;
-}
-
-.card-shimmer::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-  animation: shimmer 3s ease-in-out infinite;
 }
 
 /* 内边框渐变 */

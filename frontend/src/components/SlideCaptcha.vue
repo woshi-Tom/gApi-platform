@@ -231,6 +231,8 @@ defineExpose({ reset })
   font-weight: 500;
   font-size: 15px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .close-icon {

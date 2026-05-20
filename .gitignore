@@ -7,6 +7,7 @@ dist/
 dist-admin/
 dist_user_build/
 dist_admin_build/
+.vite/
 *.exe
 gapi-server
 gapi-server-*

@@ -1,4 +1,4 @@
-<template>
+·<template>
   <AuthLayout :showNavLinks="true" :showRegisterLink="true">
     <!-- 品牌展示区 -->
     <template #brand>
@@ -8,24 +8,12 @@
       </h1>
       <p class="brand-desc">支持 OpenAI、Claude、DeepSeek 等多渠道无缝接入</p>
 
-      <!-- 终端演示动画 -->
-      <div class="terminal-demo animate-fade-up" style="animation-delay: 600ms">
-        <div class="terminal-dots">
-          <span></span><span></span><span></span>
-        </div>
-        <div class="terminal-line" style="animation-delay: 800ms">
-          <span class="prompt">$ </span><span class="command">curl api.gapi.io/v1/chat</span>
-        </div>
-        <div class="terminal-line" style="animation-delay: 1200ms">
-          <span class="response">{ "model": "gpt-4", "stream": true }</span>
-        </div>
-        <div class="terminal-line" style="animation-delay: 1600ms">
-          <span class="success">✓ 200 OK</span><span class="response"> — 42ms via OpenAI</span>
-        </div>
-        <div class="terminal-line" style="animation-delay: 2000ms">
-          <span class="prompt">$ </span><span class="cursor"></span>
-        </div>
-      </div>
+      <!-- 产品预览面板 -->
+      <StatsPanel
+        title="平台概览"
+        live-label="实时"
+        :stats="loginStats"
+      />
 
       <!-- 特性亮点 -->
       <div class="feature-list animate-fade-up" style="animation-delay: 700ms">
@@ -88,7 +76,7 @@
         <div
           class="captcha-wrapper"
           :class="{ 'captcha-verified': captchaVerified }"
-          @click="showCaptcha = true"
+          @click="!captchaVerified && (showCaptcha = true)"
         >
           <el-icon class="captcha-icon">
             <CircleCheck v-if="captchaVerified" />
@@ -139,7 +127,14 @@ import { ElMessage } from 'element-plus'
 import { Message, Lock, Picture, CircleCheck } from '@element-plus/icons-vue'
 import SlideCaptcha from '@/components/SlideCaptcha.vue'
 import AuthLayout from '@/components/auth/AuthLayout.vue'
+import StatsPanel from '@/components/auth/StatsPanel.vue'
 import '@/styles/auth.css'
+
+const loginStats = [
+  { value: '128,430', label: '今日请求量', fillWidth: '78%' },
+  { value: '99.92%', label: '成功率', color: 'green' as const, fillWidth: '99%' },
+  { value: '200+', label: '支持模型', color: 'purple' as const, fillWidth: '85%' },
+]
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -307,6 +302,8 @@ async function handleLogin() {
   transition: all 0.3s ease;
   background: rgba(255, 255, 255, 0.03);
   width: 100%;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .captcha-wrapper:hover {
@@ -315,6 +312,12 @@ async function handleLogin() {
 }
 
 .captcha-wrapper.captcha-verified {
+  border-color: rgba(34, 197, 94, 0.3);
+  background: rgba(34, 197, 94, 0.06);
+  cursor: default;
+}
+
+.captcha-wrapper.captcha-verified:hover {
   border-color: rgba(34, 197, 94, 0.3);
   background: rgba(34, 197, 94, 0.06);
 }

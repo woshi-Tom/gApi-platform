@@ -76,6 +76,12 @@
   100% { transform: translateX(100%); }
 }
 
+/* 渐变色流动（卡片顶部高光条） */
+@keyframes shimmer-flow {
+  0% { background-position: 0% 50%; }
+  100% { background-position: -200% 50%; }
+}
+
 @keyframes gradient-shift {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
