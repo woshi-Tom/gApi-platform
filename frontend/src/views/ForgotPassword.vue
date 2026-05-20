@@ -128,7 +128,7 @@ async function handleSubmit() {
   letter-spacing: -0.04em;
   line-height: 1.2;
   margin: 0 0 16px;
-  color: #fff;
+  color: var(--c-text);
 }
 
 @media (min-width: 640px) {
@@ -154,7 +154,7 @@ async function handleSubmit() {
 
 .brand-desc {
   font-size: 15px;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--c-text-sub);
   margin: 0 0 24px;
   line-height: 1.6;
   max-width: 400px;
@@ -166,25 +166,25 @@ async function handleSubmit() {
 
 /* ===== 卡片头部 ===== */
 .card-header { text-align: center; margin-bottom: 24px; }
-.card-header h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; color: #fff; }
-.card-desc { margin: 0; font-size: 14px; color: rgba(255, 255, 255, 0.3); }
+.card-header h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; color: var(--c-text); }
+.card-desc { margin: 0; font-size: 14px; color: var(--c-text-sub); }
 
 /* ===== 表单 ===== */
 .auth-form :deep(.el-form-item) { margin-bottom: 16px; }
 .auth-form :deep(.el-form-item:last-child) { margin-bottom: 0; }
-.auth-form :deep(.el-input__wrapper) { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 10px; box-shadow: none; transition: all 0.3s; padding: 4px 12px; }
-.auth-form :deep(.el-input__wrapper:hover) { border-color: rgba(255, 255, 255, 0.12); }
+.auth-form :deep(.el-input__wrapper) { background: var(--c-input-bg); border: 1px solid var(--c-input-border); border-radius: 10px; box-shadow: none; transition: all 0.3s; padding: 4px 12px; }
+.auth-form :deep(.el-input__wrapper:hover) { border-color: var(--c-input-hover); }
 .auth-form :deep(.el-input__wrapper.is-focus) { border-color: rgba(99, 102, 241, 0.4); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08), 0 0 20px rgba(99, 102, 241, 0.04); }
-.auth-form :deep(.el-input__inner) { color: #fff; font-size: 14px; }
-.auth-form :deep(.el-input__inner::placeholder) { color: rgba(255, 255, 255, 0.2); }
-.auth-form :deep(.el-input__prefix .el-icon) { color: rgba(255, 255, 255, 0.2); font-size: 16px; }
+.auth-form :deep(.el-input__inner) { color: var(--c-text); font-size: 14px; }
+.auth-form :deep(.el-input__inner::placeholder) { color: var(--c-text-muted); }
+.auth-form :deep(.el-input__prefix .el-icon) { color: var(--c-icon); font-size: 16px; }
 
 /* ===== 验证码 ===== */
-.captcha-wrapper { display: flex; align-items: center; gap: 10px; padding: 11px 16px; border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 10px; cursor: pointer; transition: all 0.3s; background: rgba(255, 255, 255, 0.03); width: 100%; }
-.captcha-wrapper:hover { border-color: rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.05); }
+.captcha-wrapper { display: flex; align-items: center; gap: 10px; padding: 11px 16px; border: 1px solid var(--c-input-border); border-radius: 10px; cursor: pointer; transition: all 0.3s; background: var(--c-input-bg); width: 100%; }
+.captcha-wrapper:hover { border-color: var(--c-input-hover); background: rgba(255, 255, 255, 0.05); }
 .captcha-wrapper.captcha-verified { border-color: rgba(34, 197, 94, 0.3); background: rgba(34, 197, 94, 0.06); }
-.captcha-icon { font-size: 18px; color: rgba(255, 255, 255, 0.25); flex-shrink: 0; }
-.captcha-text { flex: 1; font-size: 14px; color: rgba(255, 255, 255, 0.3); }
+.captcha-icon { font-size: 18px; color: var(--c-icon-active); flex-shrink: 0; }
+.captcha-text { flex: 1; font-size: 14px; color: var(--c-text-sub); }
 .captcha-check { color: #22c55e; font-size: 18px; }
 
 /* ===== 提交按钮 ===== */
@@ -199,13 +199,13 @@ async function handleSubmit() {
 .success-icon-wrapper { position: relative; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px; }
 .success-icon { font-size: 56px; color: #22c55e; animation: envelope-fly 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
 .success-icon-wrapper::before { content: ''; position: absolute; width: 80px; height: 80px; border-radius: 50%; background: rgba(34, 197, 94, 0.08); animation: pulse-ring 2s ease-in-out infinite; }
-.success-content h3 { margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #fff; }
-.success-content p { color: rgba(255, 255, 255, 0.5); margin: 8px 0; font-size: 14px; }
-.success-content strong { color: #fff; }
-.hint { color: rgba(255, 255, 255, 0.25) !important; font-size: 13px; }
+.success-content h3 { margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: var(--c-text); }
+.success-content p { color: var(--c-text-sub); margin: 8px 0; font-size: 14px; }
+.success-content strong { color: var(--c-text); }
+.hint { color: var(--c-text-muted) !important; font-size: 13px; }
 
 /* ===== 底部链接 ===== */
-.card-footer { text-align: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.04); font-size: 13px; }
-.footer-link { color: rgba(255, 255, 255, 0.4); text-decoration: none; font-weight: 500; transition: color 0.2s ease; }
-.footer-link:hover { color: #fff; }
+.card-footer { text-align: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--c-border); font-size: 13px; }
+.footer-link { color: var(--c-text-sub); text-decoration: none; font-weight: 500; transition: color 0.2s ease; }
+.footer-link:hover { color: var(--c-text); }
 </style>

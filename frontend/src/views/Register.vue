@@ -363,7 +363,7 @@ async function handleRegister() {
   letter-spacing: -0.04em;
   line-height: 1.2;
   margin: 0 0 16px;
-  color: #fff;
+  color: var(--c-text);
 }
 
 @media (min-width: 640px) {
@@ -395,7 +395,7 @@ async function handleRegister() {
 
 .brand-desc {
   font-size: 15px;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--c-text-sub);
   margin: 0 0 24px;
   line-height: 1.6;
   max-width: 400px;
@@ -442,9 +442,9 @@ async function handleRegister() {
   justify-content: center;
   font-size: 11px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--c-text-sub);
   background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--c-border-sub);
   transition: all 0.3s ease;
 }
 
@@ -463,18 +463,18 @@ async function handleRegister() {
 
 .step-label {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--c-text-sub);
   font-weight: 500;
 }
 
 .step.active .step-label {
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--c-text-secondary);
 }
 
 .step-line {
   width: 24px;
   height: 1px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--c-border-sub);
   margin: 0 8px;
   transition: background 0.4s ease;
 }
@@ -506,13 +506,13 @@ async function handleRegister() {
   margin: 0 0 6px;
   font-size: 22px;
   font-weight: 600;
-  color: #fff;
+  color: var(--c-text);
 }
 
 .card-desc {
   margin: 0;
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--c-text-sub);
 }
 
 /* ===== 表单 ===== */
@@ -525,8 +525,8 @@ async function handleRegister() {
 }
 
 .auth-form :deep(.el-input__wrapper) {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--c-input-bg);
+  border: 1px solid var(--c-input-border);
   border-radius: 10px;
   box-shadow: none;
   transition: all 0.3s;
@@ -534,7 +534,7 @@ async function handleRegister() {
 }
 
 .auth-form :deep(.el-input__wrapper:hover) {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--c-input-hover);
 }
 
 .auth-form :deep(.el-input__wrapper.is-focus) {
@@ -543,21 +543,21 @@ async function handleRegister() {
 }
 
 .auth-form :deep(.el-input__inner) {
-  color: #fff;
+  color: var(--c-text);
   font-size: 14px;
 }
 
 .auth-form :deep(.el-input__inner::placeholder) {
-  color: rgba(255, 255, 255, 0.2);
+  color: var(--c-text-muted);
 }
 
 .auth-form :deep(.el-input__prefix .el-icon) {
-  color: rgba(255, 255, 255, 0.2);
+  color: var(--c-icon);
   font-size: 16px;
 }
 
 .auth-form :deep(.el-input__suffix .el-icon) {
-  color: rgba(255, 255, 255, 0.2);
+  color: var(--c-icon);
 }
 
 /* ===== 验证码 ===== */
@@ -566,18 +566,18 @@ async function handleRegister() {
   align-items: center;
   gap: 10px;
   padding: 11px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--c-input-border);
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.3s;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--c-input-bg);
   width: 100%;
   user-select: none;
   -webkit-user-select: none;
 }
 
 .captcha-wrapper:hover {
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--c-input-hover);
   background: rgba(255, 255, 255, 0.05);
 }
 
@@ -594,14 +594,14 @@ async function handleRegister() {
 
 .captcha-icon {
   font-size: 18px;
-  color: rgba(255, 255, 255, 0.25);
+  color: var(--c-icon-active);
   flex-shrink: 0;
 }
 
 .captcha-text {
   flex: 1;
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--c-text-sub);
 }
 
 .captcha-check {
@@ -620,7 +620,7 @@ async function handleRegister() {
 
 .code-hint {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--c-text-sub);
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -660,12 +660,12 @@ async function handleRegister() {
 .code-verify-hint {
   text-align: center;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--c-text-sub);
   margin: 0 0 16px;
 }
 
 .code-verify-hint strong {
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--c-text-secondary);
 }
 
 .code-actions {
@@ -674,12 +674,12 @@ async function handleRegister() {
 }
 
 .resend-btn {
-  color: rgba(255, 255, 255, 0.35) !important;
+  color: var(--c-text-sub) !important;
   font-size: 13px !important;
 }
 
 .resend-btn:hover:not(:disabled) {
-  color: rgba(255, 255, 255, 0.6) !important;
+  color: var(--c-text-secondary) !important;
 }
 
 /* ===== 密码强度 ===== */
@@ -741,19 +741,19 @@ async function handleRegister() {
   text-align: center;
   margin-top: 20px;
   padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.25);
+  border-top: 1px solid var(--c-border);
+  color: var(--c-text-muted);
   font-size: 13px;
 }
 
 .footer-link {
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--c-text-sub);
   text-decoration: none;
   font-weight: 500;
   transition: color 0.2s ease;
 }
 
 .footer-link:hover {
-  color: #fff;
+  color: var(--c-text);
 }
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <div class="auth-page">
+  <div class="auth-page" :data-theme="theme">
     <!-- 动态星空背景 -->
     <div class="bg-decoration">
       <!-- 渐变光晕 -->
@@ -44,6 +44,7 @@
       </div>
 
       <div class="nav-right">
+        <ThemeToggle />
         <slot name="nav-right">
           <router-link
             v-if="showRegisterLink"
@@ -119,6 +120,10 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useTheme } from '@/composables/useTheme'
+import ThemeToggle from '@/components/auth/ThemeToggle.vue'
+
+const { theme } = useTheme()
 
 const props = withDefaults(defineProps<{
   showNavLinks?: boolean
@@ -176,9 +181,9 @@ function getStarStyle(index: number) {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #06060a;
+  background: var(--c-bg);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  color: #fff;
+  color: var(--c-text);
 }
 
 /* ===== 背景装饰 ===== */
@@ -315,7 +320,7 @@ function getStarStyle(index: number) {
   font-size: 22px;
   font-weight: 600;
   letter-spacing: -0.04em;
-  color: #fff;
+  color: var(--c-text);
   text-decoration: none;
   transition: opacity 0.2s;
 }
@@ -353,7 +358,7 @@ function getStarStyle(index: number) {
 
 .nav-link {
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--c-text-sub);
   text-decoration: none;
   transition: color 0.2s ease;
   position: relative;
@@ -366,12 +371,12 @@ function getStarStyle(index: number) {
   left: 0;
   width: 0;
   height: 1px;
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--c-text-muted);
   transition: width 0.3s ease;
 }
 
 .nav-link:hover {
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--c-text-secondary);
 }
 
 .nav-link:hover::after {
@@ -391,10 +396,10 @@ function getStarStyle(index: number) {
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--c-text-secondary);
   text-decoration: none;
   cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--c-border-sub);
   transition: all 0.2s ease;
   background: rgba(255, 255, 255, 0.02);
 }
@@ -407,9 +412,9 @@ function getStarStyle(index: number) {
 }
 
 .nav-register:hover {
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: var(--c-border-hover);
   background: rgba(255, 255, 255, 0.04);
-  color: #fff;
+  color: var(--c-text);
 }
 
 /* 汉堡按钮 */
@@ -422,12 +427,12 @@ function getStarStyle(index: number) {
   border-radius: 8px;
   cursor: pointer;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--c-border-sub);
   transition: border-color 0.2s ease;
 }
 
 .nav-hamburger:hover {
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: var(--c-border-hover);
 }
 
 @media (min-width: 1024px) {
@@ -447,7 +452,7 @@ function getStarStyle(index: number) {
   display: block;
   width: 18px;
   height: 1.5px;
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--c-text-secondary);
   border-radius: 1px;
   transition: all 0.4s ease-out;
   transform-origin: center;
@@ -476,8 +481,8 @@ function getStarStyle(index: number) {
   background: rgba(6, 6, 10, 0.95);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-top: 1px solid var(--c-border);
+  border-bottom: 1px solid var(--c-border);
   padding: 16px;
   transform: translateY(-16px);
   opacity: 0;
@@ -501,7 +506,7 @@ function getStarStyle(index: number) {
   display: block;
   padding: 12px;
   font-size: 15px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--c-text-sub);
   text-decoration: none;
   border-radius: 8px;
   transition: all 0.3s ease-out;
@@ -514,13 +519,13 @@ function getStarStyle(index: number) {
 
 .mobile-link:hover {
   background: rgba(255, 255, 255, 0.04);
-  color: #fff;
+  color: var(--c-text);
 }
 
 .mobile-actions {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  border-top: 1px solid var(--c-border);
 }
 
 @media (min-width: 640px) {
@@ -534,12 +539,12 @@ function getStarStyle(index: number) {
   padding: 12px;
   font-size: 15px;
   font-weight: 500;
-  color: #fff;
+  color: var(--c-text);
   text-decoration: none;
   border-radius: 8px;
   text-align: center;
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--c-border-sub);
   transition: background 0.2s ease;
 }
 
@@ -591,11 +596,11 @@ function getStarStyle(index: number) {
 
 /* ===== Glass Card ===== */
 .glass-card {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--c-bg-card);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--c-border-sub);
   position: relative;
   overflow: hidden;
   width: 100%;
@@ -604,7 +609,7 @@ function getStarStyle(index: number) {
 }
 
 .glass-card:hover {
-  border-color: rgba(255, 255, 255, 0.08);
+  border-color: var(--c-border-hover);
   box-shadow: 0 8px 40px rgba(99, 102, 241, 0.06);
 }
 
@@ -668,6 +673,6 @@ function getStarStyle(index: number) {
   text-align: center;
   padding: 0 16px 16px;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.15);
+  color: var(--c-text-faint);
 }
 </style>

@@ -158,20 +158,20 @@ async function handleSubmit() {
 
 <style scoped>
 /* ===== 品牌展示区 ===== */
-.brand-title { font-size: 28px; font-weight: 600; letter-spacing: -0.04em; line-height: 1.2; margin: 0 0 16px; color: #fff; }
+.brand-title { font-size: 28px; font-weight: 600; letter-spacing: -0.04em; line-height: 1.2; margin: 0 0 16px; color: var(--c-text); }
 @media (min-width: 640px) { .brand-title { font-size: 36px; } }
 @media (min-width: 768px) { .brand-title { font-size: 44px; } }
 @media (min-width: 1024px) { .brand-title { font-size: 52px; } }
 
 .gradient-text { background: linear-gradient(135deg, #fff 0%, rgba(167, 139, 250, 0.7) 50%, rgba(129, 140, 248, 0.8) 100%); background-size: 200% 200%; animation: gradient-shift 6s ease infinite; -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
 
-.brand-desc { font-size: 15px; color: rgba(255, 255, 255, 0.35); margin: 0 0 24px; line-height: 1.6; max-width: 400px; }
+.brand-desc { font-size: 15px; color: var(--c-text-sub); margin: 0 0 24px; line-height: 1.6; max-width: 400px; }
 @media (min-width: 768px) { .brand-desc { font-size: 16px; } }
 
 /* ===== 卡片头部 ===== */
 .card-header { text-align: center; margin-bottom: 24px; }
-.card-header h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; color: #fff; }
-.card-desc { margin: 0; font-size: 14px; color: rgba(255, 255, 255, 0.3); }
+.card-header h2 { margin: 0 0 6px; font-size: 22px; font-weight: 600; color: var(--c-text); }
+.card-desc { margin: 0; font-size: 14px; color: var(--c-text-sub); }
 
 /* ===== 骨架屏 ===== */
 .skeleton-wrapper { padding: 8px 0; }
@@ -179,18 +179,18 @@ async function handleSubmit() {
 .skeleton-line.short { width: 60%; }
 
 /* ===== 邮箱提示 ===== */
-.email-hint { color: rgba(255, 255, 255, 0.4); text-align: center; margin-bottom: 20px; font-size: 14px; }
-.email-hint strong { color: rgba(255, 255, 255, 0.8); }
+.email-hint { color: var(--c-text-sub); text-align: center; margin-bottom: 20px; font-size: 14px; }
+.email-hint strong { color: var(--c-text-secondary); }
 
 /* ===== 表单 ===== */
 .auth-form :deep(.el-form-item) { margin-bottom: 16px; }
 .auth-form :deep(.el-form-item:last-child) { margin-bottom: 0; }
-.auth-form :deep(.el-input__wrapper) { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 10px; box-shadow: none; transition: all 0.3s; padding: 4px 12px; }
-.auth-form :deep(.el-input__wrapper:hover) { border-color: rgba(255, 255, 255, 0.12); }
+.auth-form :deep(.el-input__wrapper) { background: var(--c-input-bg); border: 1px solid var(--c-input-border); border-radius: 10px; box-shadow: none; transition: all 0.3s; padding: 4px 12px; }
+.auth-form :deep(.el-input__wrapper:hover) { border-color: var(--c-input-hover); }
 .auth-form :deep(.el-input__wrapper.is-focus) { border-color: rgba(99, 102, 241, 0.4); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08), 0 0 20px rgba(99, 102, 241, 0.04); }
-.auth-form :deep(.el-input__inner) { color: #fff; font-size: 14px; }
-.auth-form :deep(.el-input__inner::placeholder) { color: rgba(255, 255, 255, 0.2); }
-.auth-form :deep(.el-input__prefix .el-icon) { color: rgba(255, 255, 255, 0.2); font-size: 16px; }
+.auth-form :deep(.el-input__inner) { color: var(--c-text); font-size: 14px; }
+.auth-form :deep(.el-input__inner::placeholder) { color: var(--c-text-muted); }
+.auth-form :deep(.el-input__prefix .el-icon) { color: var(--c-icon); font-size: 16px; }
 
 /* ===== 密码强度 ===== */
 .password-strength-info { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
@@ -215,11 +215,11 @@ async function handleSubmit() {
 .error-icon-wrapper { position: relative; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px; }
 .error-icon { font-size: 56px; color: rgba(239, 68, 68, 0.8); animation: envelope-fly 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
 .error-icon-wrapper::before { content: ''; position: absolute; width: 80px; height: 80px; border-radius: 50%; background: rgba(239, 68, 68, 0.06); animation: pulse-ring 2s ease-in-out infinite; }
-.error-content h3 { margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #fff; }
-.error-content p { color: rgba(255, 255, 255, 0.4); margin: 8px 0; font-size: 14px; }
+.error-content h3 { margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: var(--c-text); }
+.error-content p { color: var(--c-text-sub); margin: 8px 0; font-size: 14px; }
 
 /* ===== 底部链接 ===== */
-.card-footer { text-align: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.04); font-size: 13px; }
-.footer-link { color: rgba(255, 255, 255, 0.4); text-decoration: none; font-weight: 500; transition: color 0.2s ease; }
-.footer-link:hover { color: #fff; }
+.card-footer { text-align: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--c-border); font-size: 13px; }
+.footer-link { color: var(--c-text-sub); text-decoration: none; font-weight: 500; transition: color 0.2s ease; }
+.footer-link:hover { color: var(--c-text); }
 </style>

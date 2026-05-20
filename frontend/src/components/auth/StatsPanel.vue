@@ -56,7 +56,7 @@ withDefaults(defineProps<{
 <style scoped>
 .stats-panel {
   background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--c-border-sub);
   border-radius: 12px;
   padding: 12px 18px 14px;
   max-width: 460px;
@@ -72,7 +72,7 @@ withDefaults(defineProps<{
   right: 0;
   height: 28px;
   background: rgba(255, 255, 255, 0.03);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--c-border);
   border-radius: 12px 12px 0 0;
 }
 
@@ -97,7 +97,7 @@ withDefaults(defineProps<{
 .stats-title {
   font-size: 13px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--c-text-secondary);
   flex: 1;
 }
 
@@ -131,7 +131,7 @@ withDefaults(defineProps<{
 .stat-number {
   font-size: 20px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--c-text);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   letter-spacing: -0.02em;
   line-height: 1.2;
@@ -150,14 +150,14 @@ withDefaults(defineProps<{
 
 .stat-label {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.25);
+  color: var(--c-text-muted);
   font-weight: 400;
 }
 
 .stat-bar {
   height: 3px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--c-strength-bar);
   overflow: hidden;
   margin-top: 4px;
 }
@@ -189,4 +189,5 @@ withDefaults(defineProps<{
     opacity: 1;
   }
 }
+
 </style>
