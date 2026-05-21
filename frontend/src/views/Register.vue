@@ -53,60 +53,46 @@
       <p class="card-desc animate-fade-up" style="animation-delay: 450ms">注册您的 gAPI Platform 账户</p>
     </div>
 
-    <!-- 步骤指示器 -->
-    <div class="step-indicator animate-fade-up" style="animation-delay: 480ms">
-      <div class="step" :class="{ active: currentStep >= 1, done: currentStep > 1 }">
-        <span class="step-num">1</span>
-        <span class="step-label">填写信息</span>
-      </div>
-      <div class="step-line" :class="{ active: currentStep > 1 }"></div>
-      <div class="step" :class="{ active: currentStep >= 2, done: currentStep > 2 }">
-        <span class="step-num">2</span>
-        <span class="step-label">验证邮箱</span>
-      </div>
-      <div class="step-line" :class="{ active: currentStep > 2 }"></div>
-      <div class="step" :class="{ active: currentStep >= 3 }">
-        <span class="step-num">3</span>
-        <span class="step-label">完成注册</span>
-      </div>
-    </div>
-
     <el-form @submit.prevent="handleRegister" class="auth-form animate-fade-up" style="animation-delay: 500ms">
-      <!-- Step 1: 用户名 + 邮箱 -->
-      <div class="form-step" :class="{ 'step-visible': currentStep === 1 || !stepTransition }">
-        <el-form-item>
-          <el-input v-model="form.username" placeholder="请输入用户名" :prefix-icon="User" size="large" />
-        </el-form-item>
-        <el-form-item>
-          <el-input v-model="form.email" placeholder="请输入邮箱" :prefix-icon="Message" size="large" @blur="checkEmailFormat" />
-        </el-form-item>
-        <el-form-item v-if="form.email && isValidEmail">
-          <div class="captcha-wrapper" :class="{ 'captcha-verified': captchaVerified }" @click="!captchaVerified && (showCaptcha = true)">
-            <el-icon class="captcha-icon"><Picture /></el-icon>
-            <span class="captcha-text">{{ captchaVerified ? '安全验证已通过' : '点击进行安全验证' }}</span>
-            <el-icon v-if="captchaVerified" class="captcha-check"><CircleCheck /></el-icon>
-          </div>
-        </el-form-item>
-        <el-form-item v-if="form.email && isValidEmail && captchaVerified">
-          <div class="code-send-row">
-            <span class="code-hint">验证码已准备发送至 {{ form.email }}</span>
-            <el-button
-              class="send-code-btn"
-              @click="sendCode"
-              :disabled="countdown > 0 || sendingCode"
-              :loading="sendingCode"
-            >
-              {{ countdown > 0 ? `${countdown}s` : '获取验证码' }}
-            </el-button>
-          </div>
-        </el-form-item>
-      </div>
+      <!-- 用户名 -->
+      <el-form-item>
+        <el-input v-model="form.username" placeholder="请输入用户名" :prefix-icon="User" size="large" />
+      </el-form-item>
 
-      <!-- Step 2: 验证码输入 -->
-      <div v-if="currentStep === 2" class="form-step step-visible">
-        <div class="code-verify-section">
-          <p class="code-verify-hint">请输入发送到 <strong>{{ form.email }}</strong> 的 6 位验证码</p>
-          <div class="code-input-group">
+      <!-- 密码 -->
+      <el-form-item>
+        <div class="password-row">
+          <el-input v-model="form.password" type="password" placeholder="请输入密码（至少8位）" :prefix-icon="Lock" size="large" show-password />
+          <div v-if="form.password" class="password-strength-inline">
+            <div class="password-strength-bar">
+              <div class="bar-fill" :class="passwordStrengthClass"></div>
+            </div>
+            <span class="password-strength-text" :class="passwordStrengthClass">
+              {{ passwordStrengthText }}
+            </span>
+          </div>
+        </div>
+      </el-form-item>
+
+      <!-- 确认密码 -->
+      <el-form-item class="confirm-password-item">
+        <div class="confirm-password-row">
+          <el-input v-model="form.confirmPassword" type="password" placeholder="请确认密码" :prefix-icon="Lock" size="large" show-password />
+          <span v-if="form.confirmPassword && form.confirmPassword !== form.password" class="confirm-password-error">
+            两次输入的密码不一致
+          </span>
+        </div>
+      </el-form-item>
+
+      <!-- 邮箱 -->
+      <el-form-item>
+        <el-input v-model="form.email" placeholder="请输入邮箱" :prefix-icon="Message" size="large" @blur="checkEmailFormat" />
+      </el-form-item>
+
+      <!-- 验证码 -->
+      <el-form-item>
+        <div class="captcha-row">
+          <div class="code-input-group code-input-inline">
             <input
               v-for="(_, i) in 6"
               :key="i"
@@ -122,27 +108,28 @@
               placeholder="·"
             />
           </div>
-          <div class="code-actions">
-            <el-button class="resend-btn" @click="sendCode" :disabled="countdown > 0 || sendingCode" :loading="sendingCode" text>
-              {{ countdown > 0 ? `重新发送 (${countdown}s)` : '重新发送验证码' }}
-            </el-button>
-          </div>
+          <el-button
+            class="send-code-btn"
+            @click="handleSendCode"
+            :disabled="countdown > 0 || sendingCode"
+            :loading="sendingCode"
+          >
+            {{ countdown > 0 ? `${countdown}s` : '获取验证码' }}
+          </el-button>
         </div>
-      </div>
+      </el-form-item>
 
-      <!-- 密码输入（始终显示，但 Step 2 时隐藏） -->
-      <div v-if="currentStep !== 2" class="form-step" :class="{ 'step-visible': currentStep === 3 || !stepTransition }">
-        <el-form-item>
-          <el-input v-model="form.password" type="password" placeholder="请输入密码（至少8位）" :prefix-icon="Lock" size="large" show-password />
-          <div v-if="form.password" class="password-strength-bar">
-            <div class="bar-fill" :class="passwordStrengthClass"></div>
-          </div>
-          <span v-if="form.password" class="password-strength-text" :class="passwordStrengthClass">
-            {{ passwordStrengthText }}
+      <!-- 用户协议 -->
+      <el-form-item>
+        <el-checkbox v-model="agreeTerms" class="agree-checkbox">
+          <span class="agree-text">
+            我已阅读并同意
+            <a href="#" @click.prevent class="agree-link">《用户协议》</a>
           </span>
-        </el-form-item>
-      </div>
+        </el-checkbox>
+      </el-form-item>
 
+      <!-- 注册按钮 -->
       <el-form-item>
         <el-button
           type="primary"
@@ -169,11 +156,11 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, computed, watch, nextTick } from 'vue'
+import { reactive, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
 import { ElMessage } from 'element-plus'
-import { User, Message, Lock, Key, Picture, CircleCheck } from '@element-plus/icons-vue'
+import { User, Message, Lock } from '@element-plus/icons-vue'
 import SlideCaptcha from '@/components/SlideCaptcha.vue'
 import AuthLayout from '@/components/auth/AuthLayout.vue'
 import StatsPanel from '@/components/auth/StatsPanel.vue'
@@ -190,44 +177,26 @@ const router = useRouter()
 const authStore = useAuthStore()
 const loading = ref(false)
 const showCaptcha = ref(false)
-const captchaVerified = ref(false)
 const sendingCode = ref(false)
 const countdown = ref(0)
 const countdownTimer = ref<ReturnType<typeof setInterval> | null>(null)
 const captchaRef = ref()
 const isValidEmail = ref(false)
 const captchaToken = ref('')
-const stepTransition = ref(false)
+const agreeTerms = ref(false)
+const codeSent = ref(false)
 
-const form = reactive({ username: '', email: '', password: '', code: '' })
+const form = reactive({
+  username: '',
+  password: '',
+  confirmPassword: '',
+  email: '',
+})
 const codeDigits = ref<string[]>(['', '', '', '', '', ''])
 const codeInputRefs = ref<(HTMLInputElement | null)[]>([])
 
-// 当前步骤：1=填写信息, 2=验证码, 3=密码+注册
-const currentStep = ref(1)
-
-// 同步 codeDigits 到 form.code
-watch(codeDigits, (digits) => {
-  form.code = digits.join('')
-}, { deep: true })
-
-// 当验证码通过后自动跳到步骤 2
-watch(() => captchaVerified.value, (val) => {
-  if (val) {
-    currentStep.value = 2
-    nextTick(() => {
-      codeInputRefs.value[0]?.focus()
-    })
-  }
-})
-
-// 当 form.code 有 6 位时自动跳到步骤 3
-watch(() => form.code, (code) => {
-  if (code.length === 6 && currentStep.value === 2) {
-    stepTransition.value = true
-    currentStep.value = 3
-  }
-})
+// 同步 codeDigits 到 code 字符串
+const code = computed(() => codeDigits.value.join(''))
 
 const passwordStrength = computed(() => {
   const pwd = form.password
@@ -258,7 +227,15 @@ const passwordStrengthText = computed(() => {
 })
 
 const canSubmit = computed(() => {
-  return form.username && isValidEmail.value && form.code.length === 6 && form.password.length >= 8
+  return (
+    form.username &&
+    isValidEmail.value &&
+    form.password.length >= 8 &&
+    form.confirmPassword === form.password &&
+    code.value.length === 6 &&
+    agreeTerms.value &&
+    codeSent.value
+  )
 })
 
 function checkEmailFormat() {
@@ -269,12 +246,7 @@ function checkEmailFormat() {
   }
 }
 
-function onCaptchaSuccess(token: string) {
-  captchaVerified.value = true
-  captchaToken.value = token
-}
-
-// 分格式验证码输入处理
+// 验证码输入处理
 function onCodeInput(index: number, event: Event) {
   const input = event.target as HTMLInputElement
   const value = input.value.replace(/\D/g, '')
@@ -308,17 +280,37 @@ function onCodePaste(event: ClipboardEvent) {
   }
 }
 
-async function sendCode() {
+// 滑块验证成功回调
+function onCaptchaSuccess(token: string) {
+  captchaToken.value = token
+  // 滑块验证通过后自动发送验证码
+  sendCode()
+}
+
+// 点击获取验证码：先弹滑块验证
+function handleSendCode() {
   if (!form.email || !isValidEmail.value) {
     ElMessage.warning('请输入有效的邮箱')
     return
   }
+  if (captchaToken.value) {
+    // 已有滑块 token，直接发送
+    sendCode()
+  } else {
+    // 弹出滑块验证
+    showCaptcha.value = true
+  }
+}
+
+// 发送验证码
+async function sendCode() {
   sendingCode.value = true
   try {
     const payload: any = { email: form.email }
     if (captchaToken.value) payload.captcha_token = captchaToken.value
     await request.post('/email/send-code', payload)
     ElMessage.success('验证码已发送到您的邮箱')
+    codeSent.value = true
     countdown.value = 60
     if (countdownTimer.value) clearInterval(countdownTimer.value)
     countdownTimer.value = setInterval(() => {
@@ -329,19 +321,27 @@ async function sendCode() {
     }, 1000)
   } catch (e: any) {
     ElMessage.error(e.response?.data?.error?.message || '发送失败')
-    captchaVerified.value = false
+    captchaToken.value = ''
     captchaRef.value?.reset()
   } finally { sendingCode.value = false }
 }
 
+// 注册
 async function handleRegister() {
-  if (!form.username || !form.email || !form.password) { ElMessage.warning('请填写所有字段'); return }
+  if (!form.username || !form.email || !form.password || !form.confirmPassword) {
+    ElMessage.warning('请填写所有字段'); return
+  }
   if (!isValidEmail.value) { ElMessage.warning('请输入有效的邮箱'); return }
   if (form.password.length < 8) { ElMessage.warning('密码至少8位'); return }
-  if (form.code.length !== 6) { ElMessage.warning('请输入6位验证码'); return }
+  if (form.password !== form.confirmPassword) { ElMessage.warning('两次输入的密码不一致'); return }
+  if (code.value.length !== 6) { ElMessage.warning('请输入6位验证码'); return }
+  if (!agreeTerms.value) { ElMessage.warning('请阅读并同意用户协议'); return }
+
   loading.value = true
   try {
-    await request.post('/email/verify-code', { email: form.email, code: form.code })
+    // 先验证邮箱验证码
+    await request.post('/email/verify-code', { email: form.email, code: code.value })
+    // 再注册
     await authStore.register(form.username, form.email, form.password)
     ElMessage.success('注册成功，请登录')
     router.push('/login')
@@ -349,7 +349,7 @@ async function handleRegister() {
     const errorData = e.response?.data?.error
     if (errorData?.code === 'REGISTRATION_CLOSED') { router.push('/register-closed'); return }
     ElMessage.error(errorData?.message || '注册失败')
-    captchaVerified.value = false
+    captchaToken.value = ''
     captchaRef.value?.reset()
   } finally { loading.value = false }
 }
@@ -405,95 +405,6 @@ async function handleRegister() {
   .brand-desc {
     font-size: 16px;
   }
-}
-
-/* ===== 步骤指示器 ===== */
-.step-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  margin-bottom: 24px;
-  padding: 0 8px;
-}
-
-.step {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  opacity: 0.3;
-  transition: opacity 0.4s ease;
-}
-
-.step.active {
-  opacity: 1;
-}
-
-.step.done {
-  opacity: 0.6;
-}
-
-.step-num {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--c-text-sub);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid var(--c-border-sub);
-  transition: all 0.3s ease;
-}
-
-.step.active .step-num {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  border-color: transparent;
-  color: #fff;
-  animation: step-active-pulse 2s ease-in-out infinite;
-}
-
-.step.done .step-num {
-  background: rgba(34, 197, 94, 0.15);
-  border-color: rgba(34, 197, 94, 0.3);
-  color: #22c55e;
-}
-
-.step-label {
-  font-size: 12px;
-  color: var(--c-text-sub);
-  font-weight: 500;
-}
-
-.step.active .step-label {
-  color: var(--c-text-secondary);
-}
-
-.step-line {
-  width: 24px;
-  height: 1px;
-  background: var(--c-border-sub);
-  margin: 0 8px;
-  transition: background 0.4s ease;
-}
-
-.step-line.active {
-  background: rgba(99, 102, 241, 0.4);
-}
-
-/* ===== 表单步骤过渡 ===== */
-.form-step {
-  opacity: 0;
-  max-height: 0;
-  overflow: hidden;
-  transition: opacity 0.4s ease, max-height 0.4s ease;
-}
-
-.form-step.step-visible {
-  opacity: 1;
-  max-height: 300px;
 }
 
 /* ===== 卡片头部 ===== */
@@ -560,72 +471,22 @@ async function handleRegister() {
   color: var(--c-icon);
 }
 
-/* ===== 验证码 ===== */
-.captcha-wrapper {
+/* ===== 验证码行 ===== */
+.captcha-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 11px 16px;
-  border: 1px solid var(--c-input-border);
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.3s;
-  background: var(--c-input-bg);
-  width: 100%;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-.captcha-wrapper:hover {
-  border-color: var(--c-input-hover);
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.captcha-wrapper.captcha-verified {
-  border-color: rgba(34, 197, 94, 0.3);
-  background: rgba(34, 197, 94, 0.06);
-  cursor: default;
-}
-
-.captcha-wrapper.captcha-verified:hover {
-  border-color: rgba(34, 197, 94, 0.3);
-  background: rgba(34, 197, 94, 0.06);
-}
-
-.captcha-icon {
-  font-size: 18px;
-  color: var(--c-icon-active);
-  flex-shrink: 0;
-}
-
-.captcha-text {
-  flex: 1;
-  font-size: 14px;
-  color: var(--c-text-sub);
-}
-
-.captcha-check {
-  color: #22c55e;
-  font-size: 18px;
-}
-
-/* ===== 发送验证码行 ===== */
-.code-send-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
   gap: 12px;
+  width: 100%;
 }
 
-.code-hint {
-  font-size: 12px;
-  color: var(--c-text-sub);
+.code-input-inline {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.code-input-inline .code-input {
+  width: calc((100% - 40px) / 6);
+  min-width: 0;
 }
 
 .send-code-btn {
@@ -635,7 +496,7 @@ async function handleRegister() {
   color: #a5b4fc;
   border-radius: 8px;
   font-size: 13px;
-  height: 36px;
+  height: 48px;
   transition: all 0.3s ease;
 }
 
@@ -652,41 +513,55 @@ async function handleRegister() {
   border-color: rgba(255, 255, 255, 0.06);
 }
 
-/* ===== 验证码输入区 ===== */
-.code-verify-section {
-  margin-bottom: 16px;
+/* ===== 确认密码错误提示 ===== */
+.confirm-password-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
 }
 
-.code-verify-hint {
-  text-align: center;
-  font-size: 13px;
-  color: var(--c-text-sub);
-  margin: 0 0 16px;
+.confirm-password-row .el-input {
+  flex: 1;
+  min-width: 0;
 }
 
-.code-verify-hint strong {
-  color: var(--c-text-secondary);
+.confirm-password-error {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: #ef4444;
+  white-space: nowrap;
 }
 
-.code-actions {
-  margin-top: 12px;
-  text-align: center;
+/* ===== 密码行（输入框 + 强度提示） ===== */
+.password-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
 }
 
-.resend-btn {
-  color: var(--c-text-sub) !important;
-  font-size: 13px !important;
+.password-row .el-input {
+  flex: 1;
+  min-width: 0;
 }
 
-.resend-btn:hover:not(:disabled) {
-  color: var(--c-text-secondary) !important;
+.password-strength-inline {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.password-strength-inline .password-strength-bar {
+  width: 50px;
+  flex-shrink: 0;
 }
 
 /* ===== 密码强度 ===== */
 .password-strength-text {
-  display: block;
   font-size: 12px;
-  margin-top: 6px;
+  white-space: nowrap;
   transition: color 0.3s ease;
 }
 
@@ -694,6 +569,42 @@ async function handleRegister() {
 .password-strength-text.strength-fair { color: #f59e0b; }
 .password-strength-text.strength-good { color: #10b981; }
 .password-strength-text.strength-strong { color: #8b5cf6; }
+
+/* ===== 用户协议 ===== */
+.agree-checkbox {
+  display: flex;
+  align-items: center;
+}
+
+.agree-text {
+  font-size: 13px;
+  color: var(--c-text-sub);
+}
+
+.agree-link {
+  color: #a5b4fc;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.agree-link:hover {
+  color: #c7d2fe;
+  text-decoration: underline;
+}
+
+.auth-form :deep(.el-checkbox__label) {
+  padding-left: 6px;
+}
+
+.auth-form :deep(.el-checkbox__inner) {
+  background: var(--c-input-bg);
+  border-color: var(--c-input-border);
+}
+
+.auth-form :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
+  background: rgba(99, 102, 241, 0.8);
+  border-color: rgba(99, 102, 241, 0.8);
+}
 
 /* ===== 提交按钮 ===== */
 .submit-btn {
