@@ -1,17 +1,16 @@
 <template>
   <el-aside :width="width" class="sidebar">
-    <!-- Header: Logo + Collapse Button -->
+    <!-- Header: Collapse Button (fixed left) + Brand Title -->
     <div class="sidebar-header">
-      <div class="sidebar-logo">
-        <el-icon class="sidebar-logo__icon"><Monitor /></el-icon>
-        <span v-show="!collapsed" class="sidebar-logo__text">gAPI 平台</span>
-      </div>
       <div class="sidebar-collapse-btn" @click="$emit('toggle')">
         <el-icon :size="18">
           <Fold v-if="!collapsed" />
           <Expand v-else />
         </el-icon>
       </div>
+      <transition name="brand-fade">
+        <span v-show="!collapsed" class="sidebar-brand-text">gAPI 平台</span>
+      </transition>
     </div>
 
     <!-- Navigation -->
@@ -93,7 +92,7 @@
 import { computed } from 'vue'
 import {
   HomeFilled, Key, ShoppingCart, List, Star, User, Ticket,
-  Monitor, Fold, Expand, Setting
+  Fold, Expand, Setting
 } from '@element-plus/icons-vue'
 
 const props = defineProps<{
@@ -146,44 +145,21 @@ const avatarLetter = computed(() => {
   height: var(--header-height);
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 0 12px;
   border-bottom: 1px solid var(--color-sidebar-border);
   background: var(--color-sidebar-header-bg);
   backdrop-filter: blur(10px);
   flex-shrink: 0;
-  gap: 8px;
-}
-
-.sidebar-logo {
-  display: flex;
-  align-items: center;
   gap: 10px;
-  color: #fff;
-  font-size: 18px;
-  font-weight: var(--font-weight-semibold);
-  white-space: nowrap;
-  overflow: hidden;
-  min-width: 0;
-}
-
-.sidebar-logo__icon {
-  font-size: 22px;
-  color: var(--color-primary-light);
-  flex-shrink: 0;
-}
-
-.sidebar-logo__text {
-  transition: opacity var(--transition-fast);
 }
 
 .sidebar-collapse-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   color: var(--color-sidebar-text);
   flex-shrink: 0;
@@ -193,6 +169,33 @@ const avatarLetter = computed(() => {
 .sidebar-collapse-btn:hover {
   color: #fff;
   background: rgba(99, 102, 241, 0.15);
+}
+
+.sidebar-brand-text {
+  color: #fff;
+  font-size: 18px;
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* Brand text fade transition */
+.brand-fade-enter-active {
+  transition: opacity 0.2s ease 0.05s, transform 0.2s ease 0.05s;
+}
+
+.brand-fade-leave-active {
+  transition: opacity 0.1s ease, transform 0.1s ease;
+}
+
+.brand-fade-enter-from {
+  opacity: 0;
+  transform: translateX(-6px);
+}
+
+.brand-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-6px);
 }
 
 /* ===== Navigation ===== */
