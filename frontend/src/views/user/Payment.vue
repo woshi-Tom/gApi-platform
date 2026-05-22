@@ -300,14 +300,14 @@ onUnmounted(() => {
 .payment-page {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--spacing-lg);
   max-width: 800px;
   margin: 0 auto;
 }
 
 .payment-card {
   border-radius: var(--radius-xl);
-  padding: 10px;
+  padding: var(--spacing-md);
 }
 
 .qr-code-container {
@@ -315,7 +315,7 @@ onUnmounted(() => {
 }
 
 .qr-tip {
-  color: var(--el-color-success);
+  color: var(--color-success);
   margin: var(--spacing-sm) 0 0;
   font-size: var(--font-size-base);
 }
@@ -323,7 +323,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 20px;
+  padding: var(--spacing-lg);
 }
 .qr-wrap {
   display: flex;
@@ -353,6 +353,6 @@ onUnmounted(() => {
   color: var(--el-text-color-secondary);
 }
 .info-col {
-  padding: 20px;
+  padding: var(--spacing-lg);
 }
 </style>

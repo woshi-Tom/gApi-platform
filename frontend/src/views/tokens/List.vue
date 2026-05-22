@@ -296,38 +296,27 @@ onMounted(load)
 
 <style scoped>
 .token-count {
-  color: var(--el-text-color-secondary);
-  font-size: 14px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
 }
 
 .token-card {
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
 }
 
 .token-card :deep(.el-table) {
-  border-radius: 8px;
-}
-
-.token-card :deep(.el-table th.el-table__cell) {
-  background: var(--el-fill-color-lighter);
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
-}
-
-.token-card :deep(.el-table td.el-table__cell) {
-  font-size: 14px;
+  border-radius: var(--radius-md);
 }
 
 .token-key {
   display: inline-block;
   padding: 5px 10px;
-  background: var(--el-fill-color-light);
-  border-radius: 6px;
-  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
-  font-size: 13px;
-  color: var(--el-text-color-primary);
-  margin-right: 8px;
+  background: #f1f5f9;
+  border-radius: var(--radius-sm);
+  font-family: 'JetBrains Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  margin-right: var(--spacing-sm);
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -336,13 +325,13 @@ onMounted(load)
 }
 
 .quota-value {
-  font-weight: 600;
-  color: var(--el-color-success);
-  font-size: 15px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-success);
+  font-size: var(--font-size-md);
 }
 
 .disabled-text {
-  color: var(--el-text-color-placeholder);
+  color: var(--color-text-placeholder);
 }
 
 .action-buttons {
@@ -352,7 +341,7 @@ onMounted(load)
 }
 
 .create-form {
-  padding-top: 10px;
+  padding-top: var(--spacing-md);
 }
 
 .empty-state {

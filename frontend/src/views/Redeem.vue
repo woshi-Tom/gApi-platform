@@ -184,19 +184,19 @@ onMounted(loadHistory)
 .redeem-page {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--spacing-lg);
 }
 
 /* Card Header */
 .card-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-weight: 600;
+  gap: var(--spacing-sm);
+  font-weight: var(--font-weight-semibold);
 }
 
 .card-header-icon {
-  color: var(--el-color-primary);
+  color: var(--color-primary);
 }
 
 /* Redeem Card */
@@ -214,20 +214,20 @@ onMounted(loadHistory)
 
 /* Tips */
 .redeem-tips {
-  padding: 4px 0;
+  padding: var(--spacing-xs) 0;
 }
 
 .tips-title {
   margin: 0 0 var(--spacing-sm);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
-  color: var(--el-text-color-primary);
+  color: var(--color-text-primary);
 }
 
 .tips-list {
   margin: 0;
   padding-left: 20px;
-  color: var(--el-text-color-secondary);
+  color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   line-height: 1.8;
 }
@@ -238,27 +238,27 @@ onMounted(loadHistory)
 }
 
 .success-icon {
-  color: var(--el-color-success);
+  color: var(--color-success);
   font-size: 20px;
 }
 
 .error-icon {
-  color: var(--el-color-danger);
+  color: var(--color-danger);
   font-size: 20px;
 }
 
 .result-alert {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-base);
 }
 
 .result-desc {
-  margin-top: 12px;
+  margin-top: var(--spacing-md);
 }
 
 .quota-highlight {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
-  color: var(--el-color-primary);
+  color: var(--color-primary);
 }
 
 /* History Card */
@@ -273,12 +273,12 @@ onMounted(loadHistory)
 .reward-cell {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .reward-quota {
   font-weight: var(--font-weight-semibold);
-  color: var(--el-color-primary);
+  color: var(--color-primary);
 }
 
 .empty-state {

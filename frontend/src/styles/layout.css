@@ -1,0 +1,179 @@
+/**
+ * gAPI Platform - Layout Global Styles
+ * 布局相关的全局样式
+ *
+ * 两部分：
+ * 1. 全局 reset/变量 — 所有页面生效（登录注册页也需要）
+ * 2. 布局专属样式 — 限定在 .app-container 下，不影响登录注册页
+ */
+
+/* ===== 全局 Reset（所有页面依赖，包括登录注册） ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: var(--color-bg-page);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+}
+
+/* ===== 全局 Element Plus 样式 ===== */
+.el-card {
+  border-radius: var(--card-border-radius);
+  box-shadow: var(--card-shadow);
+  border: var(--card-border);
+  transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
+}
+
+.el-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--card-shadow-hover);
+  border-color: var(--color-border);
+}
+
+/* 排除表格内的 card 不应用 hover 上浮 */
+.el-card:has(.el-table):hover {
+  transform: none;
+  box-shadow: var(--shadow-base);
+}
+
+/* 表格全局优化 */
+.app-container .el-table th.el-table__cell {
+  background: var(--table-header-bg);
+  font-weight: var(--table-header-font-weight);
+  font-size: var(--table-header-font-size);
+  color: var(--table-header-color);
+}
+
+.app-container .el-table td.el-table__cell {
+  font-size: var(--table-cell-font-size);
+}
+
+/* 按钮优化 */
+.el-button--primary {
+  background: var(--gradient-primary);
+  border: none;
+}
+
+.el-button--primary:hover {
+  opacity: 0.9;
+  border: none;
+}
+
+/* ===== 页面切换过渡动画 ===== */
+.page-fade-enter-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.page-fade-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.page-fade-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.page-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* ===== 滚动条 ===== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ===== 布局专属样式（仅后台已认证页面） ===== */
+
+/* 布局容器 */
+.app-container {
+  width: 100%;
+  height: 100vh;
+  min-width: 100%;
+  background-color: var(--color-bg-page);
+}
+
+/* Element Plus 菜单覆盖（仅后台侧边栏） */
+.app-container .el-menu {
+  border-right: none !important;
+}
+
+.app-container .el-menu-item {
+  height: 46px;
+  line-height: 46px;
+  margin: 2px 8px;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+}
+
+.app-container .el-menu-item:hover {
+  background-color: var(--color-sidebar-hover) !important;
+}
+
+.app-container .el-menu-item.is-active {
+  background: var(--color-sidebar-active-bg) !important;
+  color: var(--color-sidebar-active-text) !important;
+  position: relative;
+}
+
+.app-container .el-menu-item.is-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  background: var(--color-primary);
+  border-radius: 0 2px 2px 0;
+}
+
+/* 折叠菜单 */
+.app-container .el-menu--collapse .el-menu-item {
+  padding: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.app-container .el-menu--collapse .el-menu-item .el-icon {
+  margin: 0;
+}
+
+.app-container .el-menu--collapse .el-menu-item.is-active::before {
+  left: 0;
+  width: 3px;
+  height: 24px;
+}

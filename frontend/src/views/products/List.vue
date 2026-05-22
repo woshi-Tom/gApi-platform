@@ -132,58 +132,58 @@ onMounted(load)
 .products-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  gap: var(--spacing-lg);
 }
 
 .product-card {
   position: relative;
-  border-radius: 14px;
+  border-radius: var(--radius-2xl);
   text-align: center;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
   overflow: visible;
 }
 
 .product-card:hover {
   transform: translateY(-6px);
-  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-xl);
 }
 
 .product-card.recommended {
-  border: 2px solid var(--el-color-warning);
+  border: 2px solid var(--color-warning);
 }
 
 .product-card.hot {
-  border: 2px solid var(--el-color-danger);
+  border: 2px solid var(--color-danger);
 }
 
 .product-badge {
   position: absolute;
   top: -10px;
   right: 16px;
-  background: linear-gradient(135deg, #f2994a 0%, #f2c94c 100%);
+  background: var(--gradient-orange);
   color: #fff;
   padding: 4px 14px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(242, 153, 74, 0.4);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
   z-index: 1;
 }
 
 .product-card.hot .product-badge {
-  background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
-  box-shadow: 0 2px 8px rgba(238, 9, 121, 0.4);
+  background: var(--gradient-red);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
 }
 
 .product-header {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-base);
 }
 
 .product-name {
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
 }
 
 .product-price {
@@ -191,70 +191,70 @@ onMounted(load)
   align-items: baseline;
   justify-content: center;
   gap: 2px;
-  margin-bottom: 20px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .product-price .currency {
-  font-size: 20px;
-  font-weight: 500;
-  color: var(--el-color-primary);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
 }
 
 .product-price .amount {
   font-size: 40px;
-  font-weight: 700;
-  color: var(--el-color-primary);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
   line-height: 1;
 }
 
 .product-price .original {
-  font-size: 14px;
-  color: var(--el-text-color-placeholder);
+  font-size: var(--font-size-base);
+  color: var(--color-text-placeholder);
   text-decoration: line-through;
-  margin-left: 8px;
+  margin-left: var(--spacing-sm);
 }
 
 .product-features {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  background: var(--el-fill-color-lighter);
-  border-radius: 10px;
-  margin-bottom: 20px;
+  gap: var(--spacing-md);
+  padding: var(--spacing-base);
+  background: #f8fafc;
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--spacing-lg);
 }
 
 .feature-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 14px;
+  font-size: var(--font-size-base);
 }
 
 .feature-label {
-  color: var(--el-text-color-secondary);
+  color: var(--color-text-secondary);
 }
 
 .feature-value {
-  font-weight: 600;
-  color: var(--el-text-color-primary);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
 }
 
 .feature-value.primary {
-  color: var(--el-color-primary);
+  color: var(--color-primary);
 }
 
 .feature-value.success {
-  color: var(--el-color-success);
-  font-weight: 700;
+  color: var(--color-success);
+  font-weight: var(--font-weight-bold);
 }
 
 .buy-btn {
   width: 100%;
   height: 44px;
-  font-size: 15px;
-  font-weight: 600;
-  border-radius: 10px;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-lg);
 }
 
 @media (max-width: 768px) {

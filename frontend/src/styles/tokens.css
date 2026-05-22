@@ -1,56 +1,70 @@
 /**
  * gAPI Platform Design Tokens
  * 集中管理所有设计变量，方便全局统一调整
+ *
+ * 风格语言：与登录注册页呼应的紫靛色调，精致阴影，流畅过渡
  */
 
 :root {
   /* ===== 颜色体系 ===== */
 
-  /* 主色 */
-  --color-primary: #409eff;
-  --color-primary-light: #66b1ff;
-  --color-primary-lighter: #a0cfff;
-  --color-primary-dark: #3a8ee6;
+  /* 主色（紫靛色系，与登录页一致） */
+  --color-primary: #6366f1;
+  --color-primary-light: #818cf8;
+  --color-primary-lighter: #a5b4fc;
+  --color-primary-dark: #4f46e5;
+  --color-primary-bg: rgba(99, 102, 241, 0.08);
+  --color-primary-bg-hover: rgba(99, 102, 241, 0.12);
+
+  /* 兼容旧色（过渡期保留） */
+  --color-primary-legacy: #409eff;
 
   /* 语义色 */
-  --color-success: #67c23a;
-  --color-warning: #e6a23c;
-  --color-danger: #f56c6c;
-  --color-info: #909399;
+  --color-success: #10b981;
+  --color-success-light: #34d399;
+  --color-warning: #f59e0b;
+  --color-warning-light: #fbbf24;
+  --color-danger: #ef4444;
+  --color-danger-light: #f87171;
+  --color-info: #64748b;
 
   /* 中性色 */
-  --color-text-primary: #303133;
-  --color-text-regular: #606266;
-  --color-text-secondary: #909399;
-  --color-text-placeholder: #c0c4cc;
-  --color-text-disabled: #c0c4cc;
+  --color-text-primary: #1e293b;
+  --color-text-regular: #475569;
+  --color-text-secondary: #94a3b8;
+  --color-text-placeholder: #cbd5e1;
+  --color-text-disabled: #e2e8f0;
 
   /* 背景色 */
-  --color-bg-page: #f5f7fa;
+  --color-bg-page: #f1f5f9;
   --color-bg-card: #ffffff;
-  --color-bg-overlay: rgba(0, 0, 0, 0.5);
-  --color-bg-hover: #f5f7fa;
+  --color-bg-overlay: rgba(15, 23, 42, 0.5);
+  --color-bg-hover: #f8fafc;
+  --color-bg-elevated: #ffffff;
 
-  /* 侧边栏 */
-  --color-sidebar-bg: #1e1e1e;
-  --color-sidebar-hover: #2a2a2a;
-  --color-sidebar-active-bg: rgba(64, 158, 255, 0.15);
-  --color-sidebar-text: #a0a0a0;
-  --color-sidebar-active-text: #409eff;
-  --color-sidebar-header-bg: #252525;
-  --color-sidebar-border: #333333;
+  /* 侧边栏（深色渐变） */
+  --color-sidebar-bg: #0f172a;
+  --color-sidebar-bg-light: #1e293b;
+  --color-sidebar-hover: rgba(99, 102, 241, 0.1);
+  --color-sidebar-active-bg: rgba(99, 102, 241, 0.15);
+  --color-sidebar-text: #94a3b8;
+  --color-sidebar-active-text: #a5b4fc;
+  --color-sidebar-header-bg: rgba(0, 0, 0, 0.2);
+  --color-sidebar-border: rgba(148, 163, 184, 0.08);
 
   /* 边框 */
-  --color-border: #e4e7ed;
-  --color-border-light: #ebeef5;
-  --color-border-lighter: #f2f6fc;
+  --color-border: #e2e8f0;
+  --color-border-light: #f1f5f9;
+  --color-border-lighter: #f8fafc;
 
-  /* 渐变色（统计卡片） */
+  /* 渐变色 */
+  --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   --gradient-blue: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --gradient-green: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-  --gradient-orange: linear-gradient(135deg, #f2994a 0%, #f2c94c 100%);
-  --gradient-red: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
-  --gradient-vip: linear-gradient(135deg, #e6a23c 0%, #b88230 100%);
+  --gradient-green: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+  --gradient-orange: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+  --gradient-red: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+  --gradient-vip: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  --gradient-sidebar: linear-gradient(180deg, #0f172a 0%, #1a1a2e 100%);
 
   /* ===== 间距体系 ===== */
   --spacing-xs: 4px;
@@ -68,16 +82,18 @@
   --radius-md: 8px;
   --radius-lg: 10px;
   --radius-xl: 12px;
-  --radius-2xl: 14px;
+  --radius-2xl: 16px;
   --radius-full: 9999px;
 
   /* ===== 阴影 ===== */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-base: 0 2px 12px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
-  --shadow-xl: 0 16px 32px rgba(0, 0, 0, 0.1);
-  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-base: 0 2px 8px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --shadow-xl: 0 16px 48px rgba(15, 23, 42, 0.12);
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-card-hover: 0 10px 25px rgba(15, 23, 42, 0.08), 0 4px 10px rgba(15, 23, 42, 0.04);
+  --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.15);
 
   /* ===== 字号 ===== */
   --font-size-xs: 12px;
@@ -87,7 +103,7 @@
   --font-size-lg: 16px;
   --font-size-xl: 18px;
   --font-size-2xl: 20px;
-  --font-size-3xl: 22px;
+  --font-size-3xl: 24px;
   --font-size-4xl: 28px;
 
   /* ===== 字重 ===== */
@@ -103,20 +119,22 @@
   --transition-spring: 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 
   /* ===== 布局尺寸 ===== */
-  --sidebar-width: 220px;
+  --sidebar-width: 240px;
   --sidebar-collapsed-width: 64px;
   --header-height: 60px;
   --content-padding: 24px;
 
   /* ===== 表格 ===== */
-  --table-header-bg: var(--el-fill-color-lighter);
+  --table-header-bg: #f8fafc;
   --table-header-font-weight: 600;
   --table-header-font-size: 13px;
-  --table-header-color: var(--el-text-color-secondary);
+  --table-header-color: var(--color-text-secondary);
   --table-cell-font-size: 14px;
 
   /* ===== 卡片 ===== */
   --card-border-radius: var(--radius-xl);
-  --card-shadow: var(--shadow-base);
+  --card-shadow: var(--shadow-card);
+  --card-shadow-hover: var(--shadow-card-hover);
   --card-border: 1px solid var(--color-border);
+  --card-border-hover: 1px solid rgba(99, 102, 241, 0.2);
 }

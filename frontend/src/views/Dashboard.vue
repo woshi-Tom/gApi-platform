@@ -2,7 +2,7 @@
   <div class="dashboard">
     <!-- Stats Cards -->
     <div class="stats-grid" v-loading="pageLoading" element-loading-text="加载中...">
-      <el-card shadow="hover" class="stat-card" :class="{ 'urgent-card': isFreeExpiringSoon }">
+      <el-card shadow="never" class="stat-card" :class="{ 'urgent-card': isFreeExpiringSoon }">
         <div class="stat-icon blue">
           <el-icon size="24"><Coin /></el-icon>
         </div>
@@ -15,7 +15,7 @@
         </div>
       </el-card>
       
-      <el-card shadow="hover" class="stat-card">
+      <el-card shadow="never" class="stat-card">
         <div class="stat-icon green">
           <el-icon size="24"><TrendCharts /></el-icon>
         </div>
@@ -25,7 +25,7 @@
         </div>
       </el-card>
       
-      <el-card shadow="hover" class="stat-card" :class="{ 'vip-card': quota?.is_vip }">
+      <el-card shadow="never" class="stat-card" :class="{ 'vip-card': quota?.is_vip }">
         <div class="stat-icon orange">
           <el-icon size="24"><Star /></el-icon>
         </div>
@@ -37,7 +37,7 @@
         </div>
       </el-card>
       
-      <el-card shadow="hover" class="stat-card">
+      <el-card shadow="never" class="stat-card">
         <div class="stat-icon red">
           <el-icon size="24"><Key /></el-icon>
         </div>
@@ -50,7 +50,7 @@
 
     <!-- Charts Section -->
     <div class="charts-grid">
-      <el-card shadow="hover" class="chart-card">
+      <el-card shadow="never" class="chart-card">
         <template #header>
           <span>Token消耗趋势 (近7天)</span>
         </template>
@@ -59,7 +59,7 @@
         </div>
       </el-card>
       
-      <el-card shadow="hover" class="chart-card">
+      <el-card shadow="never" class="chart-card">
         <template #header>
           <span>API调用统计 (近7天)</span>
         </template>
@@ -72,7 +72,7 @@
     <!-- Main Content -->
     <div class="main-grid">
       <!-- Quick Start -->
-      <el-card class="quickstart-card">
+      <el-card shadow="never" class="quickstart-card">
         <template #header>
           <div class="card-header">
             <span>快速开始</span>
@@ -110,7 +110,7 @@ curl http://localhost:8080/api/v1/chat/completions \
       </el-card>
 
       <!-- Quota Details -->
-      <el-card class="quota-card">
+      <el-card shadow="never" class="quota-card">
         <template #header>
           <div class="card-header">
             <span>我的额度</span>
@@ -175,7 +175,7 @@ curl http://localhost:8080/api/v1/chat/completions \
     </div>
 
     <!-- Recent Activity -->
-    <el-card class="activity-card">
+    <el-card shadow="never" class="activity-card">
       <template #header>
         <div class="card-header">
           <span>最近活动</span>
@@ -377,8 +377,17 @@ const tokenChartOption = computed(() => {
       type: 'line',
       data: data,
       smooth: true,
-      itemStyle: { color: '#409eff' },
-      areaStyle: { color: 'rgba(64, 158, 255, 0.1)' },
+      itemStyle: { color: '#6366f1' },
+      areaStyle: { 
+        color: {
+          type: 'linear',
+          x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [
+            { offset: 0, color: 'rgba(99, 102, 241, 0.2)' },
+            { offset: 1, color: 'rgba(99, 102, 241, 0.02)' }
+          ]
+        }
+      },
       lineStyle: { width: 3 },
       symbol: 'circle',
       symbolSize: 8
@@ -430,7 +439,10 @@ const callsChartOption = computed(() => {
       name: 'API调用',
       type: 'bar',
       data: data,
-      itemStyle: { color: '#67c23a', borderRadius: [4, 4, 0, 0] },
+      itemStyle: { 
+        color: '#6366f1',
+        borderRadius: [4, 4, 0, 0] 
+      },
       barMaxWidth: 40
     }]
   }
@@ -499,26 +511,27 @@ onMounted(async () => {
 .dashboard {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--spacing-lg);
 }
 
+/* ===== 统计卡片 ===== */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+  gap: var(--spacing-base);
 }
 
 .stat-card :deep(.el-card__body) {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 20px;
+  gap: var(--spacing-base);
+  padding: var(--spacing-lg);
 }
 
 .stat-icon {
   width: 52px;
   height: 52px;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -536,36 +549,39 @@ onMounted(async () => {
 
 .stat-label {
   font-size: var(--font-size-sm);
-  color: var(--el-text-color-secondary);
+  color: var(--color-text-secondary);
   margin-bottom: var(--spacing-xs);
 }
 
 .stat-value {
   font-size: var(--font-size-3xl);
   font-weight: var(--font-weight-semibold);
-  color: var(--el-text-color-primary);
+  color: var(--color-text-primary);
+  letter-spacing: -0.02em;
 }
 
 .stat-value.vip-value {
-  color: var(--el-color-warning);
+  color: var(--color-warning);
 }
 
 .vip-card :deep(.stat-icon) {
   background: var(--gradient-vip);
 }
 
+/* ===== 图表 ===== */
 .charts-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: var(--spacing-md);
 }
 
 .chart-card {
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
 }
 
 .chart-card :deep(.el-card__header) {
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
 }
 
 .chart-container {
@@ -573,10 +589,11 @@ onMounted(async () => {
   overflow: visible;
 }
 
+/* ===== 主内容区 ===== */
 .main-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 16px;
+  gap: var(--spacing-base);
 }
 
 .card-header {
@@ -586,13 +603,14 @@ onMounted(async () => {
 }
 
 .intro-text {
-  color: var(--el-text-color-secondary);
-  margin: 0 0 16px;
+  color: var(--color-text-regular);
+  margin: 0 0 var(--spacing-base);
+  font-size: var(--font-size-base);
 }
 
 .code-box {
-  background: var(--color-sidebar-bg);
-  border-radius: var(--radius-md);
+  background: #0f172a;
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
@@ -600,13 +618,13 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
-  padding: 10px 16px;
-  background: var(--color-sidebar-header-bg);
-  border-bottom: 1px solid var(--color-sidebar-border);
+  padding: 10px var(--spacing-base);
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .lang-badge {
-  background: var(--color-primary);
+  background: var(--gradient-primary);
   color: #fff;
   padding: 2px var(--spacing-sm);
   border-radius: var(--radius-xs);
@@ -615,73 +633,122 @@ onMounted(async () => {
 }
 
 .code-header .title {
-  color: var(--color-sidebar-text);
+  color: #94a3b8;
   font-size: var(--font-size-sm);
 }
 
 .code-content {
   margin: 0;
-  padding: 16px;
-  color: #d4d4d4;
-  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  padding: var(--spacing-base);
+  color: #e2e8f0;
+  font-family: 'JetBrains Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
   font-size: var(--font-size-sm);
   line-height: 1.6;
   overflow-x: auto;
 }
 
-.hljs-comment { color: #6a9955; }
-.hljs-operator { color: #569cd6; }
-.hljs-string { color: #ce9178; }
+.hljs-comment { color: #64748b; }
+.hljs-operator { color: #818cf8; }
+.hljs-string { color: #a5b4fc; }
 
 .model-list {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .list-label {
   font-size: var(--font-size-sm);
-  color: var(--el-text-color-secondary);
+  color: var(--color-text-secondary);
 }
 
 .model-tag {
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-sm);
 }
 
+/* ===== 额度卡片 ===== */
 .quota-card :deep(.el-card__header) {
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
 }
 
-.quota-item {
+.quota-big {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.quota-number {
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+  letter-spacing: -0.02em;
+}
+
+.quota-unit {
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+}
+
+.quota-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.quota-hint.urgent {
+  color: var(--color-danger);
+}
+
+.quota-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.quota-item-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
 }
 
-.item-label {
-  font-size: 14px;
-  color: var(--el-text-color-secondary);
+.quota-label {
+  font-size: var(--font-size-base);
+  color: var(--color-text-regular);
 }
 
-.item-value {
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--el-text-color-primary);
+.quota-value-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
 }
 
-.item-value.vip {
-  color: var(--el-color-warning);
+.quota-amount {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.quota-amount.vip {
+  color: var(--color-warning);
+}
+
+.quota-amount.danger {
+  color: var(--color-danger);
 }
 
 .actions {
   display: flex;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
+/* ===== 活动列表 ===== */
 .activity-card {
-  margin-bottom: 20px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .activity-list {
@@ -694,7 +761,16 @@ onMounted(async () => {
   align-items: center;
   gap: var(--spacing-md);
   padding: var(--spacing-md) 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: 1px solid var(--color-border-light);
+  transition: background var(--transition-fast);
+}
+
+.activity-item:hover {
+  background: var(--color-bg-hover);
+  margin: 0 calc(-1 * var(--spacing-base));
+  padding-left: var(--spacing-base);
+  padding-right: var(--spacing-base);
+  border-radius: var(--radius-md);
 }
 
 .activity-item:last-child {
@@ -709,48 +785,52 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   font-size: 16px;
+  flex-shrink: 0;
 }
 
 .activity-icon.token {
-  background: rgba(64, 158, 255, 0.1);
-  color: var(--el-color-primary);
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
 }
 
 .activity-icon.order {
-  background: rgba(103, 194, 58, 0.1);
-  color: var(--el-color-success);
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--color-success);
 }
 
 .activity-icon.vip {
-  background: rgba(230, 162, 60, 0.1);
-  color: var(--el-color-warning);
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--color-warning);
 }
 
 .activity-info {
   flex: 1;
+  min-width: 0;
 }
 
 .activity-title {
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
-  color: var(--el-text-color-primary);
+  color: var(--color-text-primary);
   margin-bottom: 2px;
 }
 
 .activity-desc {
   font-size: var(--font-size-xs);
-  color: var(--el-text-color-secondary);
+  color: var(--color-text-secondary);
 }
 
 .activity-time {
   font-size: var(--font-size-xs);
-  color: var(--el-text-color-placeholder);
+  color: var(--color-text-placeholder);
+  flex-shrink: 0;
 }
 
 .empty-state {
   padding: 40px 0;
 }
 
+/* ===== 响应式 ===== */
 @media (max-width: 1200px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -777,11 +857,11 @@ onMounted(async () => {
 
 @media (max-width: 480px) {
   .dashboard {
-    gap: 12px;
+    gap: var(--spacing-md);
   }
   
   .stat-card :deep(.el-card__body) {
-    padding: 12px;
+    padding: var(--spacing-md);
   }
   
   .stat-icon {
@@ -790,7 +870,7 @@ onMounted(async () => {
   }
   
   .stat-value {
-    font-size: 18px;
+    font-size: var(--font-size-xl);
   }
   
   .chart-container {

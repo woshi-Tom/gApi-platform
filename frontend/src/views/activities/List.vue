@@ -152,28 +152,17 @@ onMounted(loadActivities)
 <style scoped>
 
 .activities-card {
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
 }
 
 .activities-card :deep(.el-table) {
-  border-radius: 8px;
-}
-
-.activities-card :deep(.el-table th.el-table__cell) {
-  background: var(--el-fill-color-lighter);
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
-}
-
-.activities-card :deep(.el-table td.el-table__cell) {
-  font-size: 14px;
+  border-radius: var(--radius-md);
 }
 
 .filter-tabs {
   display: flex;
-  gap: 8px;
-  margin-bottom: 4px;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-xs);
 }
 
 .type-cell {
@@ -190,19 +179,19 @@ onMounted(loadActivities)
 }
 
 .icon-order {
-  background: #67c23a;
+  background: var(--color-success);
 }
 
 .icon-vip {
-  background: #e6a23c;
+  background: var(--color-warning);
 }
 
 .icon-token {
-  background: #409eff;
+  background: var(--color-primary);
 }
 
 .icon-login {
-  background: #909399;
+  background: var(--color-info);
 }
 
 .activity-title {
@@ -210,12 +199,12 @@ onMounted(loadActivities)
 }
 
 .text-success {
-  color: #67c23a;
+  color: var(--color-success);
 }
 
 .time-cell {
-  color: var(--el-text-color-secondary);
-  font-size: 13px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
 }
 
 .empty-state {
@@ -223,7 +212,7 @@ onMounted(loadActivities)
 }
 
 .pagination-wrapper {
-  margin-top: 20px;
+  margin-top: var(--spacing-lg);
   display: flex;
   justify-content: flex-end;
 }

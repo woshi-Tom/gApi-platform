@@ -272,7 +272,7 @@ onMounted(async () => {
 .profile-grid {
   display: grid;
   grid-template-columns: 1fr 2fr;
-  gap: 20px;
+  gap: var(--spacing-lg);
 }
 
 /* User Card */
@@ -285,13 +285,13 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: var(--spacing-md);
 }
 
 .user-avatar {
-  background: linear-gradient(135deg, #409eff 0%, #337ecc 100%);
+  background: var(--gradient-primary);
   font-size: 32px;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .user-name {
@@ -313,12 +313,12 @@ onMounted(async () => {
 .stat-value {
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-semibold);
-  color: var(--el-text-color-primary);
+  color: var(--color-text-primary);
 }
 
 .stat-label {
   font-size: var(--font-size-xs);
-  color: var(--el-text-color-secondary);
+  color: var(--color-text-secondary);
   margin-top: var(--spacing-xs);
 }
 
@@ -337,12 +337,12 @@ onMounted(async () => {
 
 .settings-form {
   max-width: 500px;
-  padding-top: 10px;
+  padding-top: var(--spacing-md);
 }
 
 /* Security Items */
 .security-items {
-  padding: 10px 0;
+  padding: var(--spacing-md) 0;
 }
 
 .security-item {
@@ -361,7 +361,7 @@ onMounted(async () => {
 .security-info p {
   margin: var(--spacing-xs) 0 0;
   font-size: var(--font-size-xs);
-  color: var(--el-text-color-secondary);
+  color: var(--color-text-secondary);
 }
 
 /* Responsive */

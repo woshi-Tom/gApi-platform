@@ -315,7 +315,7 @@ onMounted(() => {
 .vip-page {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--spacing-lg);
 }
 
 
@@ -324,81 +324,82 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   gap: 40px;
-  padding: 20px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #ecf5ff 100%);
-  border-radius: 12px;
+  padding: var(--spacing-lg);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.08) 100%);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(99, 102, 241, 0.1);
 }
 
 .benefit {
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: var(--el-text-color-primary);
-  font-size: 14px;
+  gap: var(--spacing-sm);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
 }
 
 .benefit-icon {
   font-size: 18px;
-  color: var(--el-color-primary);
+  color: var(--color-primary);
 }
 
 /* Packages Grid */
 .packages-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 20px;
+  gap: var(--spacing-lg);
 }
 
 .package-card {
   position: relative;
   text-align: center;
-  border-radius: 12px;
-  transition: transform 0.2s, box-shadow 0.2s;
+  border-radius: var(--radius-xl);
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
 }
 
 .package-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-xl);
 }
 
 .package-card.recommended {
-  border: 2px solid var(--el-color-warning);
+  border: 2px solid var(--color-warning);
 }
 
 .package-card.popular {
-  border: 2px solid var(--el-color-primary);
+  border: 2px solid var(--color-primary);
 }
 
 .package-badge {
   position: absolute;
   top: -1px;
   right: 20px;
-  background: var(--el-color-warning);
+  background: var(--color-warning);
   color: #fff;
   padding: 4px 12px;
-  border-radius: 0 0 8px 8px;
-  font-size: 12px;
-  font-weight: 500;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
 }
 
 .package-card.popular .package-badge {
-  background: var(--el-color-primary);
+  background: var(--color-primary);
 }
 
 .package-header {
-  margin-bottom: 16px;
+  margin-bottom: var(--spacing-base);
 }
 
 .package-name {
   margin: 0;
-  font-size: 20px;
-  font-weight: 600;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
 }
 
 .package-desc {
-  margin: 8px 0 0;
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
+  margin: var(--spacing-sm) 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
 }
 
 /* Price Section */
@@ -406,32 +407,32 @@ onMounted(() => {
   display: flex;
   align-items: baseline;
   justify-content: center;
-  gap: 4px;
+  gap: var(--spacing-xs);
 }
 
 .currency {
-  font-size: 20px;
-  font-weight: 500;
-  color: var(--el-color-warning);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-warning);
 }
 
 .price {
   font-size: 42px;
-  font-weight: 700;
-  color: var(--el-color-warning);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-warning);
   line-height: 1;
 }
 
 .original-price {
-  font-size: 14px;
-  color: var(--el-text-color-placeholder);
+  font-size: var(--font-size-base);
+  color: var(--color-text-placeholder);
   text-decoration: line-through;
-  margin-left: 8px;
+  margin-left: var(--spacing-sm);
 }
 
 .period {
-  font-size: 14px;
-  color: var(--el-text-color-secondary);
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
 }
 
 /* Features List */
@@ -445,10 +446,10 @@ onMounted(() => {
 .features-list li {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 0;
-  font-size: 14px;
-  color: var(--el-text-color-primary);
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) 0;
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
 }
 
 /* Buy Button */
@@ -467,8 +468,8 @@ onMounted(() => {
 }
 
 .faq-card :deep(.el-collapse-item__content) {
-  color: var(--el-text-color-secondary);
-  padding-bottom: 16px;
+  color: var(--color-text-regular);
+  padding-bottom: var(--spacing-base);
 }
 
 /* VIP Status Alert */
@@ -503,9 +504,9 @@ onMounted(() => {
 }
 
 .info-content h4 {
-  margin: 16px 0 8px;
-  font-size: 14px;
-  font-weight: 600;
+  margin: var(--spacing-base) 0 var(--spacing-sm);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
 }
 
 .info-content h4:first-child {
@@ -519,8 +520,8 @@ onMounted(() => {
 }
 
 .info-content li {
-  margin: 4px 0;
-  font-size: 13px;
+  margin: var(--spacing-xs) 0;
+  font-size: var(--font-size-sm);
 }
 
 /* Consumption Flow */
@@ -528,10 +529,10 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 16px;
-  background: #f5f7fa;
-  border-radius: 8px;
-  margin-bottom: 16px;
+  padding: var(--spacing-base);
+  background: #f8fafc;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-base);
 }
 
 .flow-step {
@@ -556,8 +557,8 @@ onMounted(() => {
 }
 
 .step-text {
-  font-size: 14px;
-  color: var(--el-text-color-primary);
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
 }
 
 .flow-arrow {

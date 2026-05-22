@@ -189,54 +189,43 @@ onMounted(load)
 .orders-page {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--spacing-lg);
 }
 
 .orders-card {
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
 }
 
 .orders-card :deep(.el-table) {
-  border-radius: 8px;
-}
-
-.orders-card :deep(.el-table th.el-table__cell) {
-  background: var(--el-fill-color-lighter);
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
-}
-
-.orders-card :deep(.el-table td.el-table__cell) {
-  font-size: 14px;
+  border-radius: var(--radius-md);
 }
 
 .amount {
-  font-weight: 600;
-  color: var(--el-color-primary);
-  font-size: 15px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+  font-size: var(--font-size-md);
 }
 
 .amount-large {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--el-color-primary);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
 }
 
 .orders-card :deep(.el-button--primary) {
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
 }
 
 .orders-card :deep(.el-button.is-link) {
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 .pagination {
   display: flex;
   justify-content: flex-end;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  margin-top: var(--spacing-base);
+  padding-top: var(--spacing-base);
+  border-top: 1px solid var(--color-border-light);
 }
 
 .empty-state {

@@ -1,12 +1,8 @@
 <template>
   <div class="api-logs">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>API 调用记录</span>
-        </div>
-      </template>
+    <PageHeader title="API 调用记录" description="查看您的 API 调用历史" />
 
+    <el-card shadow="never">
       <el-table :data="logs" v-loading="loading" stripe>
         <el-table-column label="时间" width="160">
           <template #default="{ row }">
@@ -61,6 +57,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import PageHeader from '@/components/PageHeader.vue'
 import request from '@/api/request'
 
 interface APILog {
@@ -118,27 +115,23 @@ onMounted(load)
 
 <style scoped>
 .api-logs {
-  padding: 20px;
-}
-
-.card-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: var(--spacing-lg);
 }
 
 .pagination {
-  margin-top: 20px;
+  margin-top: var(--spacing-lg);
   display: flex;
   justify-content: flex-end;
 }
 
 .error-text {
-  color: var(--el-color-danger);
-  font-size: 13px;
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
 }
 
 .success-text {
-  color: var(--el-text-color-placeholder);
+  color: var(--color-text-placeholder);
 }
 </style>
