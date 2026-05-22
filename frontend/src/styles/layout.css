@@ -132,8 +132,8 @@ body {
 }
 
 .app-container .el-menu-item {
-  height: 46px;
-  line-height: 46px;
+  height: 42px;
+  line-height: 42px;
   margin: 2px 8px;
   border-radius: var(--radius-md);
   transition: all var(--transition-fast);
@@ -162,6 +162,10 @@ body {
 }
 
 /* 折叠菜单 */
+.app-container .el-menu--collapse {
+  width: 100%;
+}
+
 .app-container .el-menu--collapse .el-menu-item {
   padding: 0;
   display: flex;
@@ -176,4 +180,9 @@ body {
   left: 0;
   width: 3px;
   height: 24px;
+}
+
+/* tooltip 包裹的菜单项在折叠态需要全宽 */
+.app-container .el-menu--collapse .el-tooltip__trigger {
+  width: 100%;
 }

@@ -9,10 +9,11 @@
 │              Docker Network              │
 ├─────────────────────────────────────────┤
 │  postgres:5432   - PostgreSQL 16         │
-│  redis:6379     - Redis 7               │
-│  backend:8080  - Go API Server         │
-│  frontend:80   - User Dashboard (5173)  │
-│  admin:80      - Admin Panel (5174)     │
+│  redis:6379      - Redis 7               │
+│  rabbitmq:5672   - RabbitMQ 3.12         │
+│  backend:8080    - Go API Server         │
+│  frontend:5176   - User Dashboard (HMR)  │
+│  admin:5174      - Admin Panel           │
 └─────────────────────────────────────────┘
 ```
 
@@ -27,46 +28,79 @@ cp .env.example .env
 # 复制后端配置模板（Docker 环境下环境变量会覆盖，但文件必须存在）
 cp ../../backend/config/config.yaml.example ../../backend/config/config.yaml
 
-# 启动所有服务
-docker-compose up -d
+# 启动所有服务（前端默认为热更新模式）
+docker compose up -d
 
 # 查看服务状态
-docker-compose ps
+docker compose ps
 
 # 查看日志
-docker-compose logs -f backend
+docker compose logs -f backend
 ```
 
 ## 服务地址
 
+### 开发模式（默认）
+
 | 服务 | 地址 | 说明 |
 |------|------|------|
-| 用户前端 | http://localhost:5173 | 用户仪表盘 |
+| 用户前端 | http://localhost:5176 | Vite dev server，支持热更新 |
 | 管理后台 | http://localhost:5174/admin.html | 管理员面板 |
 | API 服务 | http://localhost:8080 | 后端 API |
 | Swagger | http://localhost:8080/swagger/index.html | API 文档 |
 | PostgreSQL | localhost:5432 | 数据库 |
 | Redis | localhost:6379 | 缓存 |
 
+### 生产模式
+
+| 服务 | 地址 | 说明 |
+|------|------|------|
+| 用户前端 | http://localhost:5173 | nginx 静态构建 |
+| 管理后台 | http://localhost:5174 | 管理员面板 |
+| API 服务 | http://localhost:8080 | 后端 API |
+
 ## 测试账号
 
 - **管理员**: admin / admin123
 - **操作员**: operator / operator123
 
+## 开发模式 vs 生产模式
+
+### 开发模式（默认）
+
+`docker compose up -d` 即可，前端自动进入 Vite 热更新模式：
+
+- 修改 `.vue` / `.css` 文件后浏览器自动刷新
+- 无需重建 Docker 镜像
+- 端口 5176
+
+### 生产模式
+
+使用 `docker-compose.prod.yml` 覆盖前端配置：
+
+```bash
+# 构建生产镜像并启动
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+- nginx 静态文件服务
+- 端口 5173
+- 修改代码后需要重新 build
+
 ## 常用命令
 
 ```bash
-# 启动
-docker-compose up -d
+# 启动（热更新模式）
+docker compose up -d
 
 # 停止
-docker-compose down
+docker compose down
 
 # 停止并删除数据卷
-docker-compose down -v
+docker compose down -v
 
-# 重建服务
-docker-compose up -d --force-recreate
+# 重建后端服务
+docker compose up -d --build backend
 
 # 进入后端容器
 docker exec -it gapi-backend sh
@@ -78,15 +112,10 @@ docker exec -it gapi-postgres psql -U gapi -d gapi
 docker logs -f gapi-backend
 
 # 重启后端
-docker-compose restart backend
-```
+docker compose restart backend
 
-## 开发模式
-
-修改代码后自动重建：
-
-```bash
-docker-compose up -d --build backend
+# 查看前端热更新日志
+docker logs -f gapi-frontend
 ```
 
 ## 环境变量
@@ -103,10 +132,10 @@ POSTGRES_PASSWORD=gapi123
 REDIS_PASSWORD=redis123
 
 # JWT 密钥 (生产环境必须修改!)
-GAPI_JWT_SECRET=your-super-secret-jwt-key-at-least-32-characters
+JWT_SECRET=your-super-secret-jwt-key-at-least-32-characters
 
 # 管理员密钥
-GAPI_ADMIN_SECRET=gapi-admin-secret-key-2026
+ADMIN_SECRET=gapi-admin-secret-key-2026
 ```
 
 ## 生产部署注意
@@ -115,13 +144,13 @@ GAPI_ADMIN_SECRET=gapi-admin-secret-key-2026
 2. 使用强 JWT 密钥
 3. 配置 HTTPS (使用 nginx + letsencrypt)
 4. 启用防火墙
-5. 考虑使用 Docker Swarm 或 Kubernetes
+5. 使用 `docker-compose.prod.yml` 部署
 
 ## 清理
 
 ```bash
 # 删除所有容器和卷
-docker-compose down -v --rmi all
+docker compose down -v --rmi all
 
 # 完全清理
 docker system prune -a
@@ -154,7 +183,7 @@ cd deploy/docker
 cd frontend
 
 # 设置环境变量
-export PLAYWRIGHT_BASE_URL=http://localhost:5173
+export PLAYWRIGHT_BASE_URL=http://localhost:5176
 export API_BASE_URL=http://localhost:8080
 
 # 运行测试
@@ -169,7 +198,7 @@ npx playwright test
 cd deploy/docker
 
 # 启动测试环境 (使用不同的端口)
-docker-compose -f docker-compose.test.yml up -d
+docker compose -f docker-compose.test.yml up -d
 
 # 运行测试
 docker exec gapi-playwright-test npx playwright test
@@ -182,7 +211,7 @@ docker exec gapi-playwright-test cat playwright-report/index.html
 
 | 服务 | 开发环境 | 测试环境 |
 |------|---------|---------|
-| Frontend | 5173 | 5173 |
+| Frontend | 5176 | 5173 |
 | Admin | 5174 | 5174 |
 | API | 8080 | 8081 |
 | PostgreSQL | 5432 | 5433 |

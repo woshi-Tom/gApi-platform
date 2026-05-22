@@ -15,13 +15,13 @@
       :collapsed="collapsed"
       :active-path="route.path"
       :width="sidebarWidth"
+      :user="authStore.user"
       @toggle="toggleSidebar"
+      @command="handleCommand"
     />
     <el-container>
       <AppHeader
         :title="(route.meta.title as string) || '控制台'"
-        :username="authStore.user?.username || '用户'"
-        @command="handleCommand"
       />
       <AppMain />
     </el-container>
@@ -59,7 +59,7 @@ function handleCommand(command: string) {
   if (command === 'logout') {
     authStore.logout()
     router.push('/login')
-  } else if (command === 'profile') {
+  } else if (command === 'profile' || command === 'settings') {
     router.push('/profile')
   }
 }
