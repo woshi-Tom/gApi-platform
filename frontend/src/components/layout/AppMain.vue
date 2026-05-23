@@ -15,5 +15,6 @@
 .main-content {
   padding: 24px;
   overflow-y: auto;
+  background: var(--color-bg-page);
 }
 </style>

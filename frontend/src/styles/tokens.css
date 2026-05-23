@@ -139,3 +139,81 @@
   --card-border: 1px solid var(--color-border);
   --card-border-hover: 1px solid rgba(99, 102, 241, 0.2);
 }
+
+/* ============================================================
+ * 方案 B：全深色科技风 SaaS 控制台
+ * 仅在 .console-layout 内生效，不影响登录/注册页
+ * ============================================================ */
+.console-layout {
+  /* ── 深色语义色覆盖 ── */
+  --color-text-primary: rgba(255, 255, 255, 0.92);
+  --color-text-regular: rgba(255, 255, 255, 0.78);
+  --color-text-secondary: rgba(255, 255, 255, 0.62);
+  --color-text-placeholder: rgba(255, 255, 255, 0.42);
+  --color-text-disabled: rgba(255, 255, 255, 0.25);
+
+  --color-bg-page: #0f1016;
+  --color-bg-card: rgba(255, 255, 255, 0.045);
+  --color-bg-hover: rgba(255, 255, 255, 0.06);
+  --color-bg-elevated: #1a1c25;
+  --color-bg-overlay: rgba(0, 0, 0, 0.6);
+
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-light: rgba(255, 255, 255, 0.06);
+  --color-border-lighter: rgba(255, 255, 255, 0.04);
+
+  --color-sidebar-bg: #0b0b0f;
+  --color-sidebar-bg-light: #14161e;
+  --color-sidebar-text: rgba(255, 255, 255, 0.58);
+  --color-sidebar-active-text: #a5b4fc;
+  --color-sidebar-border: rgba(255, 255, 255, 0.06);
+  --color-sidebar-header-bg: rgba(0, 0, 0, 0.3);
+  --color-sidebar-hover: rgba(255, 255, 255, 0.06);
+  --color-sidebar-active-bg: rgba(99, 102, 241, 0.15);
+
+  --color-primary-bg: rgba(99, 102, 241, 0.12);
+  --color-primary-bg-hover: rgba(99, 102, 241, 0.18);
+
+  --gradient-sidebar: linear-gradient(180deg, #0b0b0f 0%, #0b0b0f 100%);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-base: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.5);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+  --table-header-bg: rgba(255, 255, 255, 0.03);
+  --table-header-color: rgba(255, 255, 255, 0.62);
+
+  --card-border: 1px solid rgba(255, 255, 255, 0.08);
+  --card-border-hover: 1px solid rgba(255, 255, 255, 0.15);
+
+  /* ── g-* 变量映射（layout.css / console-dark.css 使用） ── */
+  --g-bg: #0f1016;
+  --g-bg-muted: #11131a;
+  --g-bg-card: rgba(255, 255, 255, 0.045);
+  --g-bg-sidebar: #0b0b0f;
+  --g-bg-sidebar-item-active: rgba(99, 102, 241, 0.15);
+  --g-border: rgba(255, 255, 255, 0.08);
+  --g-border-sidebar: rgba(255, 255, 255, 0.06);
+  --g-text-1: rgba(255, 255, 255, 0.92);
+  --g-text-2: rgba(255, 255, 255, 0.62);
+  --g-text-3: rgba(255, 255, 255, 0.42);
+  --g-text-inverse: #ffffff;
+  --g-primary: #6366f1;
+  --g-primary-light: #818cf8;
+  --g-primary-dark: #4f46e5;
+  --g-success: #22c55e;
+  --g-warning: #f59e0b;
+  --g-danger: #ef4444;
+  --g-sidebar-width: 240px;
+  --g-sidebar-collapsed: 64px;
+  --g-transition: 0.22s ease;
+  --g-radius-lg: 12px;
+  --g-radius-sm: 6px;
+  --g-radius-md: 8px;
+  --g-shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --g-gray-400: rgba(255, 255, 255, 0.62);
+}

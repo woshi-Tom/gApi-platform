@@ -8,6 +8,7 @@ import App from './App.vue'
 import './styles/tokens.css'
 import './style.css'
 import './styles/layout.css'
+import './styles/console-dark.css'
 
 const app = createApp(App)
 

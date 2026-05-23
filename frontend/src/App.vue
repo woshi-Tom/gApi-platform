@@ -10,7 +10,7 @@
   禁止在此文件中添加：页面 UI、表格、表单、API 请求、业务逻辑
 -->
 <template>
-  <el-container v-if="showLayout" class="app-container">
+  <el-container v-if="showLayout" class="app-container console-layout">
     <AppSidebar
       :collapsed="collapsed"
       :active-path="route.path"

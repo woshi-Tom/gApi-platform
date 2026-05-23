@@ -337,7 +337,10 @@ const tokenChartOption = computed(() => {
   return {
     tooltip: {
       trigger: 'axis',
-      axisPointer: { type: 'cross' },
+      axisPointer: { type: 'cross', lineStyle: { color: 'rgba(255,255,255,0.1)' } },
+      backgroundColor: '#1a1c25',
+      borderColor: 'rgba(255,255,255,0.1)',
+      textStyle: { color: 'rgba(255,255,255,0.85)' },
       formatter: (params: any[]) => {
         const p = params[0]
         const val = p.value >= 1000 ? (p.value / 1000).toFixed(2) + 'k' : p.value.toLocaleString()
@@ -354,7 +357,11 @@ const tokenChartOption = computed(() => {
     xAxis: {
       type: 'category',
       data: dailyUsage.value.map(d => d.date),
-      boundaryGap: false
+      boundaryGap: false,
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      axisTick: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      axisLabel: { color: 'rgba(255,255,255,0.45)' },
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } }
     },
     yAxis: {
       type: 'value',
@@ -363,14 +370,19 @@ const tokenChartOption = computed(() => {
       nameGap: 35,
       nameTextStyle: {
         align: 'center',
-        verticalAlign: 'bottom'
+        verticalAlign: 'bottom',
+        color: 'rgba(255,255,255,0.45)'
       },
       min: 0,
       max: Math.ceil(maxValue / 5) * 5 + 1000,
       splitNumber: 5,
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      axisTick: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
       axisLabel: {
+        color: 'rgba(255,255,255,0.45)',
         formatter: (v: number) => v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v
-      }
+      },
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } }
     },
     series: [{
       name: 'Token消耗',
@@ -402,7 +414,10 @@ const callsChartOption = computed(() => {
   return {
     tooltip: {
       trigger: 'axis',
-      axisPointer: { type: 'cross' },
+      axisPointer: { type: 'cross', lineStyle: { color: 'rgba(255,255,255,0.1)' } },
+      backgroundColor: '#1a1c25',
+      borderColor: 'rgba(255,255,255,0.1)',
+      textStyle: { color: 'rgba(255,255,255,0.85)' },
       formatter: (params: any[]) => {
         const p = params[0]
         return `${p.axisValue}<br/>${p.marker} API调用: ${p.value.toLocaleString()} 次`
@@ -417,7 +432,11 @@ const callsChartOption = computed(() => {
     },
     xAxis: {
       type: 'category',
-      data: dailyUsage.value.map(d => d.date)
+      data: dailyUsage.value.map(d => d.date),
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      axisTick: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      axisLabel: { color: 'rgba(255,255,255,0.45)' },
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } }
     },
     yAxis: {
       type: 'value',
@@ -426,14 +445,19 @@ const callsChartOption = computed(() => {
       nameGap: 30,
       nameTextStyle: {
         align: 'center',
-        verticalAlign: 'bottom'
+        verticalAlign: 'bottom',
+        color: 'rgba(255,255,255,0.45)'
       },
       min: 0,
       max: Math.ceil(maxValue / 5) * 5 + 5,
       splitNumber: 5,
+      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      axisTick: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
       axisLabel: {
+        color: 'rgba(255,255,255,0.45)',
         formatter: (v: number) => v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v
-      }
+      },
+      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } }
     },
     series: [{
       name: 'API调用',
@@ -538,10 +562,22 @@ onMounted(async () => {
   color: #fff;
 }
 
-.stat-icon.blue { background: var(--gradient-blue); }
-.stat-icon.green { background: var(--gradient-green); }
-.stat-icon.orange { background: var(--gradient-orange); }
-.stat-icon.red { background: var(--gradient-red); }
+.stat-icon.blue {
+  background: rgba(99, 102, 241, 0.18);
+  color: #a5b4fc;
+}
+.stat-icon.green {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+}
+.stat-icon.orange {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+.stat-icon.red {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
 
 .stat-info {
   flex: 1;

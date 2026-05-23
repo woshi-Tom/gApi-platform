@@ -14,7 +14,7 @@ defineProps<{
 .header {
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(15, 16, 22, 0.75);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--color-border-light);
