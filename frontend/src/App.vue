@@ -10,7 +10,7 @@
   禁止在此文件中添加：页面 UI、表格、表单、API 请求、业务逻辑
 -->
 <template>
-  <el-container v-if="showLayout" class="app-container console-layout">
+  <el-container v-if="showLayout" ref="layoutRef" class="app-container console-layout">
     <AppSidebar
       :collapsed="collapsed"
       :active-path="route.path"
@@ -22,6 +22,8 @@
     <el-container>
       <AppHeader
         :title="(route.meta.title as string) || '控制台'"
+        :console-theme="consoleTheme"
+        @toggle-theme="toggleConsoleTheme"
       />
       <AppMain />
     </el-container>
@@ -31,9 +33,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
+import { useConsoleTheme } from '@/composables/useConsoleTheme'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
 import AppHeader from '@/components/layout/AppHeader.vue'
 import AppMain from '@/components/layout/AppMain.vue'
@@ -41,6 +44,10 @@ import AppMain from '@/components/layout/AppMain.vue'
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const layoutRef = ref<HTMLElement | null>(null)
+
+// 控制台主题
+const { theme: consoleTheme, toggleTheme: toggleConsoleTheme, ensureApplied } = useConsoleTheme()
 
 // 侧边栏折叠状态（记忆到 localStorage）
 const collapsed = ref(localStorage.getItem('sidebar-collapsed') === 'true')
@@ -68,5 +75,8 @@ onMounted(async () => {
   if (authStore.isLoggedIn && !authStore.user) {
     await authStore.fetchProfile()
   }
+  // 确保主题在 .console-layout 挂载后正确应用
+  await nextTick()
+  ensureApplied()
 })
 </script>

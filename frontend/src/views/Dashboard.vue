@@ -213,6 +213,7 @@ curl http://localhost:8080/api/v1/chat/completions \
 import { ref, computed, onMounted } from 'vue'
 import { useCountUp } from '@/composables/useCountUp'
 import { formatQuota as fmtQuota } from '@/composables/useFormat'
+import { useConsoleTheme } from '@/composables/useConsoleTheme'
 import { ElMessage } from 'element-plus'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -224,6 +225,18 @@ import {
   ShoppingCart, ArrowRight, Timer
 } from '@element-plus/icons-vue'
 import request from '@/api/request'
+
+const { theme: consoleTheme } = useConsoleTheme()
+
+// 图表主题色（响应式）
+const isDark = computed(() => consoleTheme.value === 'dark')
+const chartAxisColor = computed(() => isDark.value ? 'rgba(255,255,255,0.45)' : '#94a3b8')
+const chartLineColor = computed(() => isDark.value ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)')
+const chartSplitColor = computed(() => isDark.value ? 'rgba(255,255,255,0.04)' : 'rgba(15,23,42,0.06)')
+const chartTooltipBg = computed(() => isDark.value ? '#1a1c25' : '#ffffff')
+const chartTooltipBorder = computed(() => isDark.value ? 'rgba(255,255,255,0.1)' : 'rgba(15,23,42,0.1)')
+const chartTooltipText = computed(() => isDark.value ? 'rgba(255,255,255,0.85)' : '#334155')
+const chartCrossColor = computed(() => isDark.value ? 'rgba(255,255,255,0.1)' : 'rgba(15,23,42,0.1)')
 
 use([CanvasRenderer, LineChart, GridComponent, TooltipComponent])
 
@@ -337,10 +350,10 @@ const tokenChartOption = computed(() => {
   return {
     tooltip: {
       trigger: 'axis',
-      axisPointer: { type: 'cross', lineStyle: { color: 'rgba(255,255,255,0.1)' } },
-      backgroundColor: '#1a1c25',
-      borderColor: 'rgba(255,255,255,0.1)',
-      textStyle: { color: 'rgba(255,255,255,0.85)' },
+      axisPointer: { type: 'cross', lineStyle: { color: chartCrossColor.value } },
+      backgroundColor: chartTooltipBg.value,
+      borderColor: chartTooltipBorder.value,
+      textStyle: { color: chartTooltipText.value },
       formatter: (params: any[]) => {
         const p = params[0]
         const val = p.value >= 1000 ? (p.value / 1000).toFixed(2) + 'k' : p.value.toLocaleString()
@@ -358,10 +371,10 @@ const tokenChartOption = computed(() => {
       type: 'category',
       data: dailyUsage.value.map(d => d.date),
       boundaryGap: false,
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisTick: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: 'rgba(255,255,255,0.45)' },
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } }
+      axisLine: { lineStyle: { color: chartLineColor.value } },
+      axisTick: { lineStyle: { color: chartLineColor.value } },
+      axisLabel: { color: chartAxisColor.value },
+      splitLine: { lineStyle: { color: chartSplitColor.value } }
     },
     yAxis: {
       type: 'value',
@@ -371,18 +384,18 @@ const tokenChartOption = computed(() => {
       nameTextStyle: {
         align: 'center',
         verticalAlign: 'bottom',
-        color: 'rgba(255,255,255,0.45)'
+        color: chartAxisColor.value
       },
       min: 0,
       max: Math.ceil(maxValue / 5) * 5 + 1000,
       splitNumber: 5,
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisTick: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      axisLine: { lineStyle: { color: chartLineColor.value } },
+      axisTick: { lineStyle: { color: chartLineColor.value } },
       axisLabel: {
-        color: 'rgba(255,255,255,0.45)',
+        color: chartAxisColor.value,
         formatter: (v: number) => v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v
       },
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } }
+      splitLine: { lineStyle: { color: chartSplitColor.value } }
     },
     series: [{
       name: 'Token消耗',
@@ -414,10 +427,10 @@ const callsChartOption = computed(() => {
   return {
     tooltip: {
       trigger: 'axis',
-      axisPointer: { type: 'cross', lineStyle: { color: 'rgba(255,255,255,0.1)' } },
-      backgroundColor: '#1a1c25',
-      borderColor: 'rgba(255,255,255,0.1)',
-      textStyle: { color: 'rgba(255,255,255,0.85)' },
+      axisPointer: { type: 'cross', lineStyle: { color: chartCrossColor.value } },
+      backgroundColor: chartTooltipBg.value,
+      borderColor: chartTooltipBorder.value,
+      textStyle: { color: chartTooltipText.value },
       formatter: (params: any[]) => {
         const p = params[0]
         return `${p.axisValue}<br/>${p.marker} API调用: ${p.value.toLocaleString()} 次`
@@ -433,10 +446,10 @@ const callsChartOption = computed(() => {
     xAxis: {
       type: 'category',
       data: dailyUsage.value.map(d => d.date),
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisTick: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisLabel: { color: 'rgba(255,255,255,0.45)' },
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } }
+      axisLine: { lineStyle: { color: chartLineColor.value } },
+      axisTick: { lineStyle: { color: chartLineColor.value } },
+      axisLabel: { color: chartAxisColor.value },
+      splitLine: { lineStyle: { color: chartSplitColor.value } }
     },
     yAxis: {
       type: 'value',
@@ -446,18 +459,18 @@ const callsChartOption = computed(() => {
       nameTextStyle: {
         align: 'center',
         verticalAlign: 'bottom',
-        color: 'rgba(255,255,255,0.45)'
+        color: chartAxisColor.value
       },
       min: 0,
       max: Math.ceil(maxValue / 5) * 5 + 5,
       splitNumber: 5,
-      axisLine: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
-      axisTick: { lineStyle: { color: 'rgba(255,255,255,0.08)' } },
+      axisLine: { lineStyle: { color: chartLineColor.value } },
+      axisTick: { lineStyle: { color: chartLineColor.value } },
       axisLabel: {
-        color: 'rgba(255,255,255,0.45)',
+        color: chartAxisColor.value,
         formatter: (v: number) => v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v
       },
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)' } }
+      splitLine: { lineStyle: { color: chartSplitColor.value } }
     },
     series: [{
       name: 'API调用',

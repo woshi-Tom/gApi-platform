@@ -684,6 +684,583 @@
   color: rgba(255, 255, 255, 0.85);
 }
 
+/* ============================================================
+ * 浅色模式 Element Plus 组件覆盖
+ * 仅在 .console-layout.console-theme-light 内生效
+ * ============================================================ */
+
+/* ── el-card (light) ── */
+.console-layout.console-theme-light .el-card {
+  --el-card-bg-color: #ffffff;
+  --el-card-border-color: rgba(15, 23, 42, 0.08);
+  color: #0f172a;
+}
+
+/* ── el-table (light) ── */
+.console-layout.console-theme-light .el-table {
+  --el-table-bg-color: transparent;
+  --el-table-tr-bg-color: transparent;
+  --el-table-header-bg-color: #f8fafc;
+  --el-table-header-text-color: #475569;
+  --el-table-text-color: #0f172a;
+  --el-table-border-color: rgba(15, 23, 42, 0.06);
+  --el-table-row-hover-bg-color: rgba(99, 102, 241, 0.04);
+  --el-table-current-row-bg-color: rgba(99, 102, 241, 0.08);
+  --el-fill-color-lighter: #f8fafc;
+  --el-fill-color-light: #f1f5f9;
+  color: #0f172a;
+}
+
+.console-layout.console-theme-light .el-table th.el-table__cell {
+  background-color: #f8fafc !important;
+  color: #475569 !important;
+  border-bottom-color: rgba(15, 23, 42, 0.06) !important;
+}
+
+.console-layout.console-theme-light .el-table td.el-table__cell {
+  border-bottom-color: rgba(15, 23, 42, 0.04) !important;
+}
+
+.console-layout.console-theme-light .el-table--enable-row-hover .el-table__body tr:hover > td {
+  background-color: rgba(99, 102, 241, 0.04) !important;
+}
+
+.console-layout.console-theme-light .el-table__empty-text {
+  color: #94a3b8;
+}
+
+/* ── el-input (light) ── */
+.console-layout.console-theme-light .el-input__wrapper {
+  background-color: #ffffff !important;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.12) inset !important;
+}
+
+.console-layout.console-theme-light .el-input__wrapper:hover {
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.2) inset !important;
+}
+
+.console-layout.console-theme-light .el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 1px #6366f1 inset !important;
+}
+
+.console-layout.console-theme-light .el-input__inner {
+  color: #0f172a !important;
+}
+
+.console-layout.console-theme-light .el-input__inner::placeholder {
+  color: #94a3b8 !important;
+}
+
+.console-layout.console-theme-light .el-input__suffix,
+.console-layout.console-theme-light .el-input__prefix {
+  color: #94a3b8;
+}
+
+/* ── el-textarea (light) ── */
+.console-layout.console-theme-light .el-textarea__inner {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.12) inset !important;
+}
+
+.console-layout.console-theme-light .el-textarea__inner::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* ── el-select (light) ── */
+.console-layout.console-theme-light .el-select .el-input__wrapper {
+  background-color: #ffffff !important;
+}
+
+.console-layout.console-theme-light .el-select-dropdown {
+  background-color: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.1) !important;
+}
+
+.console-layout.console-theme-light .el-select-dropdown__item {
+  color: #334155 !important;
+}
+
+.console-layout.console-theme-light .el-select-dropdown__item.hover,
+.console-layout.console-theme-light .el-select-dropdown__item:hover {
+  background-color: rgba(99, 102, 241, 0.06) !important;
+}
+
+.console-layout.console-theme-light .el-select-dropdown__item.selected {
+  color: #6366f1 !important;
+  font-weight: 600;
+}
+
+/* ── el-button (light) ── */
+.console-layout.console-theme-light .el-button--default {
+  --el-button-bg-color: #ffffff;
+  --el-button-border-color: rgba(15, 23, 42, 0.12);
+  --el-button-text-color: #334155;
+  --el-button-hover-bg-color: rgba(99, 102, 241, 0.06);
+  --el-button-hover-border-color: rgba(99, 102, 241, 0.3);
+  --el-button-hover-text-color: #6366f1;
+  --el-button-disabled-bg-color: #f8fafc;
+  --el-button-disabled-border-color: rgba(15, 23, 42, 0.06);
+  --el-button-disabled-text-color: #cbd5e1;
+}
+
+/* ── el-dialog (light) ── */
+.console-layout.console-theme-light .el-dialog {
+  --el-dialog-bg-color: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.12);
+}
+
+.console-layout.console-theme-light .el-dialog__header {
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.console-layout.console-theme-light .el-dialog__title {
+  color: #0f172a !important;
+}
+
+.console-layout.console-theme-light .el-dialog__body {
+  color: #334155;
+}
+
+.console-layout.console-theme-light .el-dialog__footer {
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.console-layout.console-theme-light .el-overlay {
+  background-color: rgba(15, 23, 42, 0.3);
+}
+
+/* ── el-drawer (light) ── */
+.console-layout.console-theme-light .el-drawer {
+  --el-drawer-bg-color: #ffffff;
+  border-left: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.console-layout.console-theme-light .el-drawer__header {
+  color: #0f172a;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.console-layout.console-theme-light .el-drawer__body {
+  color: #334155;
+}
+
+/* ── el-dropdown (light) ── */
+.console-layout.console-theme-light .el-dropdown-menu {
+  background-color: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.1) !important;
+}
+
+.console-layout.console-theme-light .el-dropdown-menu__item {
+  color: #334155 !important;
+}
+
+.console-layout.console-theme-light .el-dropdown-menu__item:hover,
+.console-layout.console-theme-light .el-dropdown-menu__item:focus {
+  background-color: rgba(99, 102, 241, 0.06) !important;
+  color: #6366f1 !important;
+}
+
+.console-layout.console-theme-light .el-dropdown-menu__item--divided {
+  border-top-color: rgba(15, 23, 42, 0.06) !important;
+}
+
+.console-layout.console-theme-light .el-dropdown-menu__item.is-disabled {
+  color: #cbd5e1 !important;
+}
+
+/* ── el-pagination (light) ── */
+.console-layout.console-theme-light .el-pagination {
+  --el-pagination-bg-color: transparent;
+  --el-pagination-text-color: #475569;
+  --el-pagination-button-bg-color: #ffffff;
+  --el-pagination-button-color: #475569;
+  --el-pagination-hover-color: #6366f1;
+}
+
+.console-layout.console-theme-light .el-pagination button:disabled {
+  background-color: #f8fafc !important;
+  color: #cbd5e1 !important;
+}
+
+.console-layout.console-theme-light .el-pager li {
+  background-color: #ffffff !important;
+  color: #475569 !important;
+}
+
+.console-layout.console-theme-light .el-pager li:hover {
+  color: #6366f1 !important;
+}
+
+.console-layout.console-theme-light .el-pager li.is-active {
+  background-color: #6366f1 !important;
+  color: #fff !important;
+}
+
+/* ── el-tag (light) ── */
+.console-layout.console-theme-light .el-tag {
+  --el-tag-bg-color: rgba(99, 102, 241, 0.06);
+  --el-tag-border-color: rgba(99, 102, 241, 0.12);
+  --el-tag-text-color: #4f46e5;
+}
+
+.console-layout.console-theme-light .el-tag--success {
+  --el-tag-bg-color: rgba(34, 197, 94, 0.08);
+  --el-tag-border-color: rgba(34, 197, 94, 0.15);
+  --el-tag-text-color: #059669;
+}
+
+.console-layout.console-theme-light .el-tag--warning {
+  --el-tag-bg-color: rgba(245, 158, 11, 0.08);
+  --el-tag-border-color: rgba(245, 158, 11, 0.15);
+  --el-tag-text-color: #d97706;
+}
+
+.console-layout.console-theme-light .el-tag--danger {
+  --el-tag-bg-color: rgba(239, 68, 68, 0.08);
+  --el-tag-border-color: rgba(239, 68, 68, 0.15);
+  --el-tag-text-color: #dc2626;
+}
+
+.console-layout.console-theme-light .el-tag--info {
+  --el-tag-bg-color: rgba(100, 116, 139, 0.08);
+  --el-tag-border-color: rgba(100, 116, 139, 0.15);
+  --el-tag-text-color: #475569;
+}
+
+/* ── el-tooltip (light) ── */
+.console-layout.console-theme-light .el-tooltip__popper.is-dark {
+  background: #1e293b !important;
+  border: 1px solid rgba(15, 23, 42, 0.1) !important;
+  color: #f8fafc !important;
+}
+
+.console-layout.console-theme-light .el-tooltip__popper.is-light {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  color: #0f172a !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.1) !important;
+}
+
+/* ── el-popover (light) ── */
+.console-layout.console-theme-light .el-popover.el-popper {
+  --el-popover-bg-color: #ffffff;
+  --el-popover-border-color: rgba(15, 23, 42, 0.1);
+  --el-popover-title-text-color: #0f172a;
+  color: #334155;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.1) !important;
+}
+
+/* ── el-form (light) ── */
+.console-layout.console-theme-light .el-form-item__label {
+  color: #475569 !important;
+}
+
+.console-layout.console-theme-light .el-form-item__error {
+  color: #ef4444 !important;
+}
+
+/* ── el-divider (light) ── */
+.console-layout.console-theme-light .el-divider {
+  --el-divider-color: rgba(15, 23, 42, 0.06);
+}
+
+.console-layout.console-theme-light .el-divider__text {
+  background-color: #f4f7fb;
+  color: #475569;
+}
+
+/* ── el-empty (light) ── */
+.console-layout.console-theme-light .el-empty__description p {
+  color: #94a3b8;
+}
+
+/* ── el-loading (light) ── */
+.console-layout.console-theme-light .el-loading-mask {
+  background-color: rgba(255, 255, 255, 0.75);
+}
+
+.console-layout.console-theme-light .el-loading-text {
+  color: #475569;
+}
+
+/* ── el-message-box (light) ── */
+.console-layout.console-theme-light .el-message-box {
+  --el-messagebox-title-color: #0f172a;
+  background-color: #ffffff;
+  border-color: rgba(15, 23, 42, 0.1);
+  box-shadow: 0 8px 32px rgba(15, 23, 42, 0.15);
+}
+
+.console-layout.console-theme-light .el-message-box__header {
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.console-layout.console-theme-light .el-message-box__content {
+  color: #334155;
+}
+
+.console-layout.console-theme-light .el-message-box__btns {
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+/* ── el-notification (light) ── */
+.console-layout.console-theme-light .el-notification {
+  background-color: #ffffff;
+  border-color: rgba(15, 23, 42, 0.08);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.1);
+}
+
+.console-layout.console-theme-light .el-notification__title {
+  color: #0f172a;
+}
+
+.console-layout.console-theme-light .el-notification__content {
+  color: #475569;
+}
+
+/* ── el-message (light) ── */
+.console-layout.console-theme-light .el-message {
+  --el-message-bg-color: #ffffff;
+  --el-message-border-color: rgba(15, 23, 42, 0.08);
+  --el-message-text-color: #334155;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.1);
+}
+
+/* ── el-switch (light) ── */
+.console-layout.console-theme-light .el-switch__label {
+  color: #94a3b8;
+}
+
+.console-layout.console-theme-light .el-switch__label.is-active {
+  color: #0f172a;
+}
+
+/* ── el-checkbox (light) ── */
+.console-layout.console-theme-light .el-checkbox__label {
+  color: #334155;
+}
+
+/* ── el-radio (light) ── */
+.console-layout.console-theme-light .el-radio__label {
+  color: #334155;
+}
+
+/* ── el-tabs (light) ── */
+.console-layout.console-theme-light .el-tabs__item {
+  color: #94a3b8;
+}
+
+.console-layout.console-theme-light .el-tabs__item.is-active {
+  color: #6366f1;
+}
+
+.console-layout.console-theme-light .el-tabs__item:hover {
+  color: #334155;
+}
+
+.console-layout.console-theme-light .el-tabs__nav-wrap::after {
+  background-color: rgba(15, 23, 42, 0.06);
+}
+
+/* ── el-breadcrumb (light) ── */
+.console-layout.console-theme-light .el-breadcrumb__inner {
+  color: #94a3b8;
+}
+
+.console-layout.console-theme-light .el-breadcrumb__inner.is-link:hover {
+  color: #6366f1;
+}
+
+.console-layout.console-theme-light .el-breadcrumb__separator {
+  color: #cbd5e1;
+}
+
+/* ── el-alert (light) ── */
+.console-layout.console-theme-light .el-alert--info.is-light {
+  --el-alert-bg-color: rgba(99, 102, 241, 0.06);
+  --el-alert-title-text-color: #334155;
+  --el-alert-description-text-color: #475569;
+  --el-alert-icon-color: #6366f1;
+}
+
+.console-layout.console-theme-light .el-alert--success.is-light {
+  --el-alert-bg-color: rgba(34, 197, 94, 0.06);
+  --el-alert-title-text-color: #334155;
+  --el-alert-description-text-color: #475569;
+  --el-alert-icon-color: #22c55e;
+}
+
+.console-layout.console-theme-light .el-alert--warning.is-light {
+  --el-alert-bg-color: rgba(245, 158, 11, 0.06);
+  --el-alert-title-text-color: #334155;
+  --el-alert-description-text-color: #475569;
+  --el-alert-icon-color: #f59e0b;
+}
+
+.console-layout.console-theme-light .el-alert--error.is-light {
+  --el-alert-bg-color: rgba(239, 68, 68, 0.06);
+  --el-alert-title-text-color: #334155;
+  --el-alert-description-text-color: #475569;
+  --el-alert-icon-color: #ef4444;
+}
+
+/* ── el-descriptions (light) ── */
+.console-layout.console-theme-light .el-descriptions__label {
+  color: #94a3b8 !important;
+}
+
+.console-layout.console-theme-light .el-descriptions__content {
+  color: #0f172a !important;
+}
+
+.console-layout.console-theme-light .el-descriptions__cell {
+  border-color: rgba(15, 23, 42, 0.06) !important;
+}
+
+/* ── el-progress (light) ── */
+.console-layout.console-theme-light .el-progress-bar__outer {
+  background-color: rgba(15, 23, 42, 0.06);
+}
+
+.console-layout.console-theme-light .el-progress__text {
+  color: #475569;
+}
+
+/* ── el-skeleton (light) ── */
+.console-layout.console-theme-light .el-skeleton__item {
+  background: linear-gradient(90deg, rgba(15,23,42,0.04) 25%, rgba(15,23,42,0.08) 37%, rgba(15,23,42,0.04) 63%);
+}
+
+/* ── el-step (light) ── */
+.console-layout.console-theme-light .el-step__title {
+  color: #94a3b8;
+}
+
+.console-layout.console-theme-light .el-step__title.is-process {
+  color: #0f172a;
+}
+
+.console-layout.console-theme-light .el-step__description {
+  color: #94a3b8;
+}
+
+/* ── Scrollbar (light) ── */
+.console-layout.console-theme-light ::-webkit-scrollbar-thumb {
+  background: rgba(15, 23, 42, 0.1);
+}
+
+.console-layout.console-theme-light ::-webkit-scrollbar-thumb:hover {
+  background: rgba(15, 23, 42, 0.2);
+}
+
+/* ── el-menu (light) ── */
+.console-layout.console-theme-light .el-menu-item {
+  color: #475569 !important;
+}
+
+.console-layout.console-theme-light .el-menu-item:hover {
+  background-color: rgba(99, 102, 241, 0.06) !important;
+  color: #0f172a !important;
+}
+
+.console-layout.console-theme-light .el-menu-item.is-active {
+  background-color: rgba(99, 102, 241, 0.1) !important;
+  color: #6366f1 !important;
+}
+
+/* ── el-cascader dropdown (light) ── */
+.console-layout.console-theme-light .el-cascader-menu {
+  background-color: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+}
+
+.console-layout.console-theme-light .el-cascader-node__label {
+  color: #334155;
+}
+
+.console-layout.console-theme-light .el-cascader-node:hover,
+.console-layout.console-theme-light .el-cascader-node.in-active-path {
+  background-color: rgba(99, 102, 241, 0.06);
+}
+
+/* ── el-date-picker (light) ── */
+.console-layout.console-theme-light .el-date-editor .el-input__wrapper {
+  background-color: #ffffff !important;
+}
+
+.console-layout.console-theme-light .el-picker-panel {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  color: #334155;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.1) !important;
+}
+
+.console-layout.console-theme-light .el-picker-panel__body {
+  color: #334155;
+}
+
+.console-layout.console-theme-light .el-date-table th {
+  color: #94a3b8;
+}
+
+.console-layout.console-theme-light .el-date-table td.today .el-date-table-cell__text {
+  color: #6366f1;
+}
+
+.console-layout.console-theme-light .el-date-table td.current:not(.disabled) .el-date-table-cell__text {
+  background-color: #6366f1;
+  color: #fff;
+}
+
+.console-layout.console-theme-light .el-date-table-cell__text:hover {
+  background-color: rgba(99, 102, 241, 0.08);
+  color: #6366f1;
+}
+
+.console-layout.console-theme-light .el-month-table td .cell {
+  color: #334155;
+}
+
+.console-layout.console-theme-light .el-year-table td .cell {
+  color: #334155;
+}
+
+.console-layout.console-theme-light .el-picker-panel__icon-btn {
+  color: #94a3b8;
+}
+
+.console-layout.console-theme-light .el-picker-panel__icon-btn:hover {
+  color: #6366f1;
+}
+
+.console-layout.console-theme-light .el-date-picker__header-label {
+  color: #334155;
+}
+
+.console-layout.console-theme-light .el-date-picker__header-label:hover {
+  color: #6366f1;
+}
+
+/* ── el-upload (light) ── */
+.console-layout.console-theme-light .el-upload-dragger {
+  background-color: #f8fafc;
+  border-color: rgba(15, 23, 42, 0.1);
+}
+
+.console-layout.console-theme-light .el-upload-dragger:hover {
+  border-color: #6366f1;
+  background-color: rgba(99, 102, 241, 0.04);
+}
+
+/* ── el-card header (light) ── */
+.console-layout.console-theme-light .el-card__header {
+  color: #0f172a;
+}
+
 /* ── Dashboard stat cards (global) ── */
 .console-layout .stat-card {
   transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
@@ -693,6 +1270,48 @@
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   border-color: rgba(255, 255, 255, 0.15);
+}
+
+.console-layout.console-theme-light .stat-card:hover {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+/* ── Light mode stat icons ── */
+.console-layout.console-theme-light .stat-icon.blue {
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366f1;
+}
+.console-layout.console-theme-light .stat-icon.green {
+  background: rgba(34, 197, 94, 0.1);
+  color: #059669;
+}
+.console-layout.console-theme-light .stat-icon.orange {
+  background: rgba(245, 158, 11, 0.1);
+  color: #d97706;
+}
+.console-layout.console-theme-light .stat-icon.red {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+/* ── Light mode activity icons ── */
+.console-layout.console-theme-light .activity-icon.token {
+  background: rgba(99, 102, 241, 0.08);
+  color: #6366f1;
+}
+.console-layout.console-theme-light .activity-icon.order {
+  background: rgba(16, 185, 129, 0.08);
+  color: #059669;
+}
+.console-layout.console-theme-light .activity-icon.vip {
+  background: rgba(245, 158, 11, 0.08);
+  color: #d97706;
+}
+
+/* ── Light mode code box ── */
+.console-layout.console-theme-light .code-box {
+  background: #1e293b;
 }
 
 /* ── el-card header text (global) ── */
