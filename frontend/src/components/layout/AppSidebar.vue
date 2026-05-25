@@ -75,8 +75,12 @@
           </el-avatar>
           <div class="sidebar-user-card__info">
             <span class="sidebar-user-card__name">{{ user?.username || '用户' }}</span>
-            <span v-if="user?.level && user.level !== 'free'" class="sidebar-user-card__badge sidebar-user-card__badge--vip">VIP</span>
-            <span v-else class="sidebar-user-card__badge sidebar-user-card__badge--free">Free</span>
+            <span
+              class="sidebar-user-card__badge"
+              :class="isVipUser ? 'sidebar-user-card__badge--vip' : 'sidebar-user-card__badge--free'"
+            >
+              {{ isVipUser ? 'VIP' : 'Free' }}
+            </span>
           </div>
         </div>
         <div class="sidebar-footer__settings-btn" @click="$emit('command', 'settings')">
@@ -105,6 +109,8 @@ const props = defineProps<{
     email?: string
     level?: string
     is_vip?: boolean
+    account_status?: string
+    vip_expired_at?: string | null
   } | null
 }>()
 
@@ -126,6 +132,24 @@ const menuItems = [
 const avatarLetter = computed(() => {
   const name = props.user?.username || props.user?.email || 'U'
   return name.charAt(0).toUpperCase()
+})
+
+const isVipUser = computed(() => {
+  const user = props.user
+  if (!user) return false
+
+  if (user.vip_expired_at) {
+    const expiresAt = Date.parse(user.vip_expired_at)
+    if (!Number.isNaN(expiresAt)) return expiresAt > Date.now()
+  }
+
+  if (user.account_status === 'vip') return true
+  if (['vip_expired', 'free', 'recharge'].includes(user.account_status || '')) {
+    return false
+  }
+
+  if (typeof user.is_vip === 'boolean') return user.is_vip
+  return Boolean(user.level && user.level !== 'free' && user.level.startsWith('vip'))
 })
 </script>
 
@@ -172,8 +196,8 @@ const avatarLetter = computed(() => {
 }
 
 .sidebar-collapse-btn:hover {
-  color: #fff;
-  background: rgba(99, 102, 241, 0.15);
+  color: var(--color-sidebar-active-text);
+  background: var(--color-sidebar-active-bg);
 }
 
 /* ===== Brand area ===== */
@@ -200,7 +224,7 @@ const avatarLetter = computed(() => {
   width: 30px;
   height: 30px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: var(--gradient-primary);
   color: #fff;
   font-size: 18px;
   font-weight: 800;
@@ -209,7 +233,7 @@ const avatarLetter = computed(() => {
 }
 
 .sidebar-brand__text {
-  color: #fff;
+  color: var(--color-text-primary);
   font-size: 26px;
   font-weight: 800;
   white-space: nowrap;
@@ -248,6 +272,7 @@ const avatarLetter = computed(() => {
   border-right: none;
   padding: 0;
   background: transparent;
+  width: 100%;
 }
 
 /* ============================================================
@@ -256,39 +281,62 @@ const avatarLetter = computed(() => {
  * Expanded: icon + label.
  * Collapsed: same icon position, label hidden.
  * ============================================================ */
-.sidebar-menu-item {
+.sidebar .sidebar-menu .sidebar-menu-item {
   box-sizing: border-box;
-  display: flex !important;
+  display: grid !important;
+  grid-template-columns: 24px minmax(0, 1fr);
+  column-gap: 14px;
   align-items: center;
   height: 54px;
-  line-height: 54px;
-  margin: 3px 8px;
-  padding: 0 18px 0 24px !important;
-  border-radius: 14px;
+  min-height: 54px;
+  line-height: 1;
+  margin: 3px 8px !important;
+  padding: 0 18px 0 22px !important;
+  border-radius: 14px !important;
   font-size: 15px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.68) !important;
+  color: var(--color-sidebar-text) !important;
+  background-color: transparent !important;
   transition:
-    background var(--transition-fast),
+    background-color var(--transition-fast),
     color var(--transition-fast);
   position: relative;
   overflow: hidden;
 }
 
-.sidebar-menu-item__icon {
-  display: inline-flex;
+.sidebar .sidebar-menu-item__icon {
+  display: flex;
   align-items: center;
   justify-content: center;
   width: 24px;
   height: 54px;
+  min-width: 24px;
   flex: 0 0 24px;
   line-height: 1;
+  overflow: hidden;
 }
 
-.sidebar-menu-item__label {
-  display: inline-block;
-  margin-left: 14px;
+.sidebar .sidebar-menu-item__icon :deep(.el-icon) {
+  width: 24px !important;
+  height: 24px !important;
+  margin: 0 !important;
+  font-size: 24px !important;
+  line-height: 1 !important;
+}
+
+.sidebar .sidebar-menu-item__icon :deep(svg) {
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+
+.sidebar .sidebar-menu-item__label {
+  display: block;
+  width: 100%;
   min-width: 0;
+  max-width: 150px;
+  margin: 0;
+  line-height: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -299,15 +347,15 @@ const avatarLetter = computed(() => {
 }
 
 /* Hover */
-.sidebar-menu-item:hover {
-  background: rgba(255, 255, 255, 0.06) !important;
-  color: rgba(255, 255, 255, 0.82) !important;
+.sidebar .sidebar-menu .sidebar-menu-item:hover {
+  background-color: var(--color-sidebar-hover) !important;
+  color: var(--color-text-primary) !important;
 }
 
 /* Active: accent background + left bar */
-.sidebar-menu-item.is-active {
-  background: rgba(99, 102, 241, 0.18) !important;
-  color: #c7d2fe !important;
+.sidebar .sidebar-menu .sidebar-menu-item.is-active {
+  background-color: var(--color-sidebar-active-bg) !important;
+  color: var(--color-sidebar-active-text) !important;
 }
 
 .sidebar-menu-item.is-active::before {
@@ -318,7 +366,7 @@ const avatarLetter = computed(() => {
   transform: translateY(-50%);
   width: 3px;
   height: 24px;
-  background: linear-gradient(180deg, #6366f1, #8b5cf6);
+  background: var(--gradient-primary);
   border-radius: 999px;
 }
 
@@ -336,30 +384,34 @@ const avatarLetter = computed(() => {
 }
 
 /* Nav: center items */
-.sidebar--collapsed .sidebar-nav :deep(.el-menu) {
-  align-items: center;
-  width: 100%;
-}
-
-.sidebar--collapsed .sidebar-menu-item {
+.sidebar.sidebar--collapsed .sidebar-menu .sidebar-menu-item {
+  grid-template-columns: 24px 0;
+  column-gap: 0;
   width: 56px;
-  margin: 3px auto;
-  padding: 0 !important;
-  justify-content: center;
+  margin: 3px auto !important;
+  padding: 0 16px !important;
+  justify-content: start;
 }
 
-.sidebar--collapsed .sidebar-menu-item__icon {
+.sidebar.sidebar--collapsed .sidebar-menu-item__icon {
   width: 24px;
   height: 54px;
   flex: 0 0 24px;
 }
 
-.sidebar--collapsed .sidebar-menu-item__label {
-  display: none;
+.sidebar.sidebar--collapsed .sidebar-menu-item__label {
+  width: 0;
+  max-width: 0;
+  margin: 0;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  color: transparent;
+  transform: none;
 }
 
-.sidebar--collapsed .sidebar-menu-item.is-active {
-  background: rgba(99, 102, 241, 0.22) !important;
+.sidebar.sidebar--collapsed .sidebar-menu .sidebar-menu-item.is-active {
+  background-color: var(--color-sidebar-active-bg) !important;
 }
 
 /* ===== Footer ===== */
@@ -401,15 +453,15 @@ const avatarLetter = computed(() => {
   overflow: hidden;
   min-width: 0;
   flex: 1;
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--color-bg-hover);
+  border: 1px solid var(--color-sidebar-border);
   transition: color var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast);
 }
 
 .sidebar-footer__user:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.10);
+  color: var(--color-text-primary);
+  background: var(--color-sidebar-active-bg);
+  border-color: var(--color-sidebar-active-bg);
 }
 
 /* ===== Expanded: Settings button (right side) ===== */
@@ -427,8 +479,8 @@ const avatarLetter = computed(() => {
 }
 
 .sidebar-footer__settings-btn:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-sidebar-active-text);
+  background: var(--color-sidebar-active-bg);
 }
 
 /* ===== Collapsed: Settings icon (centered) ===== */
@@ -445,8 +497,8 @@ const avatarLetter = computed(() => {
 }
 
 .sidebar-footer__settings-icon:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-sidebar-active-text);
+  background: var(--color-sidebar-active-bg);
 }
 
 /* ===== Collapsed: Avatar only (centered) ===== */
@@ -484,7 +536,7 @@ const avatarLetter = computed(() => {
 
 .sidebar-user-card__name {
   font-size: var(--font-size-sm);
-  color: #fff;
+  color: var(--color-text-primary);
   font-weight: var(--font-weight-medium);
   overflow: hidden;
   text-overflow: ellipsis;

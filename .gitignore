@@ -72,6 +72,7 @@ test-results/
 .claude
 memory
 CLAUDE.md
+AGENTS.md
 
 # Development documentation (internal only)
 
