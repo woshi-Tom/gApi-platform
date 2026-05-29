@@ -8,12 +8,15 @@
           <Expand v-else />
         </el-icon>
       </div>
-      <transition name="brand-fade">
-        <router-link v-show="!collapsed" to="/" class="sidebar-brand">
-          <span class="sidebar-brand__icon">G</span>
-          <span class="sidebar-brand__text">gAPI</span>
-        </router-link>
-      </transition>
+      <router-link
+        to="/"
+        class="sidebar-brand"
+        :aria-hidden="collapsed"
+        :tabindex="collapsed ? -1 : 0"
+      >
+        <span class="sidebar-brand__icon">G</span>
+        <span class="sidebar-brand__text">gAPI</span>
+      </router-link>
     </div>
 
     <!-- Navigation -->
@@ -32,16 +35,27 @@
           :key="item.index"
           :index="item.index"
           class="sidebar-menu-item"
-          :title="collapsed ? item.title : undefined"
         >
-          <span class="sidebar-menu-item__icon">
-            <el-icon :size="24">
-              <component :is="item.icon" />
-            </el-icon>
-          </span>
-          <span class="sidebar-menu-item__label">
-            {{ item.title }}
-          </span>
+          <el-tooltip
+            :disabled="!collapsed"
+            :content="item.title"
+            placement="right"
+            :offset="14"
+            popper-class="sidebar-collapsed-tooltip"
+            :show-after="200"
+            effect="dark"
+          >
+            <span class="sidebar-menu-item__content">
+              <span class="sidebar-menu-item__icon">
+                <el-icon :size="24">
+                  <component :is="item.icon" />
+                </el-icon>
+              </span>
+              <span class="sidebar-menu-item__label">
+                {{ item.title }}
+              </span>
+            </span>
+          </el-tooltip>
         </el-menu-item>
       </el-menu>
     </div>
@@ -51,30 +65,26 @@
       class="sidebar-footer"
       :class="collapsed ? 'sidebar-footer--collapsed' : 'sidebar-footer--expanded'"
     >
-      <!-- Collapsed: vertical stack (settings on top, avatar below) -->
-      <template v-if="collapsed">
-        <div class="sidebar-footer__settings-icon" @click="$emit('command', 'settings')">
-          <el-tooltip content="设置" placement="right" :show-after="200" effect="dark">
-            <el-icon :size="20"><Setting /></el-icon>
-          </el-tooltip>
-        </div>
-        <div class="sidebar-footer__avatar-only" @click="$emit('command', 'profile')">
-          <el-tooltip :content="user?.username || '用户'" placement="right" :show-after="200" effect="dark">
+      <div class="sidebar-footer__inner">
+        <div
+          class="sidebar-footer__user"
+          @click="$emit('command', 'profile')"
+        >
+          <el-tooltip
+            :disabled="!collapsed"
+            :content="accountDisplay"
+            placement="right"
+            :offset="14"
+            popper-class="sidebar-collapsed-tooltip"
+            :show-after="200"
+            effect="dark"
+          >
             <el-avatar :size="32" class="sidebar-user-card__avatar">
               {{ avatarLetter }}
             </el-avatar>
           </el-tooltip>
-        </div>
-      </template>
-
-      <!-- Expanded: horizontal row (user info left, settings right) -->
-      <template v-else>
-        <div class="sidebar-footer__user" @click="$emit('command', 'profile')">
-          <el-avatar :size="32" class="sidebar-user-card__avatar">
-            {{ avatarLetter }}
-          </el-avatar>
-          <div class="sidebar-user-card__info">
-            <span class="sidebar-user-card__name">{{ user?.username || '用户' }}</span>
+          <div class="sidebar-user-card__info" :aria-hidden="collapsed">
+            <span class="sidebar-user-card__name">{{ accountDisplay }}</span>
             <span
               class="sidebar-user-card__badge"
               :class="isVipUser ? 'sidebar-user-card__badge--vip' : 'sidebar-user-card__badge--free'"
@@ -83,12 +93,26 @@
             </span>
           </div>
         </div>
-        <div class="sidebar-footer__settings-btn" @click="$emit('command', 'settings')">
-          <el-tooltip content="设置" placement="top" :show-after="200" effect="dark">
-            <el-icon :size="20"><Setting /></el-icon>
-          </el-tooltip>
+        <div
+          class="sidebar-footer__settings-btn"
+          :class="{ 'sidebar-footer__settings-btn--active': settingsOpen }"
+          @click.stop="$emit('toggle-settings')"
+        >
+          <div class="sidebar-footer__settings-surface">
+            <el-tooltip
+              content="设置"
+              :disabled="settingsOpen"
+              :placement="collapsed ? 'right' : 'top'"
+              :offset="collapsed ? 14 : 8"
+              :popper-class="collapsed ? 'sidebar-collapsed-tooltip' : undefined"
+              :show-after="200"
+              effect="dark"
+            >
+              <el-icon :size="20"><Setting /></el-icon>
+            </el-tooltip>
+          </div>
         </div>
-      </template>
+      </div>
     </div>
   </el-aside>
 </template>
@@ -104,6 +128,7 @@ const props = defineProps<{
   collapsed: boolean
   activePath: string
   width: string
+  settingsOpen: boolean
   user?: {
     username?: string
     email?: string
@@ -116,6 +141,7 @@ const props = defineProps<{
 
 defineEmits<{
   toggle: []
+  'toggle-settings': []
   command: [cmd: string]
 }>()
 
@@ -132,6 +158,10 @@ const menuItems = [
 const avatarLetter = computed(() => {
   const name = props.user?.username || props.user?.email || 'U'
   return name.charAt(0).toUpperCase()
+})
+
+const accountDisplay = computed(() => {
+  return props.user?.email || props.user?.username || '用户'
 })
 
 const isVipUser = computed(() => {
@@ -156,17 +186,53 @@ const isVipUser = computed(() => {
 <style scoped>
 /* ===== Base Sidebar ===== */
 .sidebar {
+  --sidebar-menu-icon-size: 24px;
+  --sidebar-menu-item-height: 54px;
+  --sidebar-menu-item-expanded-margin-x: 8px;
+  --sidebar-menu-item-expanded-width-offset: 16px;
+  --sidebar-menu-item-collapsed-width: 56px;
+  --sidebar-menu-item-collapsed-margin-x: 14px;
+  --sidebar-menu-item-collapsed-padding-x: 16px;
+  --sidebar-menu-label-width: 150px;
+  --sidebar-footer-expanded-height: 66px;
+  --sidebar-footer-collapsed-height: 96px;
+  --sidebar-footer-inner-expanded-height: 50px;
+  --sidebar-footer-inner-collapsed-height: 80px;
+  --sidebar-footer-settings-size: 36px;
+  --sidebar-footer-settings-expanded-top: 7px;
+  --sidebar-footer-settings-collapsed-left: 24px;
+  --sidebar-footer-settings-expanded-padding-total: 16px;
+  --sidebar-footer-settings-path-x: calc(
+    var(--sidebar-width) -
+    var(--sidebar-footer-settings-expanded-padding-total) -
+    var(--sidebar-footer-settings-size) -
+    var(--sidebar-footer-settings-collapsed-left)
+  );
+  --sidebar-footer-settings-path-y: var(--sidebar-footer-settings-expanded-top);
+  --sidebar-footer-settings-turn-delay: 72ms;
+  --sidebar-footer-settings-x-duration: calc(
+    var(--sidebar-transition-duration) - var(--sidebar-footer-settings-turn-delay)
+  );
+  --sidebar-footer-action-offset: 44px;
+  --sidebar-footer-user-collapsed-size: 40px;
+  --sidebar-footer-user-collapsed-x: 22px;
+  --sidebar-footer-user-collapsed-y: 40px;
+
   background:
     radial-gradient(circle at 80% 0%, rgba(99, 102, 241, 0.10), transparent 35%),
     radial-gradient(circle at 50% 100%, rgba(139, 92, 246, 0.06), transparent 35%),
     var(--gradient-sidebar);
   border-right: 1px solid var(--color-sidebar-border);
-  transition: width var(--transition-sidebar) !important;
+  transition:
+    width var(--sidebar-transition),
+    inline-size var(--sidebar-transition),
+    flex-basis var(--sidebar-transition) !important;
   overflow-x: hidden;
   overflow-y: hidden;
   position: relative;
   display: flex;
   flex-direction: column;
+  will-change: width;
 }
 
 /* ===== Header ===== */
@@ -174,12 +240,13 @@ const isVipUser = computed(() => {
   height: var(--header-height);
   display: flex;
   align-items: center;
+  gap: 10px;
   padding: 0 12px;
   border-bottom: 1px solid var(--color-sidebar-border);
   background: var(--color-sidebar-header-bg);
   backdrop-filter: blur(10px);
   flex-shrink: 0;
-  transition: justify-content var(--transition-sidebar), padding var(--transition-sidebar);
+  transition: padding var(--sidebar-transition), gap var(--sidebar-transition);
 }
 
 .sidebar-collapse-btn {
@@ -205,11 +272,21 @@ const isVipUser = computed(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-left: auto;
-  margin-right: 8px;
+  max-width: 128px;
+  min-width: 0;
+  margin-left: 4px;
   text-decoration: none;
   cursor: pointer;
-  transition: opacity var(--transition-fast);
+  overflow: hidden;
+  opacity: 1;
+  transform: translateX(0);
+  user-select: none;
+  -webkit-user-select: none;
+  transition:
+    max-width var(--sidebar-transition),
+    margin var(--sidebar-transition),
+    opacity 160ms var(--sidebar-transition-easing),
+    transform var(--sidebar-transition);
 }
 
 .sidebar-brand:hover {
@@ -230,6 +307,8 @@ const isVipUser = computed(() => {
   font-weight: 800;
   flex-shrink: 0;
   line-height: 1;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .sidebar-brand__text {
@@ -238,25 +317,8 @@ const isVipUser = computed(() => {
   font-weight: 800;
   white-space: nowrap;
   letter-spacing: 0.02em;
-}
-
-/* Brand text fade transition */
-.brand-fade-enter-active {
-  transition: opacity 0.2s ease 0.05s, transform 0.2s ease 0.05s;
-}
-
-.brand-fade-leave-active {
-  transition: opacity 0.1s ease, transform 0.1s ease;
-}
-
-.brand-fade-enter-from {
-  opacity: 0;
-  transform: translateX(-6px);
-}
-
-.brand-fade-leave-to {
-  opacity: 0;
-  transform: translateX(-6px);
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* ===== Navigation ===== */
@@ -284,13 +346,14 @@ const isVipUser = computed(() => {
 .sidebar .sidebar-menu .sidebar-menu-item {
   box-sizing: border-box;
   display: grid !important;
-  grid-template-columns: 24px minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-menu-icon-size) minmax(0, 1fr);
   column-gap: 14px;
   align-items: center;
-  height: 54px;
-  min-height: 54px;
+  width: calc(100% - var(--sidebar-menu-item-expanded-width-offset));
+  height: var(--sidebar-menu-item-height);
+  min-height: var(--sidebar-menu-item-height);
   line-height: 1;
-  margin: 3px 8px !important;
+  margin: 3px var(--sidebar-menu-item-expanded-margin-x) !important;
   padding: 0 18px 0 22px !important;
   border-radius: 14px !important;
   font-size: 15px;
@@ -298,6 +361,12 @@ const isVipUser = computed(() => {
   color: var(--color-sidebar-text) !important;
   background-color: transparent !important;
   transition:
+    width var(--sidebar-transition),
+    margin var(--sidebar-transition),
+    padding var(--sidebar-transition),
+    grid-template-columns var(--sidebar-transition),
+    column-gap var(--sidebar-transition),
+    border-radius var(--sidebar-transition),
     background-color var(--transition-fast),
     color var(--transition-fast);
   position: relative;
@@ -308,12 +377,25 @@ const isVipUser = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 54px;
-  min-width: 24px;
-  flex: 0 0 24px;
+  width: var(--sidebar-menu-icon-size);
+  height: var(--sidebar-menu-item-height);
+  min-width: var(--sidebar-menu-icon-size);
+  flex: 0 0 var(--sidebar-menu-icon-size);
   line-height: 1;
   overflow: hidden;
+}
+
+.sidebar .sidebar-menu-item__content {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: var(--sidebar-menu-icon-size) minmax(0, 1fr);
+  column-gap: 14px;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  transition:
+    grid-template-columns var(--sidebar-transition),
+    column-gap var(--sidebar-transition);
 }
 
 .sidebar .sidebar-menu-item__icon :deep(.el-icon) {
@@ -332,18 +414,21 @@ const isVipUser = computed(() => {
 
 .sidebar .sidebar-menu-item__label {
   display: block;
-  width: 100%;
+  width: max-content;
   min-width: 0;
-  max-width: 150px;
+  max-width: var(--sidebar-menu-label-width);
   margin: 0;
   line-height: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   color: inherit;
+  opacity: 1;
+  transform: translateX(0);
   transition:
-    opacity var(--transition-fast),
-    transform var(--transition-fast);
+    max-width var(--sidebar-transition),
+    opacity 160ms var(--sidebar-transition-easing),
+    transform var(--sidebar-transition);
 }
 
 /* Hover */
@@ -379,35 +464,44 @@ const isVipUser = computed(() => {
 
 /* Header: collapse button stays at same left position */
 .sidebar--collapsed .sidebar-header {
-  justify-content: flex-start;
   padding: 0 12px;
+}
+
+.sidebar--collapsed .sidebar-brand {
+  max-width: 0;
+  margin-left: 0;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-6px);
 }
 
 /* Nav: center items */
 .sidebar.sidebar--collapsed .sidebar-menu .sidebar-menu-item {
-  grid-template-columns: 24px 0;
+  grid-template-columns: var(--sidebar-menu-icon-size) 0;
   column-gap: 0;
-  width: 56px;
-  margin: 3px auto !important;
-  padding: 0 16px !important;
+  width: var(--sidebar-menu-item-collapsed-width);
+  margin: 3px var(--sidebar-menu-item-collapsed-margin-x) !important;
+  padding: 0 var(--sidebar-menu-item-collapsed-padding-x) !important;
   justify-content: start;
 }
 
+.sidebar.sidebar--collapsed .sidebar-menu-item__content {
+  grid-template-columns: var(--sidebar-menu-icon-size) 0;
+  column-gap: 0;
+}
+
 .sidebar.sidebar--collapsed .sidebar-menu-item__icon {
-  width: 24px;
-  height: 54px;
-  flex: 0 0 24px;
+  width: var(--sidebar-menu-icon-size);
+  height: var(--sidebar-menu-item-height);
+  flex: 0 0 var(--sidebar-menu-icon-size);
 }
 
 .sidebar.sidebar--collapsed .sidebar-menu-item__label {
-  width: 0;
   max-width: 0;
   margin: 0;
   opacity: 0;
-  visibility: hidden;
   pointer-events: none;
-  color: transparent;
-  transform: none;
+  transform: translateX(-6px);
 }
 
 .sidebar.sidebar--collapsed .sidebar-menu .sidebar-menu-item.is-active {
@@ -420,31 +514,42 @@ const isVipUser = computed(() => {
   margin-top: auto;
   border-top: 1px solid var(--color-sidebar-border);
   padding: 8px;
-  transition: padding var(--transition-sidebar);
+  min-height: var(--sidebar-footer-expanded-height);
+  transition:
+    min-height var(--sidebar-transition),
+    padding var(--sidebar-transition);
 }
 
-/* Expanded: horizontal row — [avatar + name] left, [settings] right */
 .sidebar-footer--expanded {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  min-height: var(--sidebar-footer-expanded-height);
 }
 
-/* Collapsed: vertical stack — [settings] on top, [avatar] below */
 .sidebar-footer--collapsed {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
+  min-height: var(--sidebar-footer-collapsed-height);
   padding: 8px 0;
+}
+
+.sidebar-footer__inner {
+  position: relative;
+  width: 100%;
+  height: var(--sidebar-footer-inner-expanded-height);
+  transition: height var(--sidebar-transition);
+}
+
+.sidebar-footer--collapsed .sidebar-footer__inner {
+  height: var(--sidebar-footer-inner-collapsed-height);
 }
 
 /* ===== Expanded: User info (left side) ===== */
 .sidebar-footer__user {
+  position: absolute;
+  top: 0;
+  left: 0;
   display: flex;
   align-items: center;
   gap: 10px;
+  width: calc(100% - var(--sidebar-footer-action-offset));
+  height: var(--sidebar-footer-inner-expanded-height);
   padding: 8px 10px;
   border-radius: 18px;
   cursor: pointer;
@@ -452,67 +557,104 @@ const isVipUser = computed(() => {
   white-space: nowrap;
   overflow: hidden;
   min-width: 0;
-  flex: 1;
-  background: var(--color-bg-hover);
+  background-color: var(--color-bg-hover);
   border: 1px solid var(--color-sidebar-border);
-  transition: color var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast);
+  transform: translate3d(0, 0, 0);
+  transition:
+    width var(--sidebar-transition),
+    height var(--sidebar-transition),
+    padding var(--sidebar-transition),
+    gap var(--sidebar-transition),
+    border-radius var(--sidebar-transition),
+    transform var(--sidebar-transition),
+    background-color var(--sidebar-transition),
+    border-color var(--sidebar-transition),
+    color var(--transition-fast);
+  will-change: transform, width, height;
 }
 
 .sidebar-footer__user:hover {
   color: var(--color-text-primary);
-  background: var(--color-sidebar-active-bg);
+  background-color: var(--color-sidebar-active-bg);
   border-color: var(--color-sidebar-active-bg);
 }
 
 /* ===== Expanded: Settings button (right side) ===== */
 .sidebar-footer__settings-btn {
+  position: absolute;
+  top: 0;
+  left: var(--sidebar-footer-settings-collapsed-left);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: var(--sidebar-footer-settings-size);
+  height: var(--sidebar-footer-settings-size);
   border-radius: var(--radius-md);
   cursor: pointer;
   color: var(--color-sidebar-text);
   flex-shrink: 0;
-  transition: color var(--transition-fast), background var(--transition-fast);
+  transform: translate3d(var(--sidebar-footer-settings-path-x), 0, 0);
+  transition:
+    transform var(--sidebar-footer-settings-x-duration) var(--sidebar-transition-easing)
+      var(--sidebar-footer-settings-turn-delay),
+    color var(--transition-fast);
+  will-change: transform;
+}
+
+.sidebar-footer__settings-surface {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  transform: translate3d(0, var(--sidebar-footer-settings-path-y), 0);
+  transition:
+    transform var(--sidebar-footer-settings-turn-delay) var(--sidebar-transition-easing),
+    background-color var(--transition-fast);
+  will-change: transform;
 }
 
 .sidebar-footer__settings-btn:hover {
   color: var(--color-sidebar-active-text);
-  background: var(--color-sidebar-active-bg);
 }
 
-/* ===== Collapsed: Settings icon (centered) ===== */
-.sidebar-footer__settings-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  color: var(--color-sidebar-text);
-  transition: color var(--transition-fast), background var(--transition-fast);
+.sidebar-footer__settings-btn:hover .sidebar-footer__settings-surface,
+.sidebar-footer__settings-btn--active .sidebar-footer__settings-surface {
+  background-color: var(--color-sidebar-active-bg);
 }
 
-.sidebar-footer__settings-icon:hover {
+.sidebar-footer__settings-btn--active {
   color: var(--color-sidebar-active-text);
-  background: var(--color-sidebar-active-bg);
 }
 
-/* ===== Collapsed: Avatar only (centered) ===== */
-.sidebar-footer__avatar-only {
-  display: flex;
-  align-items: center;
+.sidebar-footer--collapsed .sidebar-footer__settings-btn {
+  transform: translate3d(0, 0, 0);
+}
+
+.sidebar-footer--collapsed .sidebar-footer__settings-surface {
+  transform: translate3d(0, 0, 0);
+}
+
+.sidebar-footer--collapsed .sidebar-footer__user {
   justify-content: center;
-  cursor: pointer;
-  padding: 4px 0;
-  transition: opacity var(--transition-fast);
+  gap: 0;
+  width: var(--sidebar-footer-user-collapsed-size);
+  height: var(--sidebar-footer-user-collapsed-size);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  background-color: transparent;
+  border-color: transparent;
+  transform: translate3d(
+    var(--sidebar-footer-user-collapsed-x),
+    var(--sidebar-footer-user-collapsed-y),
+    0
+  );
 }
 
-.sidebar-footer__avatar-only:hover {
-  opacity: 0.85;
+.sidebar-footer--collapsed .sidebar-footer__user:hover {
+  background-color: var(--color-sidebar-active-bg);
+  border-color: transparent;
 }
 
 /* ===== Shared: Avatar ===== */
@@ -530,8 +672,26 @@ const isVipUser = computed(() => {
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  max-width: 136px;
   flex: 1;
   overflow: hidden;
+  opacity: 1;
+  transform: translateX(0);
+  transition:
+    max-width var(--sidebar-transition),
+    opacity 150ms var(--sidebar-transition-easing) 30ms,
+    transform var(--sidebar-transition);
+}
+
+.sidebar-footer--collapsed .sidebar-user-card__info {
+  max-width: 0;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-6px);
+  transition:
+    max-width var(--sidebar-transition),
+    opacity 120ms var(--sidebar-transition-easing),
+    transform var(--sidebar-transition);
 }
 
 .sidebar-user-card__name {
@@ -540,6 +700,7 @@ const isVipUser = computed(() => {
   font-weight: var(--font-weight-medium);
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sidebar-user-card__badge {
@@ -559,5 +720,10 @@ const isVipUser = computed(() => {
 .sidebar-user-card__badge--free {
   background: rgba(148, 163, 184, 0.15);
   color: var(--color-sidebar-text);
+}
+
+:global(.sidebar-collapsed-tooltip) {
+  margin-left: 4px !important;
+  margin-top: -4px !important;
 }
 </style>
