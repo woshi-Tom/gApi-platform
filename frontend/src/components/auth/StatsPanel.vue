@@ -133,7 +133,7 @@ withDefaults(defineProps<{
   font-weight: 600;
   color: var(--c-text);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   line-height: 1.2;
 }
 

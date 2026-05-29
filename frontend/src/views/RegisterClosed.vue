@@ -57,7 +57,7 @@ const router = useRouter()
 
 <style scoped>
 /* ===== 品牌展示区 ===== */
-.brand-title { font-size: 28px; font-weight: 600; letter-spacing: -0.04em; line-height: 1.2; margin: 0 0 16px; color: #fff; }
+.brand-title { font-size: 28px; font-weight: 600; letter-spacing: 0; line-height: 1.2; margin: 0 0 16px; color: #fff; }
 @media (min-width: 640px) { .brand-title { font-size: 36px; } }
 @media (min-width: 768px) { .brand-title { font-size: 44px; } }
 @media (min-width: 1024px) { .brand-title { font-size: 52px; } }
@@ -76,9 +76,9 @@ const router = useRouter()
 .closed-content p { margin: 0 0 28px; font-size: 14px; color: rgba(255, 255, 255, 0.3); line-height: 1.6; }
 .closed-actions { display: flex; gap: 12px; width: 100%; }
 
-.submit-btn { flex: 1; height: 44px; border-radius: 10px; font-size: 14px; font-weight: 500; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; border: none; transition: all 0.3s ease; position: relative; overflow: hidden; }
-.submit-btn::after { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent); animation: btn-glow 3s ease-in-out infinite; }
-.submit-btn:hover { background: linear-gradient(135deg, #818cf8, #a78bfa); box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3); transform: translateY(-1px); }
+.submit-btn { flex: 1; height: 44px; border-radius: 10px; font-size: 14px; font-weight: 500; background: var(--c-primary); color: #fff; border: none; transition: all 0.3s ease; position: relative; overflow: hidden; }
+.submit-btn::after { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent); display: none; }
+.submit-btn:hover { background: var(--c-primary-hover); box-shadow: none; transform: translateY(-1px); }
 
 .ghost-btn { flex: 1; height: 44px; border-radius: 10px; font-size: 14px; font-weight: 500; color: rgba(255, 255, 255, 0.6); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); transition: all 0.3s ease; }
 .ghost-btn:hover { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.15); color: #fff; transform: translateY(-1px); }

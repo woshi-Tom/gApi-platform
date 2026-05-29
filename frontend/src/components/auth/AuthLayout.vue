@@ -319,7 +319,7 @@ function getStarStyle(index: number) {
   gap: 10px;
   font-size: 22px;
   font-weight: 600;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
   color: var(--c-text);
   text-decoration: none;
   transition: opacity 0.2s;

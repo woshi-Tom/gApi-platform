@@ -606,7 +606,7 @@ onMounted(async () => {
   font-size: var(--font-size-3xl);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .stat-value.vip-value {
@@ -733,7 +733,7 @@ onMounted(async () => {
   font-size: var(--font-size-4xl);
   font-weight: var(--font-weight-bold);
   color: var(--color-primary);
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 .quota-unit {

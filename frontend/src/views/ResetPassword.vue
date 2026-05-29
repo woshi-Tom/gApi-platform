@@ -158,7 +158,7 @@ async function handleSubmit() {
 
 <style scoped>
 /* ===== 品牌展示区 ===== */
-.brand-title { font-size: 28px; font-weight: 600; letter-spacing: -0.04em; line-height: 1.2; margin: 0 0 16px; color: var(--c-text); }
+.brand-title { font-size: 28px; font-weight: 600; letter-spacing: 0; line-height: 1.2; margin: 0 0 16px; color: var(--c-text); }
 @media (min-width: 640px) { .brand-title { font-size: 36px; } }
 @media (min-width: 768px) { .brand-title { font-size: 44px; } }
 @media (min-width: 1024px) { .brand-title { font-size: 52px; } }
@@ -187,7 +187,7 @@ async function handleSubmit() {
 .auth-form :deep(.el-form-item:last-child) { margin-bottom: 0; }
 .auth-form :deep(.el-input__wrapper) { background: var(--c-input-bg); border: 1px solid var(--c-input-border); border-radius: 10px; box-shadow: none; transition: all 0.3s; padding: 4px 12px; }
 .auth-form :deep(.el-input__wrapper:hover) { border-color: var(--c-input-hover); }
-.auth-form :deep(.el-input__wrapper.is-focus) { border-color: rgba(99, 102, 241, 0.4); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08), 0 0 20px rgba(99, 102, 241, 0.04); }
+.auth-form :deep(.el-input__wrapper.is-focus) { border-color: var(--c-primary); box-shadow: 0 0 0 3px var(--c-focus-ring); }
 .auth-form :deep(.el-input__inner) { color: var(--c-text); font-size: 14px; }
 .auth-form :deep(.el-input__inner::placeholder) { color: var(--c-text-muted); }
 .auth-form :deep(.el-input__prefix .el-icon) { color: var(--c-icon); font-size: 16px; }
@@ -198,15 +198,15 @@ async function handleSubmit() {
 .password-strength-text.strength-weak { color: #ef4444; }
 .password-strength-text.strength-fair { color: #f59e0b; }
 .password-strength-text.strength-good { color: #10b981; }
-.password-strength-text.strength-strong { color: #8b5cf6; }
+.password-strength-text.strength-strong { color: var(--c-primary); }
 
 /* ===== 密码不一致提示 ===== */
 .mismatch-hint { display: block; font-size: 12px; color: #ef4444; margin-top: 6px; }
 
 /* ===== 提交按钮 ===== */
-.submit-btn { width: 100%; height: 44px; border-radius: 10px; font-size: 14px; font-weight: 500; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; border: none; transition: all 0.3s ease; position: relative; overflow: hidden; }
-.submit-btn::after { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent); animation: btn-glow 3s ease-in-out infinite; }
-.submit-btn:hover:not(:disabled) { background: linear-gradient(135deg, #818cf8, #a78bfa); box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3); transform: translateY(-1px); }
+.submit-btn { width: 100%; height: 44px; border-radius: 10px; font-size: 14px; font-weight: 500; background: var(--c-primary); color: #fff; border: none; transition: all 0.3s ease; position: relative; overflow: hidden; }
+.submit-btn::after { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent); display: none; }
+.submit-btn:hover:not(:disabled) { background: var(--c-primary-hover); box-shadow: none; transform: translateY(-1px); }
 .submit-btn:active:not(:disabled) { transform: translateY(0); }
 .submit-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
