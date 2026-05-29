@@ -21,12 +21,18 @@ type Config struct {
 	Email      EmailConfig    `yaml:"email" json:"email"`
 	Log        LogConfig      `yaml:"log" json:"log"`
 	Security   SecurityConfig `yaml:"security" json:"security"`
+	Turnstile  TurnstileConfig `yaml:"turnstile" json:"turnstile"`
 	// Deprecated: no longer used for admin login. Kept for config backward compatibility.
 	AdminUsers []AdminAccount `yaml:"admin_users" json:"admin_users"`
 }
 
 type SecurityConfig struct {
 	EncryptKey string `yaml:"encrypt_key" json:"encrypt_key"`
+}
+
+type TurnstileConfig struct {
+	Enabled   bool   `yaml:"enabled" json:"enabled"`
+	SecretKey string `yaml:"secret_key" json:"secret_key"`
 }
 
 // AdminAccount represents an admin user account.
@@ -295,6 +301,23 @@ func (c *Config) loadFromEnv() {
 	if v := os.Getenv("GAPI_LOG_PATH"); v != "" {
 		c.Log.Path = v
 	}
+
+	// Turnstile accepts the task-specific env names and the project GAPI_ prefix.
+	if v := firstEnv("TURNSTILE_ENABLED", "GAPI_TURNSTILE_ENABLED"); v != "" {
+		c.Turnstile.Enabled = v == "true" || v == "1"
+	}
+	if v := firstEnv("TURNSTILE_SECRET_KEY", "GAPI_TURNSTILE_SECRET_KEY"); v != "" {
+		c.Turnstile.SecretKey = v
+	}
+}
+
+func firstEnv(keys ...string) string {
+	for _, key := range keys {
+		if value := os.Getenv(key); value != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func (c *Config) setDefaults() {
@@ -394,6 +417,10 @@ func (c *Config) Validate() error {
 	}
 	if len(c.JWT.Secret) < 32 {
 		return fmt.Errorf("jwt secret must be at least 32 characters")
+	}
+
+	if c.Turnstile.Enabled && c.Turnstile.SecretKey == "" {
+		return fmt.Errorf("turnstile secret key is required when turnstile is enabled")
 	}
 
 	return nil

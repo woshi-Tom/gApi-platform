@@ -24,6 +24,7 @@ cd deploy/docker
 
 # 复制环境变量配置
 cp .env.example .env
+# 如需真实 Turnstile，请在 .env 中替换 VITE_TURNSTILE_SITE_KEY 和 TURNSTILE_SECRET_KEY
 
 # 复制后端配置模板（Docker 环境下环境变量会覆盖，但文件必须存在）
 cp ../../backend/config/config.yaml.example ../../backend/config/config.yaml
@@ -136,7 +137,31 @@ JWT_SECRET=your-super-secret-jwt-key-at-least-32-characters
 
 # 管理员密钥
 ADMIN_SECRET=gapi-admin-secret-key-2026
+
+# Cloudflare Turnstile
+VITE_TURNSTILE_SITE_KEY=1x00000000000000000000AA
+TURNSTILE_ENABLED=true
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
 ```
+
+### Cloudflare Turnstile
+
+用户登录和注册发送邮箱验证码会使用 Turnstile。Docker 开发模式下，`docker-compose.yml` 会把 `.env` 中的变量分别注入：
+
+- `frontend`: 只注入 `VITE_TURNSTILE_SITE_KEY`，Site Key 会暴露给浏览器。
+- `backend`: 注入 `TURNSTILE_ENABLED` 和 `TURNSTILE_SECRET_KEY`。
+
+模板里的 key 是 Cloudflare 官方测试 key，适合本地连通性验证。接入真实 key 时，在 Cloudflare Dashboard 创建 Turnstile widget，把 Site Key 写入 `VITE_TURNSTILE_SITE_KEY`，把 Secret Key 写入 `TURNSTILE_SECRET_KEY`。Secret Key 不能写入前端环境变量，也不要提交真实 `.env`。
+
+开发阶段 widget hostname 可加入 `localhost`、`127.0.0.1` 和测试域名。生产阶段建议使用正式域名或单独生产 widget，不建议在生产 widget 中保留 localhost。
+
+修改 `.env` 后需要重启对应服务：
+
+```bash
+docker compose restart frontend backend
+```
+
+如果页面提示“人机验证配置缺失”，优先检查 frontend 容器是否拿到 `VITE_TURNSTILE_SITE_KEY`。如果 Cloudflare iframe 无法加载，通常是本地网络、代理、DNS、浏览器扩展或 CSP 问题，需要单独排查。
 
 ## 生产部署注意
 

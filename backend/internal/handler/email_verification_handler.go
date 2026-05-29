@@ -10,19 +10,21 @@ import (
 )
 
 type EmailVerificationHandler struct {
-	emailService   *service.EmailVerificationService
-	captchaService *service.SliderCaptchaService
+	emailService     *service.EmailVerificationService
+	captchaService   *service.SliderCaptchaService
+	turnstileService *service.TurnstileService
 }
 
-func NewEmailVerificationHandler(emailService *service.EmailVerificationService, captchaService *service.SliderCaptchaService) *EmailVerificationHandler {
-	return &EmailVerificationHandler{emailService: emailService, captchaService: captchaService}
+func NewEmailVerificationHandler(emailService *service.EmailVerificationService, captchaService *service.SliderCaptchaService, turnstileService *service.TurnstileService) *EmailVerificationHandler {
+	return &EmailVerificationHandler{emailService: emailService, captchaService: captchaService, turnstileService: turnstileService}
 }
 
 func (h *EmailVerificationHandler) SendCode(c *gin.Context) {
 	var req struct {
-		Email        string `json:"email" binding:"required,email"`
-		Purpose      string `json:"purpose"`
-		CaptchaToken string `json:"captcha_token" binding:"required"`
+		Email          string `json:"email" binding:"required,email"`
+		Purpose        string `json:"purpose"`
+		CaptchaToken   string `json:"captcha_token"`
+		TurnstileToken string `json:"turnstileToken"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -38,8 +40,14 @@ func (h *EmailVerificationHandler) SendCode(c *gin.Context) {
 		return
 	}
 
-	// Validate captcha token
-	if h.captchaService != nil && req.CaptchaToken != "" {
+	if req.Purpose == "register" {
+		if !verifyTurnstile(c, h.turnstileService, req.TurnstileToken) {
+			return
+		}
+	} else if req.CaptchaToken == "" {
+		response.Fail(c, "INVALID_PARAMETER", "captcha_token is required")
+		return
+	} else if h.captchaService != nil {
 		if !h.captchaService.ValidateToken(req.CaptchaToken) {
 			response.Fail(c, "CAPTCHA_INVALID", "验证码无效或已过期")
 			return
@@ -61,7 +69,7 @@ func (h *EmailVerificationHandler) SendCode(c *gin.Context) {
 			return
 		}
 	} else {
-		if err := h.emailService.SendVerificationCode(req.Email, ip, userAgent, deviceHash, req.CaptchaToken, req.Purpose); err != nil {
+		if err := h.emailService.SendVerificationCode(req.Email, ip, userAgent, deviceHash, "", req.Purpose); err != nil {
 			response.InternalError(c, "发送验证码失败")
 			return
 		}

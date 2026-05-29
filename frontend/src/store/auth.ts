@@ -1,6 +1,16 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import request from '@/api/request'
+import { authApi } from '@/api/user'
+
+interface AuthProfile {
+  level?: string
+  free_quota?: number
+  v_ip_quota?: number
+  v_ip_expired_at?: string
+  is_vip?: boolean
+  account_status?: string
+}
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('token') || '')
@@ -18,8 +28,8 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isLoggedIn = computed(() => !!token.value)
 
-  async function login(email: string, password: string) {
-    const { data } = await request.post('/user/login', { email, password })
+  async function login(email: string, password: string, turnstileToken: string) {
+    const { data } = await authApi.login({ email, password, turnstileToken })
     token.value = data.data.token
     userData.value = JSON.stringify(data.data.user)
     localStorage.setItem('token', token.value)
@@ -28,14 +38,14 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function register(username: string, email: string, password: string) {
-    const { data } = await request.post('/user/register', { username, email, password })
+    const { data } = await authApi.register({ username, email, password })
     return data
   }
 
   async function fetchProfile() {
     if (!token.value) return
     try {
-      const { data } = await request.get('/user/profile')
+      const { data } = await request.get<{ data: AuthProfile }>('/user/profile')
       const user = data.data
       // Compute user status
       user.is_vip = isVIPUser(user)
@@ -47,7 +57,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  function isVIPUser(user: any): boolean {
+  function isVIPUser(user: AuthProfile | null): boolean {
     if (!user) return false
     if (user.level && user.level !== 'free' && user.level.startsWith('vip')) {
       // Check if VIP not expired
@@ -61,7 +71,7 @@ export const useAuthStore = defineStore('auth', () => {
     return false
   }
 
-  function getAccountStatus(user: any): string {
+  function getAccountStatus(user: AuthProfile | null): string {
     if (!user) return 'unknown'
     // VIP users (bronze/silver/gold with valid expiry or permanent)
     if (user.level && user.level !== 'free' && user.level.startsWith('vip')) {
@@ -73,7 +83,7 @@ export const useAuthStore = defineStore('auth', () => {
       return 'vip' // No expiry = permanent VIP
     }
     // Free users with quota = recharge users
-    if ((user.free_quota > 0) || (user.v_ip_quota > 0)) {
+    if ((user.free_quota ?? 0) > 0 || (user.v_ip_quota ?? 0) > 0) {
       return 'recharge'
     }
     return 'free'

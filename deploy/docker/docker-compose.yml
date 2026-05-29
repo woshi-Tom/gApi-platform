@@ -98,6 +98,8 @@ services:
       GAPI_ALIPAY_PRIVATE_KEY: ${GAPI_ALIPAY_PRIVATE_KEY:-}
       GAPI_ALIPAY_PUBLIC_KEY: ${GAPI_ALIPAY_PUBLIC_KEY:-}
       GAPI_ALIPAY_ENCRYPT_KEY: ${GAPI_ALIPAY_ENCRYPT_KEY:-}
+      TURNSTILE_ENABLED: ${TURNSTILE_ENABLED:-true}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-1x0000000000000000000000000000000AA}
     ports:
       - "8080:8080"
     healthcheck:
@@ -123,6 +125,7 @@ services:
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
     environment:
       VITE_API_URL: http://backend:8080
+      VITE_TURNSTILE_SITE_KEY: ${VITE_TURNSTILE_SITE_KEY:-1x00000000000000000000AA}
     networks:
       - gapi-network
 

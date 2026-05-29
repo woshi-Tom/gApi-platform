@@ -23,6 +23,7 @@ export interface User {
 export interface LoginRequest {
   email: string
   password: string
+  turnstileToken: string
 }
 
 export interface RegisterRequest {
@@ -37,6 +38,26 @@ export interface LoginResponse {
   user: User
 }
 
+export interface SendRegisterEmailCodeRequest {
+  email: string
+  purpose?: 'register'
+  turnstileToken: string
+}
+
+export interface SendResetEmailCodeRequest {
+  email: string
+  purpose: 'reset'
+  captcha_token: string
+}
+
+export type SendEmailCodeRequest = SendRegisterEmailCodeRequest | SendResetEmailCodeRequest
+
+export interface VerifyEmailCodeRequest {
+  email: string
+  code: string
+  purpose?: 'register' | 'reset'
+}
+
 export const authApi = {
   login: (data: LoginRequest) => userAPI.post<{ data: LoginResponse }>('/user/login', data),
   register: (data: RegisterRequest) => userAPI.post('/user/register', data),
@@ -46,6 +67,11 @@ export const authApi = {
     userAPI.post('/user/change-password', { old_password: oldPassword, new_password: newPassword }),
   getQuota: () => userAPI.get<{ data: { remain_quota: number; vip_quota: number; is_vip: boolean; level: string } }>('/user/quota'),
   getVIPStatus: () => userAPI.get('/user/vip/status'),
+}
+
+export const emailApi = {
+  sendCode: (data: SendEmailCodeRequest) => userAPI.post('/email/send-code', data),
+  verifyCode: (data: VerifyEmailCodeRequest) => userAPI.post('/email/verify-code', data),
 }
 
 export interface UpdateUserRequest {

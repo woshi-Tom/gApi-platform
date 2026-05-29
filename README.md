@@ -46,20 +46,58 @@ gAPI Platform 是一个类似 OneAPI/NewAPI 的 API 代理平台，专为学习�
 git clone https://github.com/woshi-Tom/gApi-platform.git
 cd gApi-platform
 
-# 复制环境变量配置
+# Docker 开发环境使用 deploy/docker/.env
+cd deploy/docker
 cp .env.example .env
-# 编辑 .env 填写你的配置
+# 编辑 .env 填写你的配置；Turnstile 可先使用模板中的官方测试 key
+
+# 复制后端配置模板（Docker 环境变量会覆盖其中大部分配置，但文件必须存在）
+cp ../../backend/config/config.yaml.example ../../backend/config/config.yaml
 
 # 启动服务
-cd deploy/docker
-docker-compose up -d
+docker compose up -d
 ```
 
-访问地址：
-- 用户前端: http://localhost:5173
+访问地址（Docker 开发环境）：
+- 用户前端: http://localhost:5176 （Docker 映射，容器内 5173，支持 HMR 热更新）
 - 管理后台: http://localhost:5174
 - API: http://localhost:8080
 - Swagger: http://localhost:8080/swagger/index.html
+
+> **本地开发前端**（不使用 Docker 跑前端）时，`cd frontend && npm run dev` 会直接监听 http://localhost:5173。
+> 详见 [`deploy/docker/README.md`](deploy/docker/README.md) 中的端口说明。
+
+---
+
+## Cloudflare Turnstile
+
+登录认证前、注册发送邮箱验证码前会执行 Cloudflare Turnstile 人机验证。前端只使用 Site Key，后端只使用 Secret Key；不要把 Secret Key 写入前端环境变量、前端代码或提交到仓库。
+
+本地开发可使用 Cloudflare 官方测试 key：
+
+```env
+VITE_TURNSTILE_SITE_KEY=1x00000000000000000000AA
+TURNSTILE_ENABLED=true
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+```
+
+接入真实 key 时，请在 Cloudflare Dashboard 创建 Turnstile widget：
+
+- Site Key 写入前端环境变量 `VITE_TURNSTILE_SITE_KEY`。
+- Secret Key 写入后端环境变量 `TURNSTILE_SECRET_KEY`。
+- `TURNSTILE_ENABLED=false` 可用于特殊开发场景临时跳过后端校验。
+- 开发 widget 的 hostname 可加入 `localhost`、`127.0.0.1` 和测试域名；生产 widget 不建议保留 localhost，应使用正式域名或单独创建生产 widget。
+
+配置位置：
+
+- Docker 开发模式：复制并编辑 `deploy/docker/.env`，然后重启对应服务。
+- 本地前端 dev 模式：在 `frontend/.env.local` 写入 `VITE_TURNSTILE_SITE_KEY=你的 Site Key`，修改后必须重启 `npm run dev`。
+- 后端非 Docker 模式：通过 shell 环境变量或后端配置文件提供 `TURNSTILE_ENABLED` 和 `TURNSTILE_SECRET_KEY`。
+
+排查提示：
+
+- 页面显示“人机验证配置缺失”时，优先检查 `VITE_TURNSTILE_SITE_KEY` 是否注入到前端运行环境，并重启前端服务。
+- Turnstile iframe 无法加载时，检查本地网络、代理、DNS、浏览器扩展和 CSP；不要把脚本加载失败误判为后端校验失败。
 
 ---
 
@@ -149,7 +187,7 @@ git push origin v1.3.0
 ```bash
 cd deploy/docker
 cp .env.example .env
-docker-compose up -d
+docker compose up -d
 ```
 
 ### 生产环境

@@ -40,6 +40,7 @@ func SetupUserRoutes(
 	channelHandler := handler.NewChannelHandler(channelService, auditRepo, testHistoryRepo)
 	emailVerificationService := service.NewEmailVerificationService(db.GetDB(), redisClient, &cfg.Email, settingsService, cfg.Server.Frontend)
 	captchaService := service.NewSliderCaptchaService(redisClient.Client)
+	turnstileService := service.NewTurnstileService(cfg.Turnstile)
 
 	alipayService := service.NewAlipayService(
 		settingsService,
@@ -50,7 +51,7 @@ func SetupUserRoutes(
 		fmt.Sprintf("%s/api/v1/payment/callback/alipay", cfg.Server.Frontend),
 	)
 
-	userHandler := handler.NewUserHandler(authService, userService, loginLogRepo)
+	userHandler := handler.NewUserHandler(authService, userService, loginLogRepo, turnstileService)
 	tokenHandler := handler.NewTokenHandler(tokenService)
 	orderHandler := handler.NewOrderHandler(orderRepo, userRepo, paymentRepo, vipRepo, rechargeRepo, idempRepo)
 	paymentHandler := handler.NewPaymentHandler(orderRepo, paymentRepo, userRepo, vipRepo, auditRepo, alipayService, redisClient)
@@ -67,7 +68,7 @@ func SetupUserRoutes(
 	rechargeRecordRepo := repository.NewUserRechargeRecordRepository(db.GetDB())
 	billingService := service.NewBillingService(userRepo, tokenRepo, usageLogRepo, quotaTxRepo, rechargeRecordRepo)
 	apiHandler := handler.NewAPIHandler(tokenService, channelService, userRepo, modelGroupService, billingService)
-	emailHandler := handler.NewEmailVerificationHandler(emailVerificationService, captchaService)
+	emailHandler := handler.NewEmailVerificationHandler(emailVerificationService, captchaService, turnstileService)
 	captchaHandler := handler.NewCaptchaHandler(captchaService)
 	apiAccessLogHandler := handler.NewAPIAccessLogHandler(apiAccessLogRepo)
 

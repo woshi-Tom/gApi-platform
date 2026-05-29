@@ -1,4 +1,4 @@
-·<template>
+<template>
   <AuthLayout :showNavLinks="true" :showRegisterLink="true">
     <!-- 品牌展示区 -->
     <template #brand>
@@ -72,28 +72,21 @@
           show-password
         />
       </el-form-item>
-      <el-form-item>
-        <div
-          class="captcha-wrapper"
-          :class="{ 'captcha-verified': captchaVerified }"
-          @click="!captchaVerified && (showCaptcha = true)"
-        >
-          <el-icon class="captcha-icon">
-            <CircleCheck v-if="captchaVerified" />
-            <Picture v-else />
-          </el-icon>
-          <span class="captcha-text">
-            {{ captchaVerified ? '安全验证已通过' : '点击进行安全验证' }}
-          </span>
-        </div>
+      <el-form-item class="turnstile-form-item">
+        <TurnstileWidget
+          ref="turnstileRef"
+          v-model="turnstileToken"
+          @expired="handleTurnstileExpired"
+          @error="handleTurnstileError"
+          @timeout="handleTurnstileTimeout"
+        />
       </el-form-item>
       <el-form-item>
         <el-button
           native-type="submit"
           type="primary"
           :loading="loading"
-          :disabled="!captchaVerified"
-          @click="handleLogin"
+          :disabled="loading || !turnstileToken"
           size="large"
           class="login-btn"
         >
@@ -109,13 +102,6 @@
       <span class="separator">|</span>
       <router-link to="/forgot-password" class="footer-link">忘记密码</router-link>
     </div>
-
-    <!-- 滑块验证码 -->
-    <SlideCaptcha
-      v-model:visible="showCaptcha"
-      @success="onCaptchaSuccess"
-      ref="captchaRef"
-    />
   </AuthLayout>
 </template>
 
@@ -124,8 +110,9 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
 import { ElMessage } from 'element-plus'
-import { Message, Lock, Picture, CircleCheck } from '@element-plus/icons-vue'
-import SlideCaptcha from '@/components/SlideCaptcha.vue'
+import { Message, Lock } from '@element-plus/icons-vue'
+import { isAxiosError } from 'axios'
+import TurnstileWidget from '@/components/TurnstileWidget.vue'
 import AuthLayout from '@/components/auth/AuthLayout.vue'
 import StatsPanel from '@/components/auth/StatsPanel.vue'
 import '@/styles/auth.css'
@@ -139,20 +126,41 @@ const loginStats = [
 const router = useRouter()
 const authStore = useAuthStore()
 const loading = ref(false)
-const showCaptcha = ref(false)
-const captchaVerified = ref(false)
-const captchaRef = ref()
+const turnstileToken = ref('')
+const turnstileRef = ref<{ reset: () => void } | null>(null)
 
 const form = reactive({ email: '', password: '' })
 
-function onCaptchaSuccess() {
-  captchaVerified.value = true
+function resetTurnstile() {
+  turnstileToken.value = ''
+  turnstileRef.value?.reset()
+}
+
+function handleTurnstileExpired() {
+  turnstileToken.value = ''
+  ElMessage.warning('人机验证已过期，请重新验证')
+}
+
+function handleTurnstileError() {
+  turnstileToken.value = ''
+  ElMessage.error('人机验证失败，请重试')
+}
+
+function handleTurnstileTimeout() {
+  turnstileToken.value = ''
+  ElMessage.warning('人机验证已超时，请重新验证')
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (isAxiosError<{ error?: { message?: string } }>(error)) {
+    return error.response?.data?.error?.message || fallback
+  }
+  return fallback
 }
 
 async function handleLogin() {
-  if (!captchaVerified.value) {
-    ElMessage.warning('请先完成安全验证')
-    showCaptcha.value = true
+  if (!turnstileToken.value) {
+    ElMessage.warning('请先完成人机验证')
     return
   }
   if (!form.email || !form.password) {
@@ -161,13 +169,12 @@ async function handleLogin() {
   }
   loading.value = true
   try {
-    await authStore.login(form.email, form.password)
+    await authStore.login(form.email, form.password, turnstileToken.value)
     ElMessage.success('登录成功')
     router.push('/')
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.error?.message || '登录失败')
-    captchaVerified.value = false
-    captchaRef.value?.reset()
+  } catch (error: unknown) {
+    ElMessage.error(getErrorMessage(error, '登录失败'))
+    resetTurnstile()
   } finally {
     loading.value = false
   }
@@ -179,7 +186,7 @@ async function handleLogin() {
 .brand-title {
   font-size: 28px;
   font-weight: 600;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
   line-height: 1.2;
   margin: 0 0 16px;
   color: var(--c-text);
@@ -268,8 +275,7 @@ async function handleLogin() {
 }
 
 .auth-form :deep(.el-input__wrapper.is-focus) {
-  border-color: rgba(99, 102, 241, 0.4);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08), 0 0 20px rgba(99, 102, 241, 0.04);
+  border-color: var(--c-primary); box-shadow: 0 0 0 3px var(--c-focus-ring);
 }
 
 .auth-form :deep(.el-input__inner) {
@@ -290,56 +296,8 @@ async function handleLogin() {
   color: var(--c-icon);
 }
 
-/* ===== 验证码 ===== */
-.captcha-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 16px;
-  border: 1px solid var(--c-input-border);
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background: var(--c-input-bg);
-  width: 100%;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-.captcha-wrapper:hover {
-  border-color: var(--c-input-hover);
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.captcha-wrapper.captcha-verified {
-  border-color: rgba(34, 197, 94, 0.3);
-  background: rgba(34, 197, 94, 0.06);
-  cursor: default;
-}
-
-.captcha-wrapper.captcha-verified:hover {
-  border-color: rgba(34, 197, 94, 0.3);
-  background: rgba(34, 197, 94, 0.06);
-}
-
-.captcha-icon {
-  font-size: 18px;
-  color: var(--c-icon-active);
-  flex-shrink: 0;
-}
-
-.captcha-verified .captcha-icon {
-  color: #22c55e;
-}
-
-.captcha-text {
-  flex: 1;
-  font-size: 14px;
-  color: var(--c-text-sub);
-}
-
-.captcha-verified .captcha-text {
-  color: #22c55e;
+.turnstile-form-item :deep(.el-form-item__content) {
+  line-height: normal;
 }
 
 /* ===== 登录按钮 ===== */
@@ -349,7 +307,7 @@ async function handleLogin() {
   border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: var(--c-primary);
   color: #fff;
   border: none;
   transition: all 0.3s ease;
@@ -365,12 +323,12 @@ async function handleLogin() {
   width: 100%;
   height: 100%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
-  animation: btn-glow 3s ease-in-out infinite;
+  display: none;
 }
 
 .login-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #818cf8, #a78bfa);
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+  background: var(--c-primary-hover);
+  box-shadow: none;
   transform: translateY(-1px);
 }
 
