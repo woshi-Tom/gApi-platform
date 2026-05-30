@@ -52,8 +52,7 @@ func (h *OrderHandler) List(c *gin.Context) {
 		response.Fail(c, "UNAUTHORIZED", "user not authenticated")
 		return
 	}
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	page, pageSize := response.ParsePagination(c)
 	orderType := c.Query("type")
 	status := c.Query("status")
 

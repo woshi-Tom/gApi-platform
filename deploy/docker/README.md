@@ -170,6 +170,9 @@ docker compose restart frontend backend
 3. 配置 HTTPS (使用 nginx + letsencrypt)
 4. 启用防火墙
 5. 使用 `docker-compose.prod.yml` 部署
+6. 确保 nginx 配置了安全头（`X-Content-Type-Options`、`X-Frame-Options` 等）和 `server_tokens off`
+7. 数据库日志级别不要设为 `Info`，应使用 `Warn` 或 `Error` 避免 SQL 泄露
+8. API 分页参数 `page_size` 已默认上限 100，防止大查询攻击
 
 ## 清理
 

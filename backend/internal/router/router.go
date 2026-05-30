@@ -272,7 +272,7 @@ func SetupAdminRoutes(
 		v1.POST("/login", middleware.RateLimit(5, 3), adminHandler.Login)
 
 		adminAuth := v1.Group("")
-		adminAuth.Use(middleware.JWTAuth(authService), middleware.AdminAuth(cfg.Server.AdminSecret))
+		adminAuth.Use(middleware.RateLimit(60, 30), middleware.JWTAuth(authService), middleware.AdminAuth(cfg.Server.AdminSecret))
 		{
 			adminAuth.GET("/users", adminHandler.ListUsers)
 			adminAuth.PUT("/users/:id", adminHandler.UpdateUser)

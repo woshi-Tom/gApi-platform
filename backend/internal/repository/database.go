@@ -46,7 +46,7 @@ func NewDatabase(cfg *config.DatabaseConfig) (*Database, error) {
 		DSN:                  cfg.DSN(),
 		PreferSimpleProtocol: true,
 	}), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		Logger: logger.Default.LogMode(logger.Warn),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("open gorm: %w", err)

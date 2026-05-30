@@ -38,8 +38,7 @@ func NewChannelHandler(channelService *service.ChannelService, auditRepo *reposi
 
 // List returns all channels
 func (h *ChannelHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	page, pageSize := response.ParsePagination(c)
 	channelType := c.Query("type")
 	status := c.Query("status")
 	group := c.Query("group")

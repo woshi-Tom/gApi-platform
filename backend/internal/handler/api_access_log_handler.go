@@ -2,8 +2,8 @@ package handler
 
 import (
 	"net/http"
-	"strconv"
 
+	"gapi-platform/internal/pkg/response"
 	"gapi-platform/internal/repository"
 	"github.com/gin-gonic/gin"
 )
@@ -23,15 +23,7 @@ func (h *APIAccessLogHandler) List(c *gin.Context) {
 		return
 	}
 
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
-
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 20
-	}
+	page, pageSize := response.ParsePagination(c)
 
 	logs, total, err := h.apiAccessLogRepo.ListByUser(userID, page, pageSize)
 	if err != nil {

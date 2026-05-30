@@ -18,8 +18,7 @@ func NewModelGroupHandler(svc *service.ModelGroupService) *ModelGroupHandler {
 }
 
 func (h *ModelGroupHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	page, pageSize := response.ParsePagination(c)
 	status := c.Query("status")
 
 	groups, total, err := h.svc.ListGroups(page, pageSize, status)

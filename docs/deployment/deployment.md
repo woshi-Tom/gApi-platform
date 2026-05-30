@@ -170,6 +170,50 @@ docker-compose -f docker-compose.prod.yml down
 docker-compose -f docker-compose.prod.yml down -v
 ```
 
+## 安全加固
+
+### 1. API 分页参数上限
+
+所有列表查询接口的 `page_size` 参数上限为 100，防止恶意大查询耗尽服务端资源。
+
+### 2. 速率限制 (Rate Limiting)
+
+| 接口组 | 速率 | 说明 |
+|--------|------|------|
+| 用户登录 | 10 req/s, burst 20 | 防暴力破解 |
+| 用户注册 | 5 req/s, burst 10 | 防批量注册 |
+| 管理后台 API | 60 req/s, burst 30 | 已验证管理员限流 |
+| AI API 调用 | 按 Token 配置 | 基于 RPM/TPM 令牌桶 |
+
+速率限制为内存中实现，重启后重置。多实例部署场景建议引入 Redis 分布式限流。
+
+### 3. 隐藏 Nginx 版本号
+
+所有 Nginx 配置已启用 `server_tokens off`，防止攻击者通过版本号利用已知漏洞。
+
+### 4. 安全响应头
+
+Nginx 配置已添加以下安全响应头：
+
+| 头 | 值 | 作用 |
+|---|-----|------|
+| `X-Content-Type-Options` | `nosniff` | 防 MIME 类型混淆攻击 |
+| `X-Frame-Options` | `DENY` | 防点击劫持 |
+| `X-XSS-Protection` | `1; mode=block` | 启用浏览器 XSS 过滤器 |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` | 控制 Referer 泄露 |
+
+### 5. GORM 日志配置
+
+生产环境数据库日志级别设为 `Warn`（仅记录警告和错误），避免 SQL 语句在日志中泄露。
+
+### 6. SMTP 配置安全
+
+SMTP 密码通过 `json:"-"` 标签从 API 响应中排除，不会通过管理后台 API 返回。
+
+### 7. 数据库错误隔离
+
+API 返回通用错误消息 `"internal server error"` 而非原始数据库错误信息，防止信息泄露。
+
 ## 故障排除
 
 ### 查看服务日志

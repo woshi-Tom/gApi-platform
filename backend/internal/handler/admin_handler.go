@@ -154,8 +154,7 @@ func (h *AdminHandler) Login(c *gin.Context) {
 // @Failure 401 {object} map[string]interface{}
 // @Router /api/v1/admin/users [get]
 func (h *AdminHandler) ListUsers(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	page, pageSize := response.ParsePagination(c)
 	level := c.Query("level")
 	status := c.Query("status")
 	keyword := c.Query("keyword")
@@ -242,8 +241,7 @@ func (h *AdminHandler) UpdateUser(c *gin.Context) {
 
 // ListChannels returns all channels
 func (h *AdminHandler) ListChannels(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	page, pageSize := response.ParsePagination(c)
 	channelType := c.Query("type")
 	status := c.Query("status")
 	group := c.Query("group")
@@ -618,8 +616,7 @@ func (h *AdminHandler) ImportChannels(c *gin.Context) {
 
 // ListOrders returns all orders
 func (h *AdminHandler) ListOrders(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	page, pageSize := response.ParsePagination(c)
 	orderType := c.Query("type")
 	status := c.Query("status")
 
@@ -641,8 +638,7 @@ func (h *AdminHandler) ListOrders(c *gin.Context) {
 
 // GetAuditLogs returns brief audit logs for list view
 func (h *AdminHandler) GetAuditLogs(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	page, pageSize := response.ParsePagination(c)
 	actionGroup := c.Query("action_group")
 	logType := c.Query("log_type")
 	startTime := c.Query("start_time")
@@ -690,8 +686,7 @@ func (h *AdminHandler) GetAuditLogDetail(c *gin.Context) {
 
 // GetLoginLogs returns login logs
 func (h *AdminHandler) GetLoginLogs(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	page, pageSize := response.ParsePagination(c)
 	username := c.Query("username")
 	ip := c.Query("ip")
 	status := c.Query("status") // success or failed
@@ -1022,8 +1017,7 @@ func (h *AdminHandler) StatsUserRanking(c *gin.Context) {
 }
 
 func (h *AdminHandler) StatsUserList(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	page, pageSize := response.ParsePagination(c)
 	sortBy := c.DefaultQuery("sort_by", "failure_rate")
 	order := c.DefaultQuery("order", "desc")
 	timeRange := c.DefaultQuery("time_range", "week")
@@ -1243,8 +1237,7 @@ func (h *AdminHandler) StatsUserDetail(c *gin.Context) {
 
 // ListTokens lists all tokens with pagination (admin)
 func (h *AdminHandler) ListTokens(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	page, pageSize := response.ParsePagination(c)
 	userIDStr := c.Query("user_id")
 	var userID uint
 	if userIDStr != "" {
