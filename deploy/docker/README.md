@@ -12,7 +12,7 @@
 │  redis:6379      - Redis 7               │
 │  rabbitmq:5672   - RabbitMQ 3.12         │
 │  backend:8080    - Go API Server         │
-│  frontend:5176   - User Dashboard (HMR)  │
+│  frontend:5173   - User Dashboard (HMR)  │
 │  admin:5174      - Admin Panel           │
 └─────────────────────────────────────────┘
 ```
@@ -45,7 +45,7 @@ docker compose logs -f backend
 
 | 服务 | 地址 | 说明 |
 |------|------|------|
-| 用户前端 | http://localhost:5176 | Vite dev server，支持热更新 |
+| 用户前端 | http://localhost:5173 | Vite dev server，支持热更新 |
 | 管理后台 | http://localhost:5174/admin.html | 管理员面板 |
 | API 服务 | http://localhost:8080 | 后端 API |
 | Swagger | http://localhost:8080/swagger/index.html | API 文档 |
@@ -73,7 +73,7 @@ docker compose logs -f backend
 
 - 修改 `.vue` / `.css` 文件后浏览器自动刷新
 - 无需重建 Docker 镜像
-- 端口 5176
+- 端口 5173
 
 ### 生产模式
 
@@ -211,7 +211,7 @@ cd deploy/docker
 cd frontend
 
 # 设置环境变量
-export PLAYWRIGHT_BASE_URL=http://localhost:5176
+export PLAYWRIGHT_BASE_URL=http://localhost:5173
 export API_BASE_URL=http://localhost:8080
 
 # 运行测试
@@ -239,7 +239,7 @@ docker exec gapi-playwright-test cat playwright-report/index.html
 
 | 服务 | 开发环境 | 测试环境 |
 |------|---------|---------|
-| Frontend | 5176 | 5173 |
+| Frontend | 5173 | 5173 |
 | Admin | 5174 | 5174 |
 | API | 8080 | 8081 |
 | PostgreSQL | 5432 | 5433 |

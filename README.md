@@ -59,7 +59,7 @@ docker compose up -d
 ```
 
 访问地址（Docker 开发环境）：
-- 用户前端: http://localhost:5176 （Docker 映射，容器内 5173，支持 HMR 热更新）
+- 用户前端: http://localhost:5173 （支持 HMR 热更新）
 - 管理后台: http://localhost:5174
 - API: http://localhost:8080
 - Swagger: http://localhost:8080/swagger/index.html
