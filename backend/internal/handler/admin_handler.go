@@ -688,6 +688,91 @@ func (h *AdminHandler) GetAuditLogDetail(c *gin.Context) {
 	response.Success(c, log)
 }
 
+// ExportAuditLogs exports audit logs as CSV
+// Supports two modes: by specific IDs (ids param) or by filter conditions
+func (h *AdminHandler) ExportAuditLogs(c *gin.Context) {
+	var logs []model.AuditLogBrief
+	var err error
+
+	if idsStr := c.Query("ids"); idsStr != "" {
+		// Export selected: parse comma-separated IDs
+		idStrs := strings.Split(idsStr, ",")
+		var ids []uint
+		for _, s := range idStrs {
+			id, e := strconv.ParseUint(strings.TrimSpace(s), 10, 64)
+			if e == nil {
+				ids = append(ids, uint(id))
+			}
+		}
+		if len(ids) == 0 {
+			response.Fail(c, "INVALID_PARAMETER", "无效的ID列表")
+			return
+		}
+		logs, err = h.auditRepo.ListBriefByIDs(ids)
+	} else {
+		// Export filtered: use same filter params as list
+		actionGroup := c.Query("action_group")
+		logType := c.Query("log_type")
+		startTime := c.Query("start_time")
+		endTime := c.Query("end_time")
+
+		var success *bool
+		if s := c.Query("success"); s != "" {
+			b := s == "true"
+			success = &b
+		}
+
+		logs, err = h.auditRepo.ListBriefNoPage(actionGroup, logType, startTime, endTime, success)
+	}
+
+	if err != nil {
+		response.InternalError(c, "导出日志失败")
+		return
+	}
+
+	// Generate CSV
+	c.Header("Content-Type", "text/csv; charset=utf-8")
+	c.Header("Content-Disposition", "attachment; filename=audit_logs_"+time.Now().Format("2006-01-02")+".csv")
+
+	// Write BOM for Excel UTF-8 compatibility
+	c.Writer.Write([]byte{0xEF, 0xBB, 0xBF})
+
+	writer := csv.NewWriter(c.Writer)
+	defer writer.Flush()
+
+	// Header
+	writer.Write([]string{"ID", "操作", "分组", "类型", "用户", "IP", "请求方法", "请求路径", "状态", "错误信息", "时间"})
+
+	// Rows
+	for _, l := range logs {
+		status := "成功"
+		if !l.Success {
+			status = "失败"
+		}
+		logTypeStr := "操作"
+		if l.LogType == "access" {
+			logTypeStr = "访问"
+		}
+		username := l.Username
+		if username == "" {
+			username = "系统"
+		}
+		writer.Write([]string{
+			strconv.FormatUint(uint64(l.ID), 10),
+			l.Action,
+			l.ActionGroup,
+			logTypeStr,
+			username,
+			l.RequestIP,
+			l.RequestMethod,
+			l.RequestPath,
+			status,
+			l.ErrorMessage,
+			l.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+}
+
 // GetLoginLogs returns login logs
 func (h *AdminHandler) GetLoginLogs(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))

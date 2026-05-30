@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"gapi-platform/internal/model"
@@ -344,12 +345,49 @@ func (r *AuditRepository) ListBrief(page, pageSize int, userID uint, actionGroup
 		query = query.Where("created_at >= ?", startTime)
 	}
 	if endTime != "" {
-		query = query.Where("created_at <= ?", endTime)
+		query = query.Where("created_at < ?", endTimeToNextDay(endTime))
 	}
 
 	query.Count(&total)
 	err := query.Offset((page - 1) * pageSize).Limit(pageSize).Order("created_at DESC").Find(&logs).Error
 	return logs, total, err
+}
+
+// ListBriefByIDs returns brief audit logs by specific IDs (for export selected)
+func (r *AuditRepository) ListBriefByIDs(ids []uint) ([]model.AuditLogBrief, error) {
+	var logs []model.AuditLogBrief
+	err := r.db.Model(&model.AuditLog{}).
+		Select("id, action, action_group, resource_type, resource_id, username, request_method, request_path, request_ip, success, error_message, log_type, created_at").
+		Where("id IN ?", ids).
+		Order("created_at DESC").
+		Find(&logs).Error
+	return logs, err
+}
+
+// ListBriefNoPage returns all matching brief audit logs without pagination (for export filtered, max 10000)
+func (r *AuditRepository) ListBriefNoPage(actionGroup, logType, startTime, endTime string, success *bool) ([]model.AuditLogBrief, error) {
+	var logs []model.AuditLogBrief
+	query := r.db.Model(&model.AuditLog{}).
+		Select("id, action, action_group, resource_type, resource_id, username, request_method, request_path, request_ip, success, error_message, log_type, created_at")
+
+	if actionGroup != "" {
+		query = query.Where("action_group = ?", actionGroup)
+	}
+	if logType != "" {
+		query = query.Where("log_type = ?", logType)
+	}
+	if success != nil {
+		query = query.Where("success = ?", *success)
+	}
+	if startTime != "" {
+		query = query.Where("created_at >= ?", startTime)
+	}
+	if endTime != "" {
+		query = query.Where("created_at < ?", endTimeToNextDay(endTime))
+	}
+
+	err := query.Order("created_at DESC").Limit(10000).Find(&logs).Error
+	return logs, err
 }
 
 // List lists audit logs with pagination and filters
@@ -373,7 +411,7 @@ func (r *AuditRepository) List(page, pageSize int, userID uint, actionGroup, log
 		query = query.Where("created_at >= ?", startTime)
 	}
 	if endTime != "" {
-		query = query.Where("created_at <= ?", endTime)
+		query = query.Where("created_at < ?", endTimeToNextDay(endTime))
 	}
 	query.Count(&total)
 	err := query.Offset((page - 1) * pageSize).Limit(pageSize).Order("created_at DESC").Find(&logs).Error
@@ -425,7 +463,7 @@ func (r *LoginLogRepository) List(page, pageSize int, username string, ip string
 		query = query.Where("created_at >= ?", startTime)
 	}
 	if endTime != "" {
-		query = query.Where("created_at <= ?", endTime)
+		query = query.Where("created_at < ?", endTimeToNextDay(endTime))
 	}
 
 	query.Count(&total)
@@ -558,7 +596,7 @@ func (r *APIAccessLogRepository) List(page, pageSize int, userID *uint, startTim
 		query = query.Where("created_at >= ?", startTime)
 	}
 	if endTime != "" {
-		query = query.Where("created_at <= ?", endTime)
+		query = query.Where("created_at < ?", endTimeToNextDay(endTime))
 	}
 
 	query.Count(&total)
@@ -619,4 +657,17 @@ func (r *PaymentLogRepository) ListByOrderID(orderID uint) ([]model.PaymentLog, 
 
 func (r *PaymentLogRepository) GetDB() *gorm.DB {
 	return r.db
+}
+
+// endTimeToNextDay converts a date-only endTime (YYYY-MM-DD) to the next day,
+// so that "created_at < next_day" correctly includes all records from the end date.
+// If endTime already contains a time component, returns it as-is.
+func endTimeToNextDay(endTime string) string {
+	if len(endTime) == 10 && strings.Count(endTime, "-") == 2 {
+		t, err := time.Parse("2006-01-02", endTime)
+		if err == nil {
+			return t.AddDate(0, 0, 1).Format("2006-01-02")
+		}
+	}
+	return endTime
 }

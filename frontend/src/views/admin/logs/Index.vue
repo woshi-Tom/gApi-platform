@@ -3,38 +3,71 @@
     <div class="page-header">
       <h2>操作日志</h2>
       <div class="header-actions">
-        <el-button type="primary" @click="handleExport" :loading="exporting">
-          <el-icon><Download /></el-icon> 导出
-        </el-button>
+        <el-dropdown @command="handleExport" :disabled="exporting">
+          <el-button type="primary" :loading="exporting">
+            <el-icon><Download /></el-icon> 导出 <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="selected" :disabled="selectedRows.length === 0">
+                导出选中 ({{ selectedRows.length }})
+              </el-dropdown-item>
+              <el-dropdown-item command="filtered">导出当前筛选 ({{ total }} 条)</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
     </div>
 
-    <el-card class="logs-card">
-      <div class="filters">
-        <el-select v-model="filters.log_type" placeholder="日志类型" clearable style="width: 120px" @change="handleFilter">
-          <el-option v-for="g in logTypes" :key="g.value" :label="g.label" :value="g.value" />
-        </el-select>
-        <el-select v-model="filters.action_group" placeholder="操作分组" clearable style="width: 120px" @change="handleFilter">
-          <el-option v-for="g in actionGroups" :key="g.value" :label="g.label" :value="g.value" />
-        </el-select>
-        <el-select v-model="filters.success" placeholder="状态" clearable style="width: 100px" @change="handleFilter">
-          <el-option label="成功" :value="true" />
-          <el-option label="失败" :value="false" />
-        </el-select>
-        <el-date-picker
-          v-model="dateRange"
-          type="daterange"
-          range-separator="至"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-          value-format="YYYY-MM-DD"
-          @change="handleDateChange"
-          style="width: 240px"
-        />
-        <el-button @click="resetFilters">重置</el-button>
-      </div>
+    <el-card class="filter-card">
+      <el-form :inline="true" class="filter-form">
+        <el-form-item label="日志类型">
+          <el-select v-model="filters.log_type" clearable placeholder="全部" style="width: 120px" @change="handleFilter">
+            <el-option v-for="g in logTypes" :key="g.value" :label="g.label" :value="g.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="操作分组">
+          <el-select v-model="filters.action_group" clearable placeholder="全部" style="width: 120px" @change="handleFilter">
+            <el-option v-for="g in actionGroups" :key="g.value" :label="g.label" :value="g.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="filters.success" clearable placeholder="全部" style="width: 100px" @change="handleFilter">
+            <el-option label="成功" :value="true" />
+            <el-option label="失败" :value="false" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="开始日期">
+          <el-date-picker
+            v-model="startDate"
+            type="date"
+            placeholder="不限"
+            value-format="YYYY-MM-DD"
+            clearable
+            @change="handleFilter"
+            style="width: 150px"
+          />
+        </el-form-item>
+        <el-form-item label="结束日期">
+          <el-date-picker
+            v-model="endDate"
+            type="date"
+            placeholder="不限"
+            value-format="YYYY-MM-DD"
+            clearable
+            @change="handleFilter"
+            style="width: 150px"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button @click="resetFilters">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
 
-      <el-table :data="logs" v-loading="ld" stripe class="logs-table">
+    <el-card class="logs-card">
+      <el-table :data="logs" v-loading="ld" stripe class="logs-table" @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="40" />
         <el-table-column prop="id" label="ID" width="50" />
         <el-table-column label="操作" width="120">
           <template #default="{ row }">
@@ -153,7 +186,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { auditLogApi, ACTION_GROUPS, LOG_TYPES } from '@/api/log'
 import type { AuditLogBrief, AuditLog, AuditLogQuery } from '@/api/log'
 import { ElMessage } from 'element-plus'
-import { Download } from '@element-plus/icons-vue'
+import { Download, ArrowDown } from '@element-plus/icons-vue'
 
 const logs = ref<AuditLogBrief[]>([])
 const ld = ref(false)
@@ -161,10 +194,12 @@ const exporting = ref(false)
 const total = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(20)
-const dateRange = ref<string[]>([])
+const startDate = ref<string>('')
+const endDate = ref<string>('')
 const detailVisible = ref(false)
 const detailLoading = ref(false)
 const currentLog = ref<AuditLog | null>(null)
+const selectedRows = ref<AuditLogBrief[]>([])
 
 const filters = reactive({
   log_type: 'operation',
@@ -224,10 +259,8 @@ async function load() {
     if (filters.log_type) params.log_type = filters.log_type
     if (filters.action_group) params.action_group = filters.action_group
     if (filters.success !== null) params.success = filters.success
-    if (dateRange.value?.length === 2) {
-      params.start_time = dateRange.value[0]
-      params.end_time = dateRange.value[1]
-    }
+    if (startDate.value) params.start_time = startDate.value
+    if (endDate.value) params.end_time = endDate.value
 
     const res = await auditLogApi.list(params)
     logs.value = res.data.data?.list || []
@@ -254,11 +287,10 @@ async function handleShowDetail(row: AuditLogBrief) {
 }
 
 function handleFilter() {
-  currentPage.value = 1
-  load()
-}
-
-function handleDateChange() {
+  if (startDate.value && endDate.value && startDate.value > endDate.value) {
+    ElMessage.warning('开始日期不能晚于结束日期')
+    return
+  }
   currentPage.value = 1
   load()
 }
@@ -276,20 +308,35 @@ function resetFilters() {
   filters.log_type = 'operation'
   filters.action_group = ''
   filters.success = null
-  dateRange.value = []
+  startDate.value = ''
+  endDate.value = ''
   handleFilter()
 }
 
-async function handleExport() {
+function handleSelectionChange(rows: AuditLogBrief[]) {
+  selectedRows.value = rows
+}
+
+async function handleExport(mode: 'selected' | 'filtered') {
+  if (startDate.value && endDate.value && startDate.value > endDate.value) {
+    ElMessage.warning('开始日期不能晚于结束日期')
+    return
+  }
   exporting.value = true
   try {
     const params: AuditLogQuery = {}
-    if (filters.log_type) params.log_type = filters.log_type
-    if (filters.action_group) params.action_group = filters.action_group
-    if (filters.success !== null) params.success = filters.success
-    if (dateRange.value?.length === 2) {
-      params.start_time = dateRange.value[0]
-      params.end_time = dateRange.value[1]
+    if (mode === 'selected') {
+      if (selectedRows.value.length === 0) {
+        ElMessage.warning('请先选择要导出的日志')
+        return
+      }
+      params.ids = selectedRows.value.map(r => r.id).join(',')
+    } else {
+      if (filters.log_type) params.log_type = filters.log_type
+      if (filters.action_group) params.action_group = filters.action_group
+      if (filters.success !== null) params.success = filters.success
+      if (startDate.value) params.start_time = startDate.value
+      if (endDate.value) params.end_time = endDate.value
     }
 
     const res = await auditLogApi.export(params)
@@ -330,16 +377,28 @@ onMounted(load)
   font-weight: 600;
 }
 
-.logs-card {
+.filter-card {
   border-radius: 10px;
 }
 
-.filters {
+.filter-card :deep(.el-card__body) {
+  padding: 16px 20px;
+}
+
+.filter-form {
   display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
   flex-wrap: wrap;
   align-items: center;
+  gap: 0;
+}
+
+.filter-form .el-form-item {
+  margin-bottom: 0;
+  margin-right: 8px;
+}
+
+.logs-card {
+  border-radius: 10px;
 }
 
 .logs-table {

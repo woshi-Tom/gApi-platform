@@ -40,6 +40,7 @@ export interface AuditLogQuery {
   start_time?: string
   end_time?: string
   success?: boolean
+  ids?: string
 }
 
 export const auditLogApi = {
