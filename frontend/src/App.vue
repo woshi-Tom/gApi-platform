@@ -1,70 +1,44 @@
+<!--
+  App.vue - 应用根组件（编排层）
+  仅负责：布局切换判断、全局状态初始化、组件编排
+
+  侧边栏 → src/components/layout/AppSidebar.vue
+  设置面板 → src/components/layout/SidebarSettingsPanel.vue
+  主内容 → src/components/layout/AppMain.vue
+  全局布局样式 → src/styles/layout.css
+
+  禁止在此文件中添加：页面 UI、表格、表单、API 请求、业务逻辑
+-->
 <template>
-  <el-container v-if="showLayout" class="app-container">
-    <el-aside width="220px" class="sidebar">
-      <div class="logo">
-        <el-icon class="logo-icon"><Monitor /></el-icon>
-        <span>gAPI 平台</span>
-      </div>
-      <el-menu 
-        :default-active="route.path" 
-        router 
-        background-color="#1e1e1e" 
-        text-color="#a0a0a0" 
-        active-text-color="#409eff"
-        :ellipsis="false"
-      >
-        <el-menu-item index="/">
-          <el-icon><HomeFilled /></el-icon>
-          <span>控制台</span>
-        </el-menu-item>
-        <el-menu-item index="/tokens">
-          <el-icon><Key /></el-icon>
-          <span>API 密钥</span>
-        </el-menu-item>
-        <el-menu-item index="/products">
-          <el-icon><ShoppingCart /></el-icon>
-          <span>商品列表</span>
-        </el-menu-item>
-        <el-menu-item index="/orders">
-          <el-icon><List /></el-icon>
-          <span>订单记录</span>
-        </el-menu-item>
-        <el-menu-item index="/vip">
-          <el-icon><Star /></el-icon>
-          <span>VIP 会员</span>
-        </el-menu-item>
-        <el-menu-item index="/redeem">
-          <el-icon><Ticket /></el-icon>
-          <span>兑换码</span>
-        </el-menu-item>
-        <el-menu-item index="/profile">
-          <el-icon><User /></el-icon>
-          <span>个人中心</span>
-        </el-menu-item>
-      </el-menu>
-    </el-aside>
-    <el-container>
-      <el-header class="header">
-        <span class="page-title">{{ route.meta.title || '控制台' }}</span>
-        <div class="header-right">
-          <el-dropdown @command="handleCommand">
-            <span class="user-info">
-              <el-icon><Avatar /></el-icon>
-              {{ authStore.user?.username || '用户' }}
-              <el-icon class="arrow"><ArrowDown /></el-icon>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="profile">个人中心</el-dropdown-item>
-                <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-        </div>
-      </el-header>
-      <el-main class="main-content">
-        <router-view />
-      </el-main>
+  <el-container
+    v-if="showLayout"
+    ref="layoutRef"
+    class="app-container console-layout"
+    :class="collapsed ? 'console-layout--sidebar-collapsed' : 'console-layout--sidebar-expanded'"
+    :style="{ '--console-sidebar-current-width': sidebarWidth }"
+  >
+    <AppSidebar
+      :collapsed="collapsed"
+      :active-path="route.path"
+      :width="sidebarWidth"
+      :user="authStore.user"
+      :settings-open="settingsPanelOpen"
+      @toggle="toggleSidebar"
+      @toggle-settings="toggleSettingsPanel"
+      @command="handleCommand"
+    />
+    <SidebarSettingsPanel
+      v-if="settingsPanelOpen"
+      :sidebar-width="sidebarWidth"
+      :console-theme="consoleTheme"
+      @toggle-theme="toggleConsoleTheme"
+      @close="closeSettingsPanel"
+    />
+    <el-container
+      class="console-layout__main-shell"
+      :class="{ 'console-layout__main-shell--sidebar-collapsed': collapsed }"
+    >
+      <AppMain />
     </el-container>
   </el-container>
 
@@ -72,17 +46,39 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/store/auth'
-import {
-  HomeFilled, Key, ShoppingCart, List, Star, User, Ticket,
-  ArrowDown, Avatar, Monitor
-} from '@element-plus/icons-vue'
+import { useConsoleTheme } from '@/composables/useConsoleTheme'
+import AppSidebar from '@/components/layout/AppSidebar.vue'
+import AppMain from '@/components/layout/AppMain.vue'
+import SidebarSettingsPanel from '@/components/layout/SidebarSettingsPanel.vue'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const layoutRef = ref<HTMLElement | null>(null)
+
+// 控制台主题
+const { theme: consoleTheme, toggleTheme: toggleConsoleTheme, ensureApplied } = useConsoleTheme()
+
+// 侧边栏折叠状态（记忆到 localStorage）
+const collapsed = ref(localStorage.getItem('sidebar-collapsed') === 'true')
+const sidebarWidth = computed(() => collapsed.value ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)')
+const settingsPanelOpen = ref(false)
+
+function toggleSidebar() {
+  collapsed.value = !collapsed.value
+  localStorage.setItem('sidebar-collapsed', String(collapsed.value))
+}
+
+function toggleSettingsPanel() {
+  settingsPanelOpen.value = !settingsPanelOpen.value
+}
+
+function closeSettingsPanel() {
+  settingsPanelOpen.value = false
+}
 
 const showLayout = computed(() => {
   return route.meta.requiresAuth
@@ -97,163 +93,38 @@ function handleCommand(command: string) {
   }
 }
 
+function handleDocumentClick() {
+  if (settingsPanelOpen.value) closeSettingsPanel()
+}
+
+function handleDocumentKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape' && settingsPanelOpen.value) closeSettingsPanel()
+}
+
 onMounted(async () => {
+  document.addEventListener('click', handleDocumentClick)
+  document.addEventListener('keydown', handleDocumentKeydown)
+
   if (authStore.isLoggedIn && !authStore.user) {
     await authStore.fetchProfile()
   }
+  // 确保主题在 .console-layout 挂载后正确应用
+  await nextTick()
+  ensureApplied()
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleDocumentClick)
+  document.removeEventListener('keydown', handleDocumentKeydown)
 })
 </script>
 
-<style>
-:root {
-  --sidebar-bg: #1e1e1e;
-  --sidebar-hover: #2a2a2a;
-  --sidebar-active: #409eff;
-  --content-bg: #f5f7fa;
-  --card-bg: #ffffff;
-  --border-color: #e4e7ed;
-}
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-html, body {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
+<style scoped>
+.console-layout__main-shell {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
   overflow: hidden;
-}
-
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  background-color: var(--content-bg);
-}
-
-#app {
-  width: 100%;
-  height: 100%;
-}
-
-.app-container {
-  width: 100%;
-  height: 100vh;
-  min-width: 100%;
-  background-color: var(--content-bg);
-}
-
-.sidebar {
-  background-color: var(--sidebar-bg) !important;
-  border-right: 1px solid #333;
-}
-
-.logo {
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  color: #fff;
-  font-size: 18px;
-  font-weight: 600;
-  background-color: #252525;
-  border-bottom: 1px solid #333;
-}
-
-.logo-icon {
-  font-size: 22px;
-  color: #409eff;
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--card-bg);
-  border-bottom: 1px solid var(--border-color);
-  padding: 0 24px;
-  height: 60px;
-}
-
-.page-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-}
-
-.user-info {
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  transition: background-color 0.2s;
-  color: var(--el-text-color-primary);
-}
-
-.user-info:hover {
-  background-color: var(--el-fill-color-light);
-}
-
-.arrow {
-  margin-left: 4px;
-  font-size: 12px;
-}
-
-.main-content {
-  padding: 24px;
-  overflow-y: auto;
-}
-
-.el-menu {
-  border-right: none !important;
-}
-
-.el-menu-item {
-  height: 50px;
-  line-height: 50px;
-  margin: 4px 8px;
-  border-radius: 8px;
-}
-
-.el-menu-item:hover {
-  background-color: var(--sidebar-hover) !important;
-}
-
-.el-menu-item.is-active {
-  background-color: rgba(64, 158, 255, 0.15) !important;
-}
-
-.el-card {
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-  border: 1px solid var(--border-color);
-}
-
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #dcdfe6;
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #c0c4cc;
+  transition: width var(--sidebar-transition);
 }
 </style>

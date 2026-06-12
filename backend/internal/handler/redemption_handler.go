@@ -51,8 +51,7 @@ type CreateCodeRequest struct {
 }
 
 func (h *RedemptionHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	page, pageSize := response.ParsePagination(c)
 	codeType := c.Query("code_type")
 	status := c.Query("status")
 	batchID := c.Query("batch_id")

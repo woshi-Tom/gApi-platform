@@ -1,12 +1,8 @@
 <template>
   <div class="admin-dashboard">
     <!-- Header with Time Selector -->
-    <div class="page-header">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <h2>管理后台仪表盘</h2>
-          <p class="subtitle">系统运行状态概览</p>
-        </div>
+    <PageHeader title="管理后台仪表盘" description="系统运行状态概览">
+      <template #actions>
         <div class="time-selector">
           <el-radio-group v-model="timeRange" size="default" @change="onTimeRangeChange">
             <el-radio-button value="today">今日</el-radio-button>
@@ -14,8 +10,8 @@
             <el-radio-button value="month">近30天</el-radio-button>
           </el-radio-group>
         </div>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <!-- Time-Related Charts (API Trends, User Ranking) -->
     <el-card shadow="hover" class="trends-card">
@@ -149,6 +145,7 @@ import {
   User, UserFilled, Star, Connection, CircleCheck,
   Document, Money, TrendCharts, Clock, Setting
 } from '@element-plus/icons-vue'
+import PageHeader from '@/components/PageHeader.vue'
 
 use([CanvasRenderer, LineChart, PieChart, BarChart, GridComponent, TooltipComponent, LegendComponent])
 
@@ -528,21 +525,6 @@ onMounted(loadData)
   gap: 24px;
 }
 
-.page-header {
-  margin-bottom: 10px;
-}
-
-.page-header h2 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.subtitle {
-  margin: 4px 0 0;
-  font-size: 14px;
-  color: var(--el-text-color-secondary);
-}
 
 .time-selector {
   display: flex;

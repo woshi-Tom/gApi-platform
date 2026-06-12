@@ -5,7 +5,10 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import { createPinia } from 'pinia'
 import router from './router'
 import App from './App.vue'
+import './styles/tokens.css'
 import './style.css'
+import './styles/layout.css'
+import './styles/console-dark.css'
 
 const app = createApp(App)
 

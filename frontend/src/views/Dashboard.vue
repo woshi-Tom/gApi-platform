@@ -1,56 +1,56 @@
 <template>
   <div class="dashboard">
     <!-- Stats Cards -->
-    <div class="stats-grid">
-      <el-card shadow="hover" class="stat-card" :class="{ 'urgent-card': isFreeExpiringSoon }">
+    <div class="stats-grid" v-loading="pageLoading" element-loading-text="加载中...">
+      <el-card shadow="never" class="stat-card" :class="{ 'urgent-card': isFreeExpiringSoon }">
         <div class="stat-icon blue">
           <el-icon size="24"><Coin /></el-icon>
         </div>
         <div class="stat-info">
           <div class="stat-label">可用额度</div>
-          <div class="stat-value">{{ formatQuota(getTotalAvailableQuota()) }}</div>
+          <div class="stat-value">{{ formatQuota(animatedQuota) }}</div>
           <div class="stat-sub" v-if="!quota?.is_vip && quota?.free_expired_at">
             <el-tag type="danger" size="small" effect="plain">免费额度仅剩 {{ getFreeDaysRemaining() }} 天</el-tag>
           </div>
         </div>
       </el-card>
       
-      <el-card shadow="hover" class="stat-card">
+      <el-card shadow="never" class="stat-card">
         <div class="stat-icon green">
           <el-icon size="24"><TrendCharts /></el-icon>
         </div>
         <div class="stat-info">
           <div class="stat-label">今日用量</div>
-          <div class="stat-value">{{ formatQuota(usageStats?.used_today) }}</div>
+          <div class="stat-value">{{ formatQuota(animatedTodayUsage) }}</div>
         </div>
       </el-card>
       
-      <el-card shadow="hover" class="stat-card" :class="{ 'vip-card': quota?.is_vip }">
+      <el-card shadow="never" class="stat-card" :class="{ 'vip-card': quota?.is_vip }">
         <div class="stat-icon orange">
           <el-icon size="24"><Star /></el-icon>
         </div>
         <div class="stat-info">
           <div class="stat-label">{{ quota?.is_vip ? 'VIP剩余天数' : '会员状态' }}</div>
           <div class="stat-value" :class="{ 'vip-value': quota?.is_vip }">
-            {{ quota?.is_vip ? getVIPDaysRemaining() + ' 天' : '免费用户' }}
+            {{ quota?.is_vip ? animatedVIPDays + ' 天' : '免费用户' }}
           </div>
         </div>
       </el-card>
       
-      <el-card shadow="hover" class="stat-card">
+      <el-card shadow="never" class="stat-card">
         <div class="stat-icon red">
           <el-icon size="24"><Key /></el-icon>
         </div>
         <div class="stat-info">
           <div class="stat-label">API密钥</div>
-          <div class="stat-value">{{ tokenCount }} 个</div>
+          <div class="stat-value">{{ animatedTokenCount }} 个</div>
         </div>
       </el-card>
     </div>
 
     <!-- Charts Section -->
     <div class="charts-grid">
-      <el-card shadow="hover" class="chart-card">
+      <el-card shadow="never" class="chart-card">
         <template #header>
           <span>Token消耗趋势 (近7天)</span>
         </template>
@@ -59,7 +59,7 @@
         </div>
       </el-card>
       
-      <el-card shadow="hover" class="chart-card">
+      <el-card shadow="never" class="chart-card">
         <template #header>
           <span>API调用统计 (近7天)</span>
         </template>
@@ -72,7 +72,7 @@
     <!-- Main Content -->
     <div class="main-grid">
       <!-- Quick Start -->
-      <el-card class="quickstart-card">
+      <el-card shadow="never" class="quickstart-card">
         <template #header>
           <div class="card-header">
             <span>快速开始</span>
@@ -110,7 +110,7 @@ curl http://localhost:8080/api/v1/chat/completions \
       </el-card>
 
       <!-- Quota Details -->
-      <el-card class="quota-card">
+      <el-card shadow="never" class="quota-card">
         <template #header>
           <div class="card-header">
             <span>我的额度</span>
@@ -175,7 +175,7 @@ curl http://localhost:8080/api/v1/chat/completions \
     </div>
 
     <!-- Recent Activity -->
-    <el-card class="activity-card">
+    <el-card shadow="never" class="activity-card">
       <template #header>
         <div class="card-header">
           <span>最近活动</span>
@@ -211,17 +211,32 @@ curl http://localhost:8080/api/v1/chat/completions \
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useCountUp } from '@/composables/useCountUp'
+import { formatQuota as fmtQuota } from '@/composables/useFormat'
+import { useConsoleTheme } from '@/composables/useConsoleTheme'
 import { ElMessage } from 'element-plus'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent } from 'echarts/components'
 import VChart from 'vue-echarts'
-import { 
-  Coin, TrendCharts, Star, Key, CopyDocument, 
+import {
+  Coin, TrendCharts, Star, Key, CopyDocument,
   ShoppingCart, ArrowRight, Timer
 } from '@element-plus/icons-vue'
 import request from '@/api/request'
+
+const { theme: consoleTheme } = useConsoleTheme()
+
+// 图表主题色（响应式）
+const isDark = computed(() => consoleTheme.value === 'dark')
+const chartAxisColor = computed(() => isDark.value ? 'rgba(255,255,255,0.45)' : '#94a3b8')
+const chartLineColor = computed(() => isDark.value ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)')
+const chartSplitColor = computed(() => isDark.value ? 'rgba(255,255,255,0.04)' : 'rgba(15,23,42,0.06)')
+const chartTooltipBg = computed(() => isDark.value ? '#1a1c25' : '#ffffff')
+const chartTooltipBorder = computed(() => isDark.value ? 'rgba(255,255,255,0.1)' : 'rgba(15,23,42,0.1)')
+const chartTooltipText = computed(() => isDark.value ? 'rgba(255,255,255,0.85)' : '#334155')
+const chartCrossColor = computed(() => isDark.value ? 'rgba(255,255,255,0.1)' : 'rgba(15,23,42,0.1)')
 
 use([CanvasRenderer, LineChart, GridComponent, TooltipComponent])
 
@@ -248,6 +263,7 @@ interface UsageStats {
   used_today: number
 }
 
+const pageLoading = ref(true)
 const quota = ref<Quota | null>(null)
 const tokenCount = ref(0)
 const usageStats = ref<UsageStats | null>(null)
@@ -266,12 +282,14 @@ const recentActivity = ref<Array<{
   time: Date
 }>>([])
 
-function formatQuota(n: number | undefined): string {
-  if (!n) return '0'
-  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M'
-  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K'
-  return n.toLocaleString()
-}
+// 数字滚动动画
+const animatedQuota = useCountUp(() => getTotalAvailableQuota())
+const animatedTodayUsage = useCountUp(() => usageStats.value?.used_today || 0, 600)
+const animatedTokenCount = useCountUp(() => tokenCount.value, 600)
+const animatedVIPDays = useCountUp(() => getVIPDaysRemaining(), 600)
+
+// 使用共享的 formatQuota
+const formatQuota = fmtQuota
 
 function formatVIPExpiry(dateStr: string | undefined): string {
   if (!dateStr) return '-'
@@ -332,7 +350,10 @@ const tokenChartOption = computed(() => {
   return {
     tooltip: {
       trigger: 'axis',
-      axisPointer: { type: 'cross' },
+      axisPointer: { type: 'cross', lineStyle: { color: chartCrossColor.value } },
+      backgroundColor: chartTooltipBg.value,
+      borderColor: chartTooltipBorder.value,
+      textStyle: { color: chartTooltipText.value },
       formatter: (params: any[]) => {
         const p = params[0]
         const val = p.value >= 1000 ? (p.value / 1000).toFixed(2) + 'k' : p.value.toLocaleString()
@@ -349,7 +370,11 @@ const tokenChartOption = computed(() => {
     xAxis: {
       type: 'category',
       data: dailyUsage.value.map(d => d.date),
-      boundaryGap: false
+      boundaryGap: false,
+      axisLine: { lineStyle: { color: chartLineColor.value } },
+      axisTick: { lineStyle: { color: chartLineColor.value } },
+      axisLabel: { color: chartAxisColor.value },
+      splitLine: { lineStyle: { color: chartSplitColor.value } }
     },
     yAxis: {
       type: 'value',
@@ -358,22 +383,36 @@ const tokenChartOption = computed(() => {
       nameGap: 35,
       nameTextStyle: {
         align: 'center',
-        verticalAlign: 'bottom'
+        verticalAlign: 'bottom',
+        color: chartAxisColor.value
       },
       min: 0,
       max: Math.ceil(maxValue / 5) * 5 + 1000,
       splitNumber: 5,
+      axisLine: { lineStyle: { color: chartLineColor.value } },
+      axisTick: { lineStyle: { color: chartLineColor.value } },
       axisLabel: {
+        color: chartAxisColor.value,
         formatter: (v: number) => v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v
-      }
+      },
+      splitLine: { lineStyle: { color: chartSplitColor.value } }
     },
     series: [{
       name: 'Token消耗',
       type: 'line',
       data: data,
       smooth: true,
-      itemStyle: { color: '#409eff' },
-      areaStyle: { color: 'rgba(64, 158, 255, 0.1)' },
+      itemStyle: { color: '#6366f1' },
+      areaStyle: { 
+        color: {
+          type: 'linear',
+          x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [
+            { offset: 0, color: 'rgba(99, 102, 241, 0.2)' },
+            { offset: 1, color: 'rgba(99, 102, 241, 0.02)' }
+          ]
+        }
+      },
       lineStyle: { width: 3 },
       symbol: 'circle',
       symbolSize: 8
@@ -388,7 +427,10 @@ const callsChartOption = computed(() => {
   return {
     tooltip: {
       trigger: 'axis',
-      axisPointer: { type: 'cross' },
+      axisPointer: { type: 'cross', lineStyle: { color: chartCrossColor.value } },
+      backgroundColor: chartTooltipBg.value,
+      borderColor: chartTooltipBorder.value,
+      textStyle: { color: chartTooltipText.value },
       formatter: (params: any[]) => {
         const p = params[0]
         return `${p.axisValue}<br/>${p.marker} API调用: ${p.value.toLocaleString()} 次`
@@ -403,7 +445,11 @@ const callsChartOption = computed(() => {
     },
     xAxis: {
       type: 'category',
-      data: dailyUsage.value.map(d => d.date)
+      data: dailyUsage.value.map(d => d.date),
+      axisLine: { lineStyle: { color: chartLineColor.value } },
+      axisTick: { lineStyle: { color: chartLineColor.value } },
+      axisLabel: { color: chartAxisColor.value },
+      splitLine: { lineStyle: { color: chartSplitColor.value } }
     },
     yAxis: {
       type: 'value',
@@ -412,20 +458,28 @@ const callsChartOption = computed(() => {
       nameGap: 30,
       nameTextStyle: {
         align: 'center',
-        verticalAlign: 'bottom'
+        verticalAlign: 'bottom',
+        color: chartAxisColor.value
       },
       min: 0,
       max: Math.ceil(maxValue / 5) * 5 + 5,
       splitNumber: 5,
+      axisLine: { lineStyle: { color: chartLineColor.value } },
+      axisTick: { lineStyle: { color: chartLineColor.value } },
       axisLabel: {
+        color: chartAxisColor.value,
         formatter: (v: number) => v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v
-      }
+      },
+      splitLine: { lineStyle: { color: chartSplitColor.value } }
     },
     series: [{
       name: 'API调用',
       type: 'bar',
       data: data,
-      itemStyle: { color: '#67c23a', borderRadius: [4, 4, 0, 0] },
+      itemStyle: { 
+        color: '#6366f1',
+        borderRadius: [4, 4, 0, 0] 
+      },
       barMaxWidth: 40
     }]
   }
@@ -484,6 +538,8 @@ onMounted(async () => {
     }
   } catch (e: any) {
     ElMessage.error('加载数据失败')
+  } finally {
+    pageLoading.value = false
   }
 })
 </script>
@@ -492,73 +548,89 @@ onMounted(async () => {
 .dashboard {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--spacing-lg);
 }
 
+/* ===== 统计卡片 ===== */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+  gap: var(--spacing-base);
 }
 
 .stat-card :deep(.el-card__body) {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 20px;
+  gap: var(--spacing-base);
+  padding: var(--spacing-lg);
 }
 
 .stat-icon {
   width: 52px;
   height: 52px;
-  border-radius: 10px;
+  border-radius: var(--radius-xl);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
 }
 
-.stat-icon.blue { background: linear-gradient(135deg, #409eff 0%, #337ecc 100%); }
-.stat-icon.green { background: linear-gradient(135deg, #67c23a 0%, #529b2e 100%); }
-.stat-icon.orange { background: linear-gradient(135deg, #e6a23c 0%, #b88230 100%); }
-.stat-icon.red { background: linear-gradient(135deg, #f56c6c 0%, #c45656 100%); }
+.stat-icon.blue {
+  background: rgba(99, 102, 241, 0.18);
+  color: #a5b4fc;
+}
+.stat-icon.green {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+}
+.stat-icon.orange {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+.stat-icon.red {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
 
 .stat-info {
   flex: 1;
 }
 
 .stat-label {
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
-  margin-bottom: 4px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-xs);
 }
 
 .stat-value {
-  font-size: 22px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  letter-spacing: 0;
 }
 
 .stat-value.vip-value {
-  color: var(--el-color-warning);
+  color: var(--color-warning);
 }
 
 .vip-card :deep(.stat-icon) {
-  background: linear-gradient(135deg, #e6a23c 0%, #b88230 100%);
+  background: var(--gradient-vip);
 }
 
+/* ===== 图表 ===== */
 .charts-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: var(--spacing-md);
 }
 
 .chart-card {
-  border-radius: 10px;
+  border-radius: var(--radius-xl);
 }
 
 .chart-card :deep(.el-card__header) {
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
 }
 
 .chart-container {
@@ -566,10 +638,11 @@ onMounted(async () => {
   overflow: visible;
 }
 
+/* ===== 主内容区 ===== */
 .main-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 16px;
+  gap: var(--spacing-base);
 }
 
 .card-header {
@@ -579,102 +652,152 @@ onMounted(async () => {
 }
 
 .intro-text {
-  color: var(--el-text-color-secondary);
-  margin: 0 0 16px;
+  color: var(--color-text-regular);
+  margin: 0 0 var(--spacing-base);
+  font-size: var(--font-size-base);
 }
 
 .code-box {
-  background: #1e1e1e;
-  border-radius: 8px;
+  background: #0f172a;
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
 .code-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  background: #2d2d2d;
-  border-bottom: 1px solid #333;
+  gap: var(--spacing-md);
+  padding: 10px var(--spacing-base);
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .lang-badge {
-  background: #409eff;
+  background: var(--gradient-primary);
   color: #fff;
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 2px var(--spacing-sm);
+  border-radius: var(--radius-xs);
   font-size: 11px;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 .code-header .title {
-  color: #a0a0a0;
-  font-size: 13px;
+  color: #94a3b8;
+  font-size: var(--font-size-sm);
 }
 
 .code-content {
   margin: 0;
-  padding: 16px;
-  color: #d4d4d4;
-  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
-  font-size: 13px;
+  padding: var(--spacing-base);
+  color: #e2e8f0;
+  font-family: 'JetBrains Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-size: var(--font-size-sm);
   line-height: 1.6;
   overflow-x: auto;
 }
 
-.hljs-comment { color: #6a9955; }
-.hljs-operator { color: #569cd6; }
-.hljs-string { color: #ce9178; }
+.hljs-comment { color: #64748b; }
+.hljs-operator { color: #818cf8; }
+.hljs-string { color: #a5b4fc; }
 
 .model-list {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
 .list-label {
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
 }
 
 .model-tag {
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
+/* ===== 额度卡片 ===== */
 .quota-card :deep(.el-card__header) {
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
 }
 
-.quota-item {
+.quota-big {
+  display: flex;
+  align-items: baseline;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.quota-number {
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+  letter-spacing: 0;
+}
+
+.quota-unit {
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+}
+
+.quota-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.quota-hint.urgent {
+  color: var(--color-danger);
+}
+
+.quota-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.quota-item-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
 }
 
-.item-label {
-  font-size: 14px;
-  color: var(--el-text-color-secondary);
+.quota-label {
+  font-size: var(--font-size-base);
+  color: var(--color-text-regular);
 }
 
-.item-value {
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--el-text-color-primary);
+.quota-value-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
 }
 
-.item-value.vip {
-  color: var(--el-color-warning);
+.quota-amount {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.quota-amount.vip {
+  color: var(--color-warning);
+}
+
+.quota-amount.danger {
+  color: var(--color-danger);
 }
 
 .actions {
   display: flex;
-  gap: 8px;
+  gap: var(--spacing-sm);
 }
 
+/* ===== 活动列表 ===== */
 .activity-card {
-  margin-bottom: 20px;
+  margin-bottom: var(--spacing-lg);
 }
 
 .activity-list {
@@ -685,9 +808,18 @@ onMounted(async () => {
 .activity-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) 0;
+  border-bottom: 1px solid var(--color-border-light);
+  transition: background var(--transition-fast);
+}
+
+.activity-item:hover {
+  background: var(--color-bg-hover);
+  margin: 0 calc(-1 * var(--spacing-base));
+  padding-left: var(--spacing-base);
+  padding-right: var(--spacing-base);
+  border-radius: var(--radius-md);
 }
 
 .activity-item:last-child {
@@ -697,53 +829,57 @@ onMounted(async () => {
 .activity-icon {
   width: 36px;
   height: 36px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 16px;
+  flex-shrink: 0;
 }
 
 .activity-icon.token {
-  background: rgba(64, 158, 255, 0.1);
-  color: var(--el-color-primary);
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
 }
 
 .activity-icon.order {
-  background: rgba(103, 194, 58, 0.1);
-  color: var(--el-color-success);
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--color-success);
 }
 
 .activity-icon.vip {
-  background: rgba(230, 162, 60, 0.1);
-  color: var(--el-color-warning);
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--color-warning);
 }
 
 .activity-info {
   flex: 1;
+  min-width: 0;
 }
 
 .activity-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--el-text-color-primary);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
   margin-bottom: 2px;
 }
 
 .activity-desc {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
 }
 
 .activity-time {
-  font-size: 12px;
-  color: var(--el-text-color-placeholder);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-placeholder);
+  flex-shrink: 0;
 }
 
 .empty-state {
   padding: 40px 0;
 }
 
+/* ===== 响应式 ===== */
 @media (max-width: 1200px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -770,11 +906,11 @@ onMounted(async () => {
 
 @media (max-width: 480px) {
   .dashboard {
-    gap: 12px;
+    gap: var(--spacing-md);
   }
   
   .stat-card :deep(.el-card__body) {
-    padding: 12px;
+    padding: var(--spacing-md);
   }
   
   .stat-icon {
@@ -783,7 +919,7 @@ onMounted(async () => {
   }
   
   .stat-value {
-    font-size: 18px;
+    font-size: var(--font-size-xl);
   }
   
   .chart-container {

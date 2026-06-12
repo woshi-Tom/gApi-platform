@@ -1,0 +1,294 @@
+/**
+ * gAPI Platform Design Tokens
+ * 集中管理所有设计变量，方便全局统一调整
+ *
+ * 风格语言：与登录注册页呼应的紫靛色调，精致阴影，流畅过渡
+ */
+
+:root {
+  /* ===== 颜色体系 ===== */
+
+  /* 主色（紫靛色系，与登录页一致） */
+  --color-primary: #6366f1;
+  --color-primary-light: #818cf8;
+  --color-primary-lighter: #a5b4fc;
+  --color-primary-dark: #4f46e5;
+  --color-primary-bg: rgba(99, 102, 241, 0.08);
+  --color-primary-bg-hover: rgba(99, 102, 241, 0.12);
+
+  /* 兼容旧色（过渡期保留） */
+  --color-primary-legacy: #409eff;
+
+  /* 语义色 */
+  --color-success: #10b981;
+  --color-success-light: #34d399;
+  --color-warning: #f59e0b;
+  --color-warning-light: #fbbf24;
+  --color-danger: #ef4444;
+  --color-danger-light: #f87171;
+  --color-info: #64748b;
+
+  /* 中性色 */
+  --color-text-primary: #1e293b;
+  --color-text-regular: #475569;
+  --color-text-secondary: #94a3b8;
+  --color-text-placeholder: #cbd5e1;
+  --color-text-disabled: #e2e8f0;
+
+  /* 背景色 */
+  --color-bg-page: #f1f5f9;
+  --color-bg-card: #ffffff;
+  --color-bg-overlay: rgba(15, 23, 42, 0.5);
+  --color-bg-hover: #f8fafc;
+  --color-bg-elevated: #ffffff;
+
+  /* 侧边栏（深色渐变） */
+  --color-sidebar-bg: #0f172a;
+  --color-sidebar-bg-light: #1e293b;
+  --color-sidebar-hover: rgba(99, 102, 241, 0.1);
+  --color-sidebar-active-bg: rgba(99, 102, 241, 0.15);
+  --color-sidebar-text: #94a3b8;
+  --color-sidebar-active-text: #a5b4fc;
+  --color-sidebar-header-bg: rgba(0, 0, 0, 0.2);
+  --color-sidebar-border: rgba(148, 163, 184, 0.08);
+
+  /* 边框 */
+  --color-border: #e2e8f0;
+  --color-border-light: #f1f5f9;
+  --color-border-lighter: #f8fafc;
+
+  /* 渐变色 */
+  --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  --gradient-blue: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-green: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+  --gradient-orange: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+  --gradient-red: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+  --gradient-vip: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  --gradient-sidebar: linear-gradient(180deg, #0f172a 0%, #1a1a2e 100%);
+
+  /* ===== 间距体系 ===== */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-base: 16px;
+  --spacing-lg: 20px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+  --spacing-3xl: 40px;
+
+  /* ===== 圆角 ===== */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-full: 9999px;
+
+  /* ===== 阴影 ===== */
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-base: 0 2px 8px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --shadow-xl: 0 16px 48px rgba(15, 23, 42, 0.12);
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-card-hover: 0 10px 25px rgba(15, 23, 42, 0.08), 0 4px 10px rgba(15, 23, 42, 0.04);
+  --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.15);
+
+  /* ===== 字号 ===== */
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-base: 14px;
+  --font-size-md: 15px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 20px;
+  --font-size-3xl: 24px;
+  --font-size-4xl: 28px;
+
+  /* ===== 字重 ===== */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* ===== 过渡动画 ===== */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.25s ease;
+  --transition-slow: 0.35s ease;
+  --transition-spring: 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --transition-sidebar: 0.22s ease;
+  --sidebar-transition-duration: 220ms;
+  --sidebar-transition-easing: cubic-bezier(0.2, 0, 0, 1);
+  --sidebar-transition: var(--sidebar-transition-duration) var(--sidebar-transition-easing);
+
+  /* ===== 布局尺寸 ===== */
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 84px;
+  --header-height: 60px;
+  --content-padding: 24px;
+
+  /* ===== 表格 ===== */
+  --table-header-bg: #f8fafc;
+  --table-header-font-weight: 600;
+  --table-header-font-size: 13px;
+  --table-header-color: var(--color-text-secondary);
+  --table-cell-font-size: 14px;
+
+  /* ===== 卡片 ===== */
+  --card-border-radius: var(--radius-xl);
+  --card-shadow: var(--shadow-card);
+  --card-shadow-hover: var(--shadow-card-hover);
+  --card-border: 1px solid var(--color-border);
+  --card-border-hover: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+/* ============================================================
+ * 方案 B：全深色科技风 SaaS 控制台
+ * 仅在 .console-layout 内生效，不影响登录/注册页
+ * ============================================================ */
+.console-layout {
+  /* ── 深色语义色覆盖 ── */
+  --color-text-primary: rgba(255, 255, 255, 0.92);
+  --color-text-regular: rgba(255, 255, 255, 0.78);
+  --color-text-secondary: rgba(255, 255, 255, 0.62);
+  --color-text-placeholder: rgba(255, 255, 255, 0.42);
+  --color-text-disabled: rgba(255, 255, 255, 0.25);
+
+  --color-bg-page: #0f1016;
+  --color-bg-card: rgba(255, 255, 255, 0.045);
+  --color-bg-hover: rgba(255, 255, 255, 0.06);
+  --color-bg-elevated: #1a1c25;
+  --color-bg-overlay: rgba(0, 0, 0, 0.6);
+
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-light: rgba(255, 255, 255, 0.06);
+  --color-border-lighter: rgba(255, 255, 255, 0.04);
+
+  --color-sidebar-bg: #0b0b0f;
+  --color-sidebar-bg-light: #14161e;
+  --color-sidebar-text: rgba(255, 255, 255, 0.58);
+  --color-sidebar-active-text: #a5b4fc;
+  --color-sidebar-border: rgba(255, 255, 255, 0.06);
+  --color-sidebar-header-bg: rgba(0, 0, 0, 0.3);
+  --color-sidebar-hover: rgba(255, 255, 255, 0.06);
+  --color-sidebar-active-bg: rgba(99, 102, 241, 0.15);
+
+  --color-primary-bg: rgba(99, 102, 241, 0.12);
+  --color-primary-bg-hover: rgba(99, 102, 241, 0.18);
+
+  --gradient-sidebar: linear-gradient(180deg, #0b0b0f 0%, #0b0b0f 100%);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-base: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.5);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+  --table-header-bg: rgba(255, 255, 255, 0.03);
+  --table-header-color: rgba(255, 255, 255, 0.62);
+
+  --card-border: 1px solid rgba(255, 255, 255, 0.08);
+  --card-border-hover: 1px solid rgba(255, 255, 255, 0.15);
+
+  /* ── g-* 变量映射（layout.css / console-dark.css 使用） ── */
+  --g-bg: #0f1016;
+  --g-bg-muted: #11131a;
+  --g-bg-card: rgba(255, 255, 255, 0.045);
+  --g-bg-sidebar: #0b0b0f;
+  --g-bg-sidebar-item-active: rgba(99, 102, 241, 0.15);
+  --g-border: rgba(255, 255, 255, 0.08);
+  --g-border-sidebar: rgba(255, 255, 255, 0.06);
+  --g-text-1: rgba(255, 255, 255, 0.92);
+  --g-text-2: rgba(255, 255, 255, 0.62);
+  --g-text-3: rgba(255, 255, 255, 0.42);
+  --g-text-inverse: #ffffff;
+  --g-primary: #6366f1;
+  --g-primary-light: #818cf8;
+  --g-primary-dark: #4f46e5;
+  --g-success: #22c55e;
+  --g-warning: #f59e0b;
+  --g-danger: #ef4444;
+  --g-sidebar-width: 240px;
+  --g-sidebar-collapsed: 84px;
+  --g-transition: 0.22s ease;
+  --g-radius-lg: 12px;
+  --g-radius-sm: 6px;
+  --g-radius-md: 8px;
+  --g-shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --g-gray-400: rgba(255, 255, 255, 0.62);
+}
+
+/* ============================================================
+ * 浅色模式覆盖
+ * 仅在 .console-layout.console-theme-light 内生效
+ * ============================================================ */
+.console-layout.console-theme-light {
+  /* ── 浅色语义色 ── */
+  --color-text-primary: #0f172a;
+  --color-text-regular: #334155;
+  --color-text-secondary: #475569;
+  --color-text-placeholder: #94a3b8;
+  --color-text-disabled: #cbd5e1;
+
+  --color-bg-page: #f4f7fb;
+  --color-bg-card: #ffffff;
+  --color-bg-hover: rgba(99, 102, 241, 0.06);
+  --color-bg-elevated: #ffffff;
+  --color-bg-overlay: rgba(15, 23, 42, 0.3);
+
+  --color-border: rgba(15, 23, 42, 0.08);
+  --color-border-light: rgba(15, 23, 42, 0.06);
+  --color-border-lighter: rgba(15, 23, 42, 0.04);
+
+  --color-sidebar-bg: #ffffff;
+  --color-sidebar-bg-light: #f8fafc;
+  --color-sidebar-text: #475569;
+  --color-sidebar-active-text: #6366f1;
+  --color-sidebar-border: rgba(15, 23, 42, 0.08);
+  --color-sidebar-header-bg: rgba(255, 255, 255, 0.9);
+  --color-sidebar-hover: rgba(99, 102, 241, 0.06);
+  --color-sidebar-active-bg: rgba(99, 102, 241, 0.1);
+
+  --color-primary-bg: rgba(99, 102, 241, 0.08);
+  --color-primary-bg-hover: rgba(99, 102, 241, 0.12);
+
+  --gradient-sidebar: linear-gradient(180deg, #ffffff 0%, #ffffff 100%);
+
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-base: 0 2px 8px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 8px 24px rgba(15, 23, 42, 0.1);
+  --shadow-xl: 0 16px 48px rgba(15, 23, 42, 0.12);
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-card-hover: 0 8px 24px rgba(15, 23, 42, 0.1), 0 4px 8px rgba(15, 23, 42, 0.06);
+
+  --table-header-bg: #f8fafc;
+  --table-header-color: #475569;
+
+  --card-border: 1px solid rgba(15, 23, 42, 0.08);
+  --card-border-hover: 1px solid rgba(99, 102, 241, 0.2);
+
+  /* ── g-* 变量映射 ── */
+  --g-bg: #f4f7fb;
+  --g-bg-muted: #f4f7fb;
+  --g-bg-card: #ffffff;
+  --g-bg-sidebar: #ffffff;
+  --g-bg-sidebar-item-active: rgba(99, 102, 241, 0.1);
+  --g-border: rgba(15, 23, 42, 0.08);
+  --g-border-sidebar: rgba(15, 23, 42, 0.08);
+  --g-text-1: #0f172a;
+  --g-text-2: #475569;
+  --g-text-3: #94a3b8;
+  --g-text-inverse: #ffffff;
+  --g-primary: #6366f1;
+  --g-primary-light: #818cf8;
+  --g-primary-dark: #4f46e5;
+  --g-success: #22c55e;
+  --g-warning: #f59e0b;
+  --g-danger: #ef4444;
+  --g-shadow-card-hover: 0 8px 24px rgba(15, 23, 42, 0.1);
+  --g-gray-400: #94a3b8;
+}

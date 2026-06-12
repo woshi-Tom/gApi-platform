@@ -150,7 +150,7 @@ func (h *InitHandler) CreateAdmin(c *gin.Context) {
 		Username:     req.Username,
 		Email:        req.Email,
 		PasswordHash: string(hashed),
-		Role:         "admin",
+		Role:         "super_admin",
 		Permissions:  "[]", // Empty JSON array for permissions
 		Status:       "active",
 	}

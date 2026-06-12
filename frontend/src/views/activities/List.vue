@@ -1,11 +1,8 @@
 <template>
   <div class="activities-view">
+    <PageHeader title="最近活动" description="查看您的账户活动记录" />
+
     <el-card shadow="hover" class="activities-card">
-      <template #header>
-        <div class="card-header">
-          <span>最近活动</span>
-        </div>
-      </template>
       
       <div class="filter-tabs">
         <el-radio-group v-model="filterType" size="default">
@@ -61,6 +58,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
+import PageHeader from '@/components/PageHeader.vue'
 import request from '@/api/request'
 
 interface Activity {
@@ -152,22 +150,19 @@ onMounted(loadActivities)
 </script>
 
 <style scoped>
-.activities-view {
-  padding: 20px;
-}
 
 .activities-card {
-  border-radius: 8px;
+  border-radius: var(--radius-xl);
 }
 
-.card-header {
-  font-weight: 600;
-  font-size: 16px;
+.activities-card :deep(.el-table) {
+  border-radius: var(--radius-md);
 }
 
 .filter-tabs {
   display: flex;
-  gap: 8px;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-xs);
 }
 
 .type-cell {
@@ -184,19 +179,19 @@ onMounted(loadActivities)
 }
 
 .icon-order {
-  background: #67c23a;
+  background: var(--color-success);
 }
 
 .icon-vip {
-  background: #e6a23c;
+  background: var(--color-warning);
 }
 
 .icon-token {
-  background: #409eff;
+  background: var(--color-primary);
 }
 
 .icon-login {
-  background: #909399;
+  background: var(--color-info);
 }
 
 .activity-title {
@@ -204,12 +199,12 @@ onMounted(loadActivities)
 }
 
 .text-success {
-  color: #67c23a;
+  color: var(--color-success);
 }
 
 .time-cell {
-  color: var(--el-text-color-secondary);
-  font-size: 13px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
 }
 
 .empty-state {
@@ -217,16 +212,12 @@ onMounted(loadActivities)
 }
 
 .pagination-wrapper {
-  margin-top: 20px;
+  margin-top: var(--spacing-lg);
   display: flex;
   justify-content: flex-end;
 }
 
 @media (max-width: 768px) {
-  .activities-view {
-    padding: 12px;
-  }
-
   .filter-tabs :deep(.el-radio-button__inner) {
     padding: 8px 12px;
     font-size: 13px;

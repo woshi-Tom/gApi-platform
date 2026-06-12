@@ -1,0 +1,365 @@
+/* ============================================================
+ * gAPI Layout — 全局布局样式
+ * 方案 B：全深色科技风 SaaS 控制台
+ * ============================================================ */
+
+/* ── 全局重置 ── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--el-font-family);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--g-text-1);
+  background: var(--g-bg);
+}
+
+/* ── 后台布局容器 ── */
+.console-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--g-bg);
+}
+
+/* 右侧内容容器（header + main） */
+.console-layout > .el-container {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── 侧边栏 ── */
+.console-sidebar {
+  width: var(--g-sidebar-width);
+  background: var(--g-bg-sidebar);
+  color: var(--g-text-inverse);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 100;
+  transition: width var(--g-transition);
+  overflow: hidden;
+  border-right: 1px solid var(--g-border-sidebar);
+}
+
+.console-sidebar.collapsed {
+  width: var(--g-sidebar-collapsed);
+}
+
+/* ── 侧边栏顶部 ── */
+.sidebar-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 16px 12px;
+  flex-shrink: 0;
+  min-height: 56px;
+}
+
+.sidebar-top .collapse-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.62);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+  flex-shrink: 0;
+}
+
+.sidebar-top .collapse-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.sidebar-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.92);
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+/* ── 侧边栏导航 ── */
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.58);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.18s, color 0.18s;
+  white-space: nowrap;
+  position: relative;
+}
+
+.sidebar-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.sidebar-item.active {
+  background: var(--g-bg-sidebar-item-active);
+  color: var(--g-primary-light);
+}
+
+.sidebar-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  background: var(--g-primary);
+  border-radius: 0 3px 3px 0;
+}
+
+.sidebar-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── 侧边栏底部账号区 ── */
+.sidebar-footer {
+  flex-shrink: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 12px 8px;
+}
+
+.footer-account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+
+.footer-account:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.footer-account.collapsed {
+  justify-content: center;
+  padding: 8px;
+}
+
+.avatar-wrapper {
+  flex-shrink: 0;
+}
+
+.avatar-circle {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--g-primary), var(--g-primary-dark));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.account-info {
+  overflow: hidden;
+  min-width: 0;
+}
+
+.account-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.account-email {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.42);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+/* ── 主内容区 ── */
+.console-main {
+  flex: 1;
+  margin-left: var(--g-sidebar-width);
+  min-height: 100vh;
+  transition: margin-left var(--g-transition);
+  background: var(--g-bg-muted);
+}
+
+.console-main.sidebar-collapsed {
+  margin-left: var(--g-sidebar-collapsed);
+}
+
+/* ── 内容区 ── */
+.console-content {
+  padding: 28px 32px;
+  max-width: 1440px;
+}
+
+/* ── PageHeader ── */
+.page-header {
+  margin-bottom: 24px;
+  position: relative;
+}
+
+.page-header__title {
+  font-size: 22px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+  line-height: 1.3;
+}
+
+.page-header__desc {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 4px;
+}
+
+/* ── PageHeader 紫色渐变装饰线 ── */
+.page-header::after {
+  content: '';
+  display: block;
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--g-primary), var(--g-primary-light));
+  border-radius: 2px;
+  margin-top: 12px;
+  opacity: 0.7;
+}
+
+/* ── 通用卡片 ── */
+.g-card {
+  background: var(--g-bg-card);
+  border: 1px solid var(--g-border);
+  border-radius: var(--g-radius-lg);
+  padding: 20px 24px;
+  transition: box-shadow var(--g-transition), border-color var(--g-transition), transform var(--g-transition);
+}
+
+.g-card:hover {
+  box-shadow: var(--g-shadow-card-hover);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* ── 通用表格容器 ── */
+.g-table-wrapper {
+  background: var(--g-bg-card);
+  border: 1px solid var(--g-border);
+  border-radius: var(--g-radius-lg);
+  padding: 0;
+  overflow: hidden;
+}
+
+/* ── 通用按钮 ── */
+.g-btn-primary {
+  background: var(--g-primary);
+  color: #fff;
+  border: none;
+  padding: 8px 20px;
+  border-radius: var(--g-radius-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--g-transition);
+}
+
+.g-btn-primary:hover {
+  background: var(--g-primary-dark);
+}
+
+/* ── 工具类 ── */
+.text-primary { color: var(--g-primary); }
+.text-success { color: var(--g-success); }
+.text-warning { color: var(--g-warning); }
+.text-danger  { color: var(--g-danger); }
+.text-muted   { color: var(--g-text-3); }
+
+/* ── 表格深色适配（scoped 外全局） ── */
+.g-dark-table .el-table {
+  --el-table-bg-color: var(--g-bg-card);
+  --el-table-tr-bg-color: transparent;
+  --el-table-header-bg-color: rgba(255, 255, 255, 0.03);
+  --el-table-header-text-color: var(--g-gray-400);
+  --el-table-text-color: var(--g-text-1);
+  --el-table-border-color: var(--g-border);
+  --el-table-row-hover-bg-color: rgba(255, 255, 255, 0.04);
+  --el-table-current-row-bg-color: rgba(99, 102, 241, 0.08);
+  --el-fill-color-lighter: rgba(255, 255, 255, 0.02);
+}
+
+/* ── 收起状态侧边栏内部调整 ── */
+.console-sidebar.collapsed .sidebar-top {
+  padding: 16px 12px 12px;
+  justify-content: center;
+}
+
+.console-sidebar.collapsed .sidebar-top .collapse-btn {
+  width: 40px;
+  height: 40px;
+}
+
+.console-sidebar.collapsed .sidebar-nav {
+  padding: 4px 8px;
+  align-items: center;
+}
+
+.console-sidebar.collapsed .sidebar-item {
+  justify-content: center;
+  padding: 12px;
+  width: 48px;
+  height: 48px;
+  gap: 0;
+}
+
+.console-sidebar.collapsed .sidebar-item.active::before {
+  left: 0;
+  height: 24px;
+}
+
+.console-sidebar.collapsed .sidebar-footer {
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.console-sidebar.collapsed .footer-account {
+  padding: 6px;
+}

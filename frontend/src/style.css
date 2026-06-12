@@ -1,36 +1,26 @@
-/* 基础重置 - 只重置 box-sizing，保留语义元素默认间距 */
-*, *::before, *::after {
-  box-sizing: border-box;
-}
-
 /* 基础排版 */
 html, body {
-  width: 100%;
-  height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-size: 16px;
   line-height: 1.5;
-  color: #303133;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  height: 100%;
 }
 
 #app {
-  width: 100%;
   height: 100%;
 }
 
 /* 标题样式 */
 h1, h2, h3, h4, h5, h6 {
   margin: 0 0 0.5em;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   line-height: 1.3;
+  color: var(--color-text-primary);
 }
 
-h1 { font-size: 28px; }
-h2 { font-size: 24px; }
-h3 { font-size: 20px; }
-h4 { font-size: 18px; }
+h1 { font-size: var(--font-size-4xl); }
+h2 { font-size: var(--font-size-3xl); }
+h3 { font-size: var(--font-size-2xl); }
+h4 { font-size: var(--font-size-xl); }
 
 /* 段落间距 */
 p {
@@ -38,24 +28,20 @@ p {
 }
 
 /* Element Plus 统一圆角 */
-.el-card {
-  border-radius: 8px;
-}
-
 .el-button {
-  border-radius: 6px;
+  border-radius: var(--radius-md);
 }
 
-.el-input__inner {
-  border-radius: 6px;
+.el-input__wrapper {
+  border-radius: var(--radius-md);
 }
 
 .el-dialog {
-  border-radius: 12px;
+  border-radius: var(--radius-2xl);
 }
 
 .el-message-box {
-  border-radius: 8px;
+  border-radius: var(--radius-xl);
 }
 
 /* 响应式布局 */
@@ -64,10 +50,10 @@ p {
     font-size: 14px;
   }
 
-  h1 { font-size: 22px; }
-  h2 { font-size: 20px; }
-  h3 { font-size: 18px; }
-  h4 { font-size: 16px; }
+  h1 { font-size: var(--font-size-3xl); }
+  h2 { font-size: var(--font-size-2xl); }
+  h3 { font-size: var(--font-size-xl); }
+  h4 { font-size: var(--font-size-lg); }
 }
 
 @media (max-width: 480px) {
@@ -75,8 +61,8 @@ p {
     font-size: 13px;
   }
 
-  h1 { font-size: 20px; }
-  h2 { font-size: 18px; }
-  h3 { font-size: 16px; }
-  h4 { font-size: 15px; }
+  h1 { font-size: var(--font-size-2xl); }
+  h2 { font-size: var(--font-size-xl); }
+  h3 { font-size: var(--font-size-lg); }
+  h4 { font-size: var(--font-size-md); }
 }

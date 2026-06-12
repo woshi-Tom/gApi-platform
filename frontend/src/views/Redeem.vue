@@ -1,19 +1,35 @@
 <template>
-  <div style="max-width:600px;margin:0 auto;padding:20px">
-    <el-card>
+  <div class="redeem-page">
+    <PageHeader title="兑换码" description="使用兑换码获取配额或 VIP 会员权益" />
+
+    <el-card class="redeem-card" shadow="hover">
       <template #header>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:20px">🎁</span>
-          <span style="font-size:18px;font-weight:bold">兑换码兑换</span>
+        <div class="card-header">
+          <el-icon class="card-header-icon" :size="20"><Present /></el-icon>
+          <span>兑换码兑换</span>
         </div>
       </template>
-      
-      <el-form :model="form" label-width="100px">
+
+      <el-form :model="form" label-width="100px" class="redeem-form">
         <el-form-item label="兑换码">
-          <el-input v-model="form.code" placeholder="请输入兑换码" size="large" />
+          <el-input
+            v-model="form.code"
+            placeholder="请输入兑换码"
+            size="large"
+            clearable
+            :prefix-icon="Tickets"
+          />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" size="large" :loading="loading" @click="redeem" style="width:100%">
+          <el-button
+            type="primary"
+            size="large"
+            :loading="loading"
+            :disabled="!form.code.trim()"
+            @click="redeem"
+            class="redeem-btn"
+          >
+            <el-icon><Present /></el-icon>
             立即兑换
           </el-button>
         </el-form-item>
@@ -21,9 +37,9 @@
 
       <el-divider />
 
-      <div style="color:#909399;font-size:13px">
-        <p style="margin-bottom:8px">兑换说明：</p>
-        <ul style="padding-left:20px;margin:0">
+      <div class="redeem-tips">
+        <h4 class="tips-title">兑换说明</h4>
+        <ul class="tips-list">
           <li>每个兑换码仅限使用一次</li>
           <li>兑换码有有效期限，请在有效期内使用</li>
           <li>兑换码一经使用不可退还</li>
@@ -31,80 +47,94 @@
       </div>
     </el-card>
 
-    <el-card v-if="result" style="margin-top:20px">
+    <!-- 兑换结果 -->
+    <el-card v-if="result" class="result-card" shadow="hover">
       <template #header>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:20px">{{ result.success ? '✅' : '❌' }}</span>
-          <span style="font-size:16px;font-weight:bold">{{ result.success ? '兑换成功' : '兑换失败' }}</span>
+        <div class="card-header">
+          <el-icon v-if="result.success" class="success-icon"><CircleCheck /></el-icon>
+          <el-icon v-else class="error-icon"><CircleClose /></el-icon>
+          <span>{{ result.success ? '兑换成功' : '兑换失败' }}</span>
         </div>
       </template>
-      
+
       <div v-if="result.success">
-        <p style="margin-bottom:8px">恭喜！您已成功兑换以下权益：</p>
-        <el-descriptions :column="1" border>
-          <el-descriptions-item label="配额奖励" v-if="result.quota_granted > 0">
-            {{ formatQuota(result.quota_granted) }}
+        <el-alert type="success" :closable="false" show-icon class="result-alert">
+          <template #title>恭喜！您已成功兑换以下权益</template>
+        </el-alert>
+        <el-descriptions :column="1" border class="result-desc">
+          <el-descriptions-item label="配额奖励" v-if="result.quota_granted && result.quota_granted > 0">
+            <span class="quota-highlight">{{ formatQuota(result.quota_granted) }}</span>
           </el-descriptions-item>
           <el-descriptions-item label="VIP奖励" v-if="result.vip_granted">
-            {{ result.vip_days }}天VIP会员
+            <el-tag type="warning" effect="plain">VIP {{ result.vip_days }} 天</el-tag>
           </el-descriptions-item>
         </el-descriptions>
       </div>
-      <div v-else style="color:#f56c6c">
-        {{ result.error }}
+      <div v-else>
+        <el-alert type="error" :closable="false" show-icon>
+          <template #title>{{ result.error }}</template>
+        </el-alert>
       </div>
     </el-card>
 
-    <el-card style="margin-top:20px">
+    <!-- 兑换历史 -->
+    <el-card class="history-card" shadow="hover">
       <template #header>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:18px">📜</span>
-          <span style="font-size:16px;font-weight:bold">兑换历史</span>
+        <div class="card-header">
+          <el-icon class="card-header-icon" :size="20"><Clock /></el-icon>
+          <span>兑换历史</span>
         </div>
       </template>
-      
-      <el-table :data="history" v-loading="historyLoading" stripe>
-        <el-table-column prop="redeemed_at" label="兑换时间" width="160">
-          <template #default="{ row }">{{ row.redeemed_at?.substring(0, 19) }}</template>
-        </el-table-column>
-        <el-table-column label="获得权益" min-width="120">
+
+      <el-table :data="history" v-loading="historyLoading" stripe class="history-table">
+        <el-table-column label="兑换时间" width="180">
           <template #default="{ row }">
-            <span v-if="row.quota_granted > 0">配额: {{ formatQuota(row.quota_granted) }}</span>
-            <el-tag v-if="row.vip_granted" type="success" size="small" style="margin-left:4px">
-              {{ row.vip_days }}天VIP
-            </el-tag>
+            {{ formatDate(row.redeemed_at) }}
           </template>
         </el-table-column>
-        <el-table-column prop="ip_address" label="IP地址" width="130" />
+        <el-table-column label="获得权益" min-width="160">
+          <template #default="{ row }">
+            <div class="reward-cell">
+              <span v-if="row.quota_granted && row.quota_granted > 0" class="reward-quota">
+                配额: {{ formatQuota(row.quota_granted) }}
+              </span>
+              <el-tag v-if="row.vip_granted" type="warning" size="small" effect="plain">
+                VIP {{ row.vip_days }} 天
+              </el-tag>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="ip_address" label="IP地址" width="150" />
       </el-table>
-      
-      <el-empty v-if="!historyLoading && history.length === 0" description="暂无兑换记录" style="padding:40px 0" />
+
+      <div v-if="!historyLoading && history.length === 0" class="empty-state">
+        <el-empty description="暂无兑换记录" :image-size="80" />
+      </div>
     </el-card>
   </div>
 </template>
+
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Present, Tickets, CircleCheck, CircleClose, Clock } from '@element-plus/icons-vue'
+import PageHeader from '@/components/PageHeader.vue'
 import { userRedemptionApi } from '@/api/redemption'
+import { formatQuota, formatDate } from '@/composables/useFormat'
 
-const form = reactive({
-  code: '',
-})
+interface RedeemResult {
+  success: boolean
+  quota_granted?: number
+  vip_granted?: boolean
+  vip_days?: number
+  error?: string
+}
 
+const form = reactive({ code: '' })
 const loading = ref(false)
 const historyLoading = ref(false)
-const result = ref<{success: boolean; quota_granted?: number; vip_granted?: boolean; vip_days?: number; error?: string} | null>(null)
+const result = ref<RedeemResult | null>(null)
 const history = ref<any[]>([])
-
-const formatQuota = (quota: number): string => {
-  if (quota >= 1000000) {
-    return (quota / 1000000).toFixed(1) + 'M'
-  }
-  if (quota >= 1000) {
-    return (quota / 1000).toFixed(0) + 'K'
-  }
-  return quota.toString()
-}
 
 const redeem = async () => {
   if (!form.code.trim()) {
@@ -140,7 +170,7 @@ const loadHistory = async () => {
   try {
     const res = await userRedemptionApi.getHistory()
     history.value = res.data.data || []
-  } catch (e: any) {
+  } catch {
     // ignore
   } finally {
     historyLoading.value = false
@@ -149,3 +179,116 @@ const loadHistory = async () => {
 
 onMounted(loadHistory)
 </script>
+
+<style scoped>
+.redeem-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+/* Card Header */
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.card-header-icon {
+  color: var(--color-primary);
+}
+
+/* Redeem Card */
+.redeem-card {
+  border-radius: var(--radius-xl);
+}
+
+.redeem-form {
+  max-width: 500px;
+}
+
+.redeem-btn {
+  width: 200px;
+}
+
+/* Tips */
+.redeem-tips {
+  padding: var(--spacing-xs) 0;
+}
+
+.tips-title {
+  margin: 0 0 var(--spacing-sm);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.tips-list {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.8;
+}
+
+/* Result Card */
+.result-card {
+  border-radius: var(--radius-xl);
+}
+
+.success-icon {
+  color: var(--color-success);
+  font-size: 20px;
+}
+
+.error-icon {
+  color: var(--color-danger);
+  font-size: 20px;
+}
+
+.result-alert {
+  margin-bottom: var(--spacing-base);
+}
+
+.result-desc {
+  margin-top: var(--spacing-md);
+}
+
+.quota-highlight {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+}
+
+/* History Card */
+.history-card {
+  border-radius: var(--radius-xl);
+}
+
+.history-table {
+  border-radius: var(--radius-md);
+}
+
+.reward-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.reward-quota {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+}
+
+.empty-state {
+  padding: 40px 0;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .redeem-btn {
+    width: 100%;
+  }
+}
+</style>

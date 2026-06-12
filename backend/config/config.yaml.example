@@ -23,3 +23,10 @@ security:
 jwt:
   secret: "CHANGE_ME_min_32_characters"
   expire_hour: 24
+
+# Cloudflare Turnstile. Docker deployments normally override this with
+# TURNSTILE_ENABLED and TURNSTILE_SECRET_KEY from deploy/docker/.env.
+# Keep the secret key backend-only; never expose it to frontend code or VITE_* env.
+turnstile:
+  enabled: true
+  secret_key: "1x0000000000000000000000000000000AA"

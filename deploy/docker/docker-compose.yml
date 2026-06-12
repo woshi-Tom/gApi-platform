@@ -98,6 +98,8 @@ services:
       GAPI_ALIPAY_PRIVATE_KEY: ${GAPI_ALIPAY_PRIVATE_KEY:-}
       GAPI_ALIPAY_PUBLIC_KEY: ${GAPI_ALIPAY_PUBLIC_KEY:-}
       GAPI_ALIPAY_ENCRYPT_KEY: ${GAPI_ALIPAY_ENCRYPT_KEY:-}
+      TURNSTILE_ENABLED: ${TURNSTILE_ENABLED:-true}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-1x0000000000000000000000000000000AA}
     ports:
       - "8080:8080"
     healthcheck:
@@ -109,18 +111,21 @@ services:
       - gapi-network
 
   frontend:
-    image: gapi-frontend:test
-    build:
-      context: ../../frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_API_BASE_URL: ""
+    image: node:20-alpine
     container_name: gapi-frontend
     restart: unless-stopped
+    working_dir: /app
     depends_on:
       - backend
+    volumes:
+      - ../../frontend:/app
+      - frontend_node_modules:/app/node_modules
     ports:
-      - "5173:80"
+      - "5173:5173"
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    environment:
+      VITE_API_URL: http://backend:8080
+      VITE_TURNSTILE_SITE_KEY: ${VITE_TURNSTILE_SITE_KEY:-1x00000000000000000000AA}
     networks:
       - gapi-network
 
@@ -144,6 +149,7 @@ volumes:
   postgres_data:
   redis_data:
   rabbitmq_data:
+  frontend_node_modules:
 
 networks:
   gapi-network:

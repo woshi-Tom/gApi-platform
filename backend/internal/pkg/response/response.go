@@ -3,6 +3,7 @@ package response
 import (
 	"math"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -134,4 +135,21 @@ func Paginated(c *gin.Context, data interface{}, page, pageSize int, total int64
 			TotalPages: totalPages,
 		},
 	})
+}
+
+// ParsePagination parses and validates page/page_size query parameters.
+// Returns (page, pageSize) with bounds: page >= 1, 1 <= pageSize <= 100.
+func ParsePagination(c *gin.Context) (int, int) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = 20
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+	return page, pageSize
 }

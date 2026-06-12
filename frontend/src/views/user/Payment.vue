@@ -1,11 +1,8 @@
 <template>
   <div class="payment-page">
-    <div class="page-header">
-      <h2>支付宝支付</h2>
-      <p class="subtitle">请使用手机支付宝扫描下方二维码完成支付</p>
-    </div>
+    <PageHeader title="支付宝支付" description="请使用手机支付宝扫描下方二维码完成支付" />
 
-    <el-card class="payment-card" v-loading="loading || loadingOrderInfo">
+    <el-card class="payment-card" v-loading="loading || loadingOrderInfo" shadow="hover">
       <el-result v-if="status === 'paid' || status === 'completed'" icon="success" title="支付成功">
         <template #sub-title>
           <p>您的订单已支付成功，配额已到账</p>
@@ -23,9 +20,9 @@
         <el-row :gutter="20" align="middle">
           <el-col :span="12" class="qr-col">
             <div class="qr-wrap">
-              <div v-if="qrCodeImage" style="text-align:center">
+              <div v-if="qrCodeImage" class="qr-code-container">
                 <img :src="qrCodeImage" alt="支付宝二维码" class="qr-image" />
-                <p style="color:green">支付宝扫码支付</p>
+                <p class="qr-tip">支付宝扫码支付</p>
               </div>
               <div v-else class="qr-placeholder">
                 <span v-if="loading">正在生成二维码...</span>
@@ -68,6 +65,7 @@ import { ElMessage } from 'element-plus'
 import QRCode from 'qrcode'
 import { paymentApi } from '@/api/order'
 import request from '@/api/request'
+import PageHeader from '@/components/PageHeader.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -300,29 +298,32 @@ onUnmounted(() => {
 
 <style scoped>
 .payment-page {
-  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
   max-width: 800px;
   margin: 0 auto;
 }
-.page-header {
-  text-align: center;
-  margin-bottom: 20px;
-}
-.page-header h2 {
-  margin: 0 0 8px;
-}
-.subtitle {
-  color: var(--el-text-color-secondary);
-  margin: 0;
-}
+
 .payment-card {
-  padding: 10px;
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-md);
+}
+
+.qr-code-container {
+  text-align: center;
+}
+
+.qr-tip {
+  color: var(--color-success);
+  margin: var(--spacing-sm) 0 0;
+  font-size: var(--font-size-base);
 }
 .qr-col {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 20px;
+  padding: var(--spacing-lg);
 }
 .qr-wrap {
   display: flex;
@@ -352,6 +353,6 @@ onUnmounted(() => {
   color: var(--el-text-color-secondary);
 }
 .info-col {
-  padding: 20px;
+  padding: var(--spacing-lg);
 }
 </style>

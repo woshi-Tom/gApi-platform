@@ -58,8 +58,7 @@ func NewModelPricingHandler(svc *service.ModelGroupService) *ModelPricingHandler
 }
 
 func (h *ModelPricingHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	page, pageSize := response.ParsePagination(c)
 	provider := c.Query("provider")
 
 	pricings, total, err := h.svc.ListPricing(page, pageSize, provider, nil)

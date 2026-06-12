@@ -31,17 +31,19 @@ type UserProfile struct {
 
 // UserHandler handles user-related endpoints
 type UserHandler struct {
-	authService  *service.AuthService
-	userService  *service.UserService
-	loginLogRepo *repository.LoginLogRepository
+	authService      *service.AuthService
+	userService      *service.UserService
+	loginLogRepo     *repository.LoginLogRepository
+	turnstileService *service.TurnstileService
 }
 
 // NewUserHandler creates a new user handler
-func NewUserHandler(authService *service.AuthService, userService *service.UserService, loginLogRepo *repository.LoginLogRepository) *UserHandler {
+func NewUserHandler(authService *service.AuthService, userService *service.UserService, loginLogRepo *repository.LoginLogRepository, turnstileService *service.TurnstileService) *UserHandler {
 	return &UserHandler{
-		authService:  authService,
-		userService:  userService,
-		loginLogRepo: loginLogRepo,
+		authService:      authService,
+		userService:      userService,
+		loginLogRepo:     loginLogRepo,
+		turnstileService: turnstileService,
 	}
 }
 
@@ -102,12 +104,17 @@ func (h *UserHandler) Register(c *gin.Context) {
 // @Router /api/v1/user/login [post]
 func (h *UserHandler) Login(c *gin.Context) {
 	var req struct {
-		Email    string `json:"email" binding:"required,email"`
-		Password string `json:"password" binding:"required"`
+		Email          string `json:"email" binding:"required,email"`
+		Password       string `json:"password" binding:"required"`
+		TurnstileToken string `json:"turnstileToken"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, "INVALID_PARAMETER", err.Error())
+		return
+	}
+
+	if !verifyTurnstile(c, h.turnstileService, req.TurnstileToken) {
 		return
 	}
 
